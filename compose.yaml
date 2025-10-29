@@ -1,0 +1,18 @@
+services:
+  parser:
+
+  postgres:
+
+  backend:
+
+  cron-jobs:
+
+  nginx:
+
+  frontend:
+
+networks:
+  - main
+
+volumes:
+  pgdata:

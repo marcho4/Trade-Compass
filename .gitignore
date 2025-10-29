@@ -1,0 +1,7 @@
+.ai
+__pycache__/
+venv/
+.venv/
+.env
+.vscode/
+.DS_Store
