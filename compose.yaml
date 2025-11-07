@@ -10,6 +10,18 @@ services:
   nginx:
 
   frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    volumes:
+      - ./frontend:/app
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://backend:8080
+
+  redis:
 
 networks:
   - main

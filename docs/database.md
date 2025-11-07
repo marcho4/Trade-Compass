@@ -16,6 +16,8 @@ Table companies {
   owner text
   sector_id integer
   lot_size integer
+  ceo varchar(100)
+  employees int
 }
 
 Table sectors {
@@ -25,11 +27,50 @@ Table sectors {
 
 Table metrics {
   report_id int
-  revenue int
-  net_profit int
-  total_assets int
-  debt int
-  equity int
+  
+  // P&L (Отчёт о прибылях и убытках)
+  revenue bigint // Выручка
+  cost_of_revenue bigint // Себестоимость
+  gross_profit bigint // Валовая прибыль
+  operating_expenses bigint // Операционные расходы
+  ebit bigint // Прибыль до вычета процентов и налогов
+  ebitda bigint // EBITDA
+  interest_expense bigint // Проценты к уплате
+  tax_expense bigint // Налоги
+  net_profit bigint // Чистая прибыль
+  
+  // Balance Sheet (Баланс)
+  total_assets bigint // Всего активов
+  current_assets bigint // Оборотные активы
+  cash_and_equivalents bigint // Денежные средства и эквиваленты
+  inventories bigint // Запасы
+  receivables bigint // Дебиторская задолженность
+  
+  total_liabilities bigint // Всего обязательств
+  current_liabilities bigint // Краткосрочные обязательства
+  debt bigint // Долг (краткосрочный + долгосрочный)
+  long_term_debt bigint // Долгосрочный долг
+  short_term_debt bigint // Краткосрочный долг
+  
+  equity bigint // Собственный капитал
+  retained_earnings bigint // Нераспределённая прибыль
+  
+  // Cash Flow Statement (Отчёт о движении денежных средств)
+  operating_cash_flow bigint // Операционный денежный поток
+  investing_cash_flow bigint // Инвестиционный денежный поток
+  financing_cash_flow bigint // Финансовый денежный поток
+  capex bigint // Капитальные затраты
+  free_cash_flow bigint // Свободный денежный поток (OCF - CapEx)
+  
+  // Market Data (для мультипликаторов)
+  shares_outstanding bigint // Количество акций в обращении
+  market_cap bigint // Рыночная капитализация на дату отчёта
+  
+  // Дополнительные расчётные поля
+  working_capital bigint // Оборотный капитал (current_assets - current_liabilities)
+  capital_employed bigint // Задействованный капитал (total_assets - current_liabilities)
+  enterprise_value bigint // EV = market_cap + debt - cash
+  net_debt bigint // Чистый долг (debt - cash)
 }
 
 Table indicators {
