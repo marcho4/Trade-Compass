@@ -68,29 +68,29 @@ export const UsageLimitsCard = ({ limits }: UsageLimitsCardProps) => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Лимиты использования</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">Лимиты</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {limits_data.map((item, idx) => {
           const Icon = item.icon
           const percentage = calculatePercentage(item.used, item.limit)
           const isUnlimited = item.limit === -1
 
           return (
-            <div key={idx} className="space-y-2">
+            <div key={idx} className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icon className={`h-5 w-5 ${item.color}`} />
-                  <span className="font-medium text-sm">{item.label}</span>
+                <div className="flex items-center gap-1.5">
+                  <Icon className={`h-4 w-4 ${item.color}`} />
+                  <span className="font-medium text-xs">{item.label}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold">
                     {item.used} / {formatLimit(item.limit)}
                   </span>
                   {isUnlimited && (
-                    <Badge variant="secondary" className="text-xs">
-                      Безлимит
+                    <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                      ∞
                     </Badge>
                   )}
                 </div>
@@ -98,9 +98,9 @@ export const UsageLimitsCard = ({ limits }: UsageLimitsCardProps) => {
 
               {!isUnlimited && (
                 <>
-                  <Progress value={percentage} className="h-2" />
+                  <Progress value={percentage} className="h-1.5" />
                   {item.resetsAt && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] text-muted-foreground">
                       Обновится {formatResetDate(item.resetsAt)}
                     </p>
                   )}
@@ -108,17 +108,17 @@ export const UsageLimitsCard = ({ limits }: UsageLimitsCardProps) => {
               )}
 
               {!isUnlimited && percentage >= 90 && (
-                <p className="text-xs text-red-600">
-                  Вы почти исчерпали лимит. Рассмотрите улучшение плана.
+                <p className="text-[10px] text-red-600">
+                  Почти исчерпан
                 </p>
               )}
             </div>
           )
         })}
 
-        <div className="pt-4 border-t">
-          <p className="text-xs text-muted-foreground">
-            Лимиты обновляются ежемесячно с даты оформления подписки
+        <div className="pt-3 border-t">
+          <p className="text-[10px] text-muted-foreground">
+            Лимиты обновляются ежемесячно
           </p>
         </div>
       </CardContent>
