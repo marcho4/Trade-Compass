@@ -39,70 +39,82 @@ export const AccountSettings = ({ onSave, onDeleteAccount }: AccountSettingsProp
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Настройки аккаунта</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">Настройки</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Безопасность */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Безопасность</h3>
+      <CardContent className="space-y-4">
+        {/* Безопасность и Email в двух колонках на больших экранах */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Безопасность */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold text-sm">Безопасность</h3>
+            </div>
+
+            <div className="space-y-2 pl-6">
+              <div>
+                <Label htmlFor="current-password" className="text-xs">Текущий пароль</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  placeholder="••••••••"
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-password" className="text-xs">Новый пароль</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
+              <Button variant="outline" size="sm" className="mt-2 h-7 text-xs">
+                <Lock className="h-3 w-3 mr-1.5" />
+                Изменить
+              </Button>
+            </div>
           </div>
-          
-          <div className="space-y-3 pl-7">
-            <div>
-              <Label htmlFor="current-password">Текущий пароль</Label>
-              <Input 
-                id="current-password" 
-                type="password" 
-                placeholder="Введите текущий пароль"
-                className="mt-1.5"
-              />
+
+          {/* Email */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold text-sm">Email</h3>
             </div>
-            <div>
-              <Label htmlFor="new-password">Новый пароль</Label>
-              <Input 
-                id="new-password" 
-                type="password" 
-                placeholder="Введите новый пароль"
-                className="mt-1.5"
-              />
+
+            <div className="space-y-2 pl-6">
+              <div>
+                <Label htmlFor="email" className="text-xs">Текущий email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  defaultValue="user@example.com"
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
+              <Button variant="outline" size="sm" className="h-7 text-xs">
+                Изменить email
+              </Button>
             </div>
-            <div>
-              <Label htmlFor="confirm-password">Подтвердите пароль</Label>
-              <Input 
-                id="confirm-password" 
-                type="password" 
-                placeholder="Повторите новый пароль"
-                className="mt-1.5"
-              />
-            </div>
-            <Button variant="outline" size="sm" className="mt-2">
-              <Lock className="h-4 w-4 mr-2" />
-              Изменить пароль
-            </Button>
           </div>
         </div>
 
         <Separator />
 
         {/* Уведомления */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Уведомления</h3>
+            <Bell className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm">Уведомления</h3>
           </div>
 
-          <div className="space-y-4 pl-7">
+          <div className="space-y-2 pl-6">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="email-notif">Email уведомления</Label>
-                <p className="text-xs text-muted-foreground">
-                  Получать важные обновления на email
-                </p>
-              </div>
-              <Switch 
+              <Label htmlFor="email-notif" className="text-xs">Email уведомления</Label>
+              <Switch
                 id="email-notif"
                 checked={emailNotifications}
                 onCheckedChange={setEmailNotifications}
@@ -110,13 +122,8 @@ export const AccountSettings = ({ onSave, onDeleteAccount }: AccountSettingsProp
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="portfolio-alerts">Алерты по портфелю</Label>
-                <p className="text-xs text-muted-foreground">
-                  Уведомления о важных изменениях в портфеле
-                </p>
-              </div>
-              <Switch 
+              <Label htmlFor="portfolio-alerts" className="text-xs">Алерты по портфелю</Label>
+              <Switch
                 id="portfolio-alerts"
                 checked={portfolioAlerts}
                 onCheckedChange={setPortfolioAlerts}
@@ -124,13 +131,8 @@ export const AccountSettings = ({ onSave, onDeleteAccount }: AccountSettingsProp
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="market-news">Новости рынка</Label>
-                <p className="text-xs text-muted-foreground">
-                  Получать дайджест новостей рынка
-                </p>
-              </div>
-              <Switch 
+              <Label htmlFor="market-news" className="text-xs">Новости рынка</Label>
+              <Switch
                 id="market-news"
                 checked={marketNews}
                 onCheckedChange={setMarketNews}
@@ -138,13 +140,8 @@ export const AccountSettings = ({ onSave, onDeleteAccount }: AccountSettingsProp
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="weekly-report">Еженедельный отчет</Label>
-                <p className="text-xs text-muted-foreground">
-                  Получать сводку по портфелю раз в неделю
-                </p>
-              </div>
-              <Switch 
+              <Label htmlFor="weekly-report" className="text-xs">Еженедельный отчет</Label>
+              <Switch
                 id="weekly-report"
                 checked={weeklyReport}
                 onCheckedChange={setWeeklyReport}
@@ -155,51 +152,24 @@ export const AccountSettings = ({ onSave, onDeleteAccount }: AccountSettingsProp
 
         <Separator />
 
-        {/* Email */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Email адрес</h3>
-          </div>
-          
-          <div className="space-y-3 pl-7">
-            <div>
-              <Label htmlFor="email">Текущий email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                defaultValue="user@example.com"
-                className="mt-1.5"
-              />
-            </div>
-            <Button variant="outline" size="sm">
-              Изменить email
-            </Button>
-          </div>
-        </div>
-
-        <Separator />
-
         {/* Опасная зона */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-red-600 flex items-center gap-2">
-              <Trash2 className="h-5 w-5" />
-              Опасная зона
-            </h3>
-          </div>
-          
-          <div className="pl-7 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Удаление аккаунта приведет к безвозвратной потере всех данных, 
-              включая портфели, настройки и историю.
+        <div className="space-y-3">
+          <h3 className="font-semibold text-red-600 flex items-center gap-2 text-sm">
+            <Trash2 className="h-4 w-4" />
+            Опасная зона
+          </h3>
+
+          <div className="pl-6 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Удаление аккаунта приведет к безвозвратной потере всех данных.
             </p>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               size="sm"
               onClick={onDeleteAccount}
+              className="h-7 text-xs"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-3 w-3 mr-1.5" />
               Удалить аккаунт
             </Button>
           </div>
@@ -209,9 +179,9 @@ export const AccountSettings = ({ onSave, onDeleteAccount }: AccountSettingsProp
 
         {/* Сохранить изменения */}
         <div className="flex justify-end">
-          <Button onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Сохранить изменения
+          <Button onClick={handleSave} size="sm" className="h-8 text-xs">
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            Сохранить
           </Button>
         </div>
       </CardContent>
