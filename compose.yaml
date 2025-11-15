@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17
     container_name: bull-run-postgres
     environment:
       POSTGRES_DB: bullrun
