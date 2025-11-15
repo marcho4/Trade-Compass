@@ -54,7 +54,7 @@ export const MetricCard = ({
   const getComparisonColor = () => {
     if (value === null || comparisonValue === null || comparisonValue === undefined) return "text-muted-foreground"
     
-    const diff = value - comparisonValue
+    const diff = value - (comparisonValue ? comparisonValue : 0)
     if (Math.abs(diff) < 0.01) return "text-muted-foreground"
     
     // Для некоторых метрик меньше - лучше (например, P/E, долг)
