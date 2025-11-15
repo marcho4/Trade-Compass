@@ -1,7 +1,6 @@
 services:
-  # PostgreSQL Database
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: bull-run-postgres
     environment:
       POSTGRES_DB: bullrun
@@ -18,9 +17,8 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
   redis:
-    image: redis:7-alpine
+    image: redis:latest
     container_name: bull-run-redis
     networks:
       - main
@@ -31,58 +29,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Backend API (placeholder for future implementation)
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: bull-run-backend
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/bullrun
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - main
-    restart: unless-stopped
-
-  # Parser Service
-  parser:
-    build:
-      context: ./parser
-      dockerfile: Dockerfile
-    container_name: bull-run-parser
-    volumes:
-      - ./parser:/app
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/bullrun
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - main
-    restart: unless-stopped
-
-  # Cron Jobs (placeholder for future implementation)
-  cron-jobs:
-    build:
-      context: ./cron-jobs
-      dockerfile: Dockerfile
-    container_name: bull-run-cron
-    environment:
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/bullrun
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - main
-    restart: unless-stopped
-
-  # Frontend Next.js Application
   frontend:
     build:
       context: frontend
@@ -101,26 +47,25 @@ services:
       - main
     restart: unless-stopped
 
-  # Nginx Reverse Proxy
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:latest
     container_name: bull-run-nginx
     ports:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - frontend
-      - backend
+    # depends_on:
+    #   - frontend
+    #   - backend
     networks:
       - main
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    # healthcheck:
+    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
 
 networks:
   main:
