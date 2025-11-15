@@ -1,23 +1,14 @@
 services:
-  # auth-service:
-  #   build:
-  #     context: auth-service
-  #     dockerfile: Dockerfile
-  #   container_name: bull-run-auth-service
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - ./auth-service:/app
-  #   env_file:
-  #     - ./auth-service/.env
-  #   networks:
-  #     - main
-    # restart: unless-stopped
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
-    #   redis:
-    #     condition: service_healthy
+  auth-service:
+    build:
+      context: auth-service
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    volumes:
+      - ./auth-service:/app
+    env-file:
+      - ./auth-service/.env
 
   postgres:
     image: postgres:17
