@@ -21,6 +21,8 @@ func CreateServer() *Server {
 func (s *Server) MountRoutes() {
 	log.Println("Mounting routes")
 	s.Router.Get("/webhook", HandleWebhook)
+	s.Router.Get("/callback/yandex", HandleYandexCallback)
+	// s.Router.Get("/callback/google", HandleGoogleCallback)
 	log.Println("Routes mounted")
 }
 
