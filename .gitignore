@@ -5,3 +5,6 @@ venv/
 .env
 .vscode/
 .DS_Store
+frontend/node_modules/
+frontend/.next/
+nginx/crt/

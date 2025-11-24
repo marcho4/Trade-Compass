@@ -2,6 +2,7 @@ name: CI/CD
 on:
   pull_request:
   push:
+    branches: [master]
 permissions:
   contents: read
 concurrency:
@@ -20,16 +21,60 @@ jobs:
           go-version: 'stable'
 
       # Для сборки фронта
-      - uses: actions/setup-node
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Install npm dependencies
-        run: cd frontend && npm install
+        run: cd frontend && npm install && npm run build
 
       - name: Build auth service
         run: cd auth-service && make build
 
-  # test:
-
-  # deploy:
-
-    
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_YANDEX_CLOUD_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: GITHUB_TOKEN
+          script: |
+            set -e
+            echo "📂 Переходим в директорию проекта..."
+            cd /home/${{ secrets.SSH_USER }}/bull-run
+            
+            echo "💾 Сохраняем текущий origin URL..."
+            ORIGINAL_ORIGIN=$(git remote get-url origin)
+            
+            echo "📦 Сохраняем локальные изменения..."
+            git stash push -u -m "Auto-stash before deploy $(date +%Y-%m-%d_%H:%M:%S)"
+            
+            echo "🔄 Останавливаем старые контейнеры..."
+            docker compose down --timeout 30
+            
+            echo "🔄 Обновляем код из репозитория..."
+            git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/marcho4/bull-run.git
+            git fetch origin master
+            git reset --hard origin/master
+            
+            echo "🔙 Восстанавливаем original origin URL..."
+            git remote set-url origin "$ORIGINAL_ORIGIN"
+            
+            echo "🧹 Очищаем неиспользуемые образы..."
+            docker image prune -f
+            
+            echo "🚀 Запускаем новые контейнеры..."
+            docker compose up -d --build --force-recreate
+            
+            echo "✅ Проверяем статус контейнеров..."
+            docker compose ps
+            
+            echo "🎉 Деплой завершён успешно!"
