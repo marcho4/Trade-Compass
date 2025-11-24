@@ -5,7 +5,7 @@ const navigationItems: ReadonlyArray<{ label: string; href: string }> = [
   { label: "Портфель", href: "/portfolio" },
 ];
 
-const Header = () => {
+export const Header = () => {
   return (
     <header className="sticky top-6 z-50 flex w-full justify-center px-4">
       <nav
@@ -41,6 +41,4 @@ const Header = () => {
     </header>
   );
 };
-
-export default Header;
 

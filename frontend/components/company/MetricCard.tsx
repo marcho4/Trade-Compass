@@ -52,7 +52,7 @@ export const MetricCard = ({
   }
 
   const getComparisonColor = () => {
-    if (value === null || comparisonValue === null) return "text-muted-foreground"
+    if (value === null || comparisonValue === null || comparisonValue === undefined) return "text-muted-foreground"
     
     const diff = value - comparisonValue
     if (Math.abs(diff) < 0.01) return "text-muted-foreground"
