@@ -13,20 +13,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ValidationErrors {
+  name?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
 }
 
 export default function RegisterPage() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateName = (name: string): string | undefined => {
+    if (!name) {
+      return "Имя обязательно для заполнения";
+    }
+    if (name.length < 3) {
+      return "Имя должно содержать минимум 3 символа";
+    }
+    if (name.length > 50) {
+      return "Имя не должно превышать 50 символов";
+    }
+    return undefined;
+  };
 
   const validateEmail = (email: string): string | undefined => {
     if (!email) {
@@ -74,6 +88,11 @@ export default function RegisterPage() {
 
     const newErrors: ValidationErrors = {};
 
+    const nameError = validateName(name);
+    if (nameError) {
+      newErrors.name = nameError;
+    }
+
     const emailError = validateEmail(email);
     if (emailError) {
       newErrors.email = emailError;
@@ -96,11 +115,18 @@ export default function RegisterPage() {
 
     if (Object.keys(newErrors).length === 0) {
       // TODO: Реализовать логику регистрации
-      console.log("Register:", { email, password });
+      console.log("Register:", { name, email, password });
       // Здесь будет редирект на страницу подтверждения или авторизации
     }
 
     setIsSubmitting(false);
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+    if (errors.name) {
+      setErrors((prev) => ({ ...prev, name: undefined }));
+    }
   };
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,6 +177,30 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Имя</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Ваше имя"
+                value={name}
+                onChange={handleNameChange}
+                aria-invalid={errors.name ? "true" : "false"}
+                aria-describedby={errors.name ? "name-error" : undefined}
+                maxLength={50}
+                required
+              />
+              {errors.name && (
+                <p
+                  id="name-error"
+                  className="text-sm text-destructive"
+                  role="alert"
+                >
+                  {errors.name}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

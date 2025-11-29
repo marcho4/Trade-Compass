@@ -10,7 +10,7 @@ const Home = () => {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <div className="my-5">
+      <div className="my-2 mx-1">
         <HeroSection />
       </div>
 
