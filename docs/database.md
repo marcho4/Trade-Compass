@@ -166,7 +166,8 @@ Table users {
   id serial pk
   name varchar(50)
   last_login_at timestamptz
-  
+  status varchar(20) [default: 'active'] // active, blocked, deleted
+
   created_at timestamptz [default: `now()`]
   updated_at timestamptz
   
