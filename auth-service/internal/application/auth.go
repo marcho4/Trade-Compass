@@ -14,7 +14,37 @@ func HandleRegistration(w http.ResponseWriter, r *http.Request)      {}
 func HandleEmailVerification(w http.ResponseWriter, r *http.Request) {}
 func HandleEmailResend(w http.ResponseWriter, r *http.Request)       {}
 
-func HandleLogin(w http.ResponseWriter, r *http.Request)       {}
+// func HandleLogin(w http.ResponseWriter, r *http.Request) {
+// 	// json.Unmarshal(r.Body, &LoginRequest{})
+// 	body, err := io.ReadAll(r.Body)
+// 	defer r.Body.Close()
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	json.Unmarshal(body, &LoginRequest{})
+// 	db.GetAuthDataByEmail(loginRequest.Email)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	if authData.PasswordHash != loginRequest.Password {
+// 		http.Error(w, "Invalid password", http.StatusUnauthorized)
+// 		return
+// 	}
+
+// 	accessToken, refreshToken, err := jwt.GenerateTokens(authData.UserID)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	json.NewEncoder(w).Encode(map[string]string{
+// 		"accessToken":  accessToken,
+// 		"refreshToken": refreshToken,
+// 	})
+// 	return
+// }
+
 func HandleYandexLogin(w http.ResponseWriter, r *http.Request) {}
 func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {}
 
