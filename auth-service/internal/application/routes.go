@@ -49,8 +49,14 @@ func HandleYandexLogin(w http.ResponseWriter, r *http.Request) {}
 func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {}
 
 func HandleYandexCallback(w http.ResponseWriter, r *http.Request) {
-	log.Println("Got yandex callback request")
-	log.Println(r.URL.Query())
+	code := r.URL.Query().Get("code")
+	accessToken, err := GetYandexAccessToken(code)
+	if err != nil {
+		return
+	}
+	userInfo, err := GetYandexUserInfo(accessToken)
+	user, err := 
+
 }
 
 func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {}

@@ -3,8 +3,9 @@ package domain
 import "context"
 
 type DbRepo interface {
-	CreateUser(ctx context.Context, name string) (*User, error)
-	GetUserByID(ctx context.Context, id int64) (*User, error)
+	CreateUser(ctx context.Context, name, email, hashedPassword string) (*User, error)
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByID(ctx context.Context, id uint64) (*User, error)
 	UpdateLastLogin(ctx context.Context, userID int64) error
 
 	CreateAuthData(ctx context.Context, userID int64, email, passwordHash string) error

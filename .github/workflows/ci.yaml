@@ -2,7 +2,7 @@ name: CI/CD
 on:
   pull_request:
   push:
-    branches: [master, auth]
+    branches: [master]
 permissions:
   contents: read
 concurrency:

@@ -15,9 +15,6 @@ type Migrator struct {
 	logger  *slog.Logger
 }
 
-// NewMigrator создаёт новый экземпляр мигратора
-// dbURL формат: postgres://user:password@host:port/dbname?sslmode=disable
-// migrationsPath формат: file://migrations
 func NewMigrator(dbURL, migrationsPath string, logger *slog.Logger) (*Migrator, error) {
 	if dbURL == "" {
 		return nil, errors.New("database URL is required")

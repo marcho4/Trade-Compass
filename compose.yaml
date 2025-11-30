@@ -3,27 +3,23 @@ services:
     build:
       context: auth-service
       dockerfile: Dockerfile
-    container_name: bull-run-auth-service
+    container_name: auth-service
     ports:
       - "8080:8080"
-    volumes:
-      - ./auth-service:/app
     env_file:
       - ./auth-service/.env
     networks:
       - main
-    # restart: unless-stopped
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
-    #   redis:
-    #     condition: service_healthy
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:17
-    container_name: bull-run-postgres
+    container_name: postgres
     environment:
-      POSTGRES_DB: bullrun
+      POSTGRES_DB: trade-compass
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
@@ -39,7 +35,7 @@ services:
 
   redis:
     image: redis:latest
-    container_name: bull-run-redis
+    container_name: redis
     networks:
       - main
     restart: unless-stopped
@@ -53,11 +49,10 @@ services:
     build:
       context: frontend
       dockerfile: Dockerfile.prod
-    container_name: bull-run-frontend
+    container_name: frontend
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
       - /app/node_modules
       - /app/.next
     environment:
