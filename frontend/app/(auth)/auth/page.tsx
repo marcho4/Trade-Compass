@@ -29,9 +29,10 @@ export default function AuthPage() {
     console.log("Google auth");
   };
 
+  const YANDEX_OAUTH_URL = "https://oauth.yandex.ru/authorize?response_type=code&client_id=970a06c171b2439594fbe83833dd0e6d";
+
   const handleYandexAuth = () => {
-    // TODO: Реализовать OAuth авторизацию через Яндекс
-    console.log("Yandex auth");
+    window.location.href = YANDEX_OAUTH_URL;
   };
 
   return (
@@ -131,13 +132,14 @@ export default function AuthPage() {
             >
               <svg
                 className="mr-2 h-4 w-4"
-                viewBox="0 0 24 24"
+                viewBox="0 0 44 44"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
+                <circle cx="22" cy="22" r="22" fill="#FC3F1D" />
                 <path
-                  d="M12.003 2C6.476 2 2 6.477 2 12.003c0 5.526 4.476 10.003 10.003 10.003S22.006 17.529 22.006 12.003C22.006 6.477 17.53 2 12.003 2zm-.006 14.82V7.18h3.85c1.84 0 3.26 1.24 3.26 3.04 0 1.8-1.42 3.04-3.26 3.04h-1.98v3.56h-1.87zm1.87-5.47h1.25c.78 0 1.32-.47 1.32-1.2 0-.73-.54-1.2-1.32-1.2h-1.25v2.4z"
-                  fill="#FC3F1D"
+                  d="M24.1 32.4h3.3V11.6h-4.8c-4.9 0-7.4 2.5-7.4 6.6 0 3.1 1.4 4.9 4.1 6.8l-4.6 7.4h3.8l5.1-8.1-1.8-1.2c-2.1-1.5-3.2-2.6-3.2-5 0-2.1 1.5-3.6 4.4-3.6h1.6v17.9h-.5z"
+                  fill="#FFFFFF"
                 />
               </svg>
               Яндекс
