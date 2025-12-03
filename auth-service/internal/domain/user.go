@@ -22,3 +22,14 @@ func (u *User) GetName() string {
 func (u *User) GetStatus() string {
 	return u.status
 }
+
+func NewUser(id int64, name, status string, lastLoginAt, createdAt, updatedAt time.Time) *User {
+	return &User{
+		id:          id,
+		name:        name,
+		status:      status,
+		lastLoginAt: lastLoginAt,
+		createdAt:   createdAt,
+		updatedAt:   updatedAt,
+	}
+}

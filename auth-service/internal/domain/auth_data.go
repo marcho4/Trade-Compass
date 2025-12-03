@@ -17,3 +17,11 @@ func (a *AuthData) GetUserID() int64 {
 func (a *AuthData) GetEmail() string {
 	return a.email
 }
+
+func NewAuthData(userID int64, email, passwordHash string) *AuthData {
+	return &AuthData{
+		userId:       userID,
+		email:        email,
+		passwordHash: passwordHash,
+	}
+}

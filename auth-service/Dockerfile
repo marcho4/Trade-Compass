@@ -8,13 +8,12 @@ RUN make build-prod
 
 # ==================== RUNTIME STAGE ====================
 FROM alpine:3.21
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata curl
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
-WORKDIR /ap
+WORKDIR /app
 COPY --from=builder /app/auth-service .
 COPY --from=builder /app/migrations ./migrations
 RUN chown -R appuser:appgroup /app
 USER appuser
 ENTRYPOINT ["/app/auth-service"]
-

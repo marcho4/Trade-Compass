@@ -1,9 +1,10 @@
-package migrations
+package infrastructure
 
 import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -89,4 +90,19 @@ func (m *Migrator) Close() error {
 		return fmt.Errorf("close database: %w", dbErr)
 	}
 	return nil
+}
+
+func RunMigrations(logger *slog.Logger) error {
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		return fmt.Errorf("DB_URL environment variable is required")
+	}
+
+	migrator, err := NewMigrator(dbURL, "file://migrations", logger)
+	if err != nil {
+		return err
+	}
+	defer migrator.Close()
+
+	return migrator.Up()
 }
