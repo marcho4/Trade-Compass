@@ -1,0 +1,33 @@
+# Скомпилированные бинарники
+auth-service
+*.exe
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Документация
+*.md
+README*
+LICENSE
+
+# Тесты (не нужны в production образе)
+*_test.go
+testdata/
+
+# Временные файлы
+tmp/
+*.log
+
+# Docker файлы (избегаем рекурсии)
+Dockerfile*
+docker-compose*.yml
+compose*.yaml
+.dockerignore
+
