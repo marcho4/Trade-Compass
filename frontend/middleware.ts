@@ -38,8 +38,9 @@ export function middleware(request: NextRequest) {
   }
 
   if (isAuthRoute(pathname) && hasToken) {
-    const redirectTo = request.nextUrl.searchParams.get("redirect");
-    const dashboardUrl = new URL(redirectTo || "/dashboard", request.url);
+    // const redirectTo = request.nextUrl.searchParams.get("redirect");
+    // const dashboardUrl = new URL(redirectTo || "/dashboard", request.url);
+    const dashboardUrl = new URL("/welcome", request.url);
     return NextResponse.redirect(dashboardUrl);
   }
 
