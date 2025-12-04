@@ -7,7 +7,7 @@ export const CTAButtons = () => {
         tabIndex={0}
         aria-label="Начать бесплатно"
       >
-        Начать бесплатно
+        Попробовать бесплатно
         <svg
           className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1"
           fill="none"
@@ -23,8 +23,8 @@ export const CTAButtons = () => {
           />
         </svg>
       </a>
-      <p className="text-sm text-muted-foreground">
-        Разберем твою первую акцию за 2 минуты • Без карты
+      <p className="text-sm text-foreground">
+        Без карты • Данные по всем компаниям Мосбиржи
       </p>
     </div>
   )
