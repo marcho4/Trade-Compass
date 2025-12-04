@@ -1,41 +1,24 @@
 import Link from "next/link";
 
-const navigationItems: ReadonlyArray<{ label: string; href: string }> = [
-  { label: "Скринер", href: "/screener" },
-  { label: "Портфель", href: "/portfolio" },
-];
-
 export const Header = () => {
   return (
-    <header className="sticky top-6 z-50 flex w-full justify-center px-4">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <nav
         aria-label="Главная навигация"
-        className="flex w-full max-w-6xl items-center justify-between rounded-3xl border border-border bg-card/80 px-6 py-4 shadow-lg backdrop-blur-2xl backdrop-saturate-150"
+        className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4"
       >
         <Link
           href="/"
-          className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="text-xl font-bold tracking-tight text-foreground transition-colors hover:text-primary"
         >
-          BullRun
+          TradeCompass
         </Link>
-
-        <div className="flex items-center gap-4">
-          {navigationItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
 
         <Link
           href="/auth"
-          className="rounded-full border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground shadow-sm transition-colors hover:bg-secondary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          Войти в аккаунт
+          className="text-lg font-bold tracking-tight text-gray-900 transition-all hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        > 
+          Войти
         </Link>
       </nav>
     </header>

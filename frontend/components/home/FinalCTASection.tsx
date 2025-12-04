@@ -1,24 +1,21 @@
 export const FinalCTASection = () => {
   return (
     <section className="my-20">
-      <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-12 text-center shadow-2xl md:p-16">
-        {/* Heading */}
+      <div className="overflow-hidden rounded-3xl border border-primary/20 from-primary/10 via-primary/5 to-background p-12 text-center shadow-2xl md:p-16">
         <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
-          Перестань гуглить метрики по 10 сайтам
+          Хватит читать отчёты на 200 страниц
         </h2>
 
-        {/* Description */}
         <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground md:text-xl">
-          Bull Run собирает данные, AI объясняет их смысл, ты принимаешь
+          Trade Compass собирает данные, AI объясняет их смысл, ты принимаешь
           решения. Как должно быть.
         </p>
 
-        {/* CTA Button */}
         <a
           href="/auth/register"
           className="group inline-flex items-center justify-center rounded-full bg-primary px-10 py-5 text-lg font-bold text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           tabIndex={0}
-          aria-label="Проанализировать первую акцию бесплатно"
+          aria-label="Попробовать бесплатно"
         >
           Проанализировать первую акцию бесплатно
           <svg
@@ -37,9 +34,8 @@ export const FinalCTASection = () => {
           </svg>
         </a>
 
-        {/* Subtext */}
-        <p className="mt-6 text-sm text-muted-foreground">
-          2 минуты на анализ • Без карты • Отмена в 1 клик
+        <p className="mt-6 text-sm text-foreground">
+          2 минуты на анализ • Без карты
         </p>
       </div>
     </section>
