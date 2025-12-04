@@ -1,3 +1,4 @@
+import { Header } from "@/components/layout/Header"
 import { HeroSection } from "@/components/home/HeroSection"
 import { DetailedFeatures } from "@/components/home/DetailedFeatures"
 import { ObjectionsSection } from "@/components/home/ObjectionsSection"
@@ -9,29 +10,17 @@ import { FinalCTASection } from "@/components/home/FinalCTASection"
 const Home = () => {
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
+      <Header />
       <div className="my-2 mx-1">
         <HeroSection />
       </div>
 
-      {/* Main Content */}
       <div className="container mx-auto px-4 md:px-6">
-        {/* Features */}
         <DetailedFeatures />
-
-        {/* Objections */}
         <ObjectionsSection />
-
-        {/* Social Proof */}
         <SocialProofSection />
-
-        {/* FAQ */}
         <FAQSection />
-
-        {/* Pricing */}
         <PricingSection />
-
-        {/* Final CTA */}
         <FinalCTASection />
       </div>
     </div>

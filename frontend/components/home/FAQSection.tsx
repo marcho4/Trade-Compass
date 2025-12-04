@@ -2,7 +2,7 @@ export const FAQSection = () => {
   const faqs = [
     {
       question: "Какие компании покрыты?",
-      answer: "Все компании MOEX с публичной отчетностью. ~250 акций.",
+      answer: "Пока 10 самых крупных компаний на MOEX",
     },
     {
       question: "Как часто обновляются данные?",
@@ -17,20 +17,18 @@ export const FAQSection = () => {
     {
       question: "AI может ошибаться?",
       answer:
-        "Claude дает источники для каждого утверждения. Проверяй критичные решения.",
+        "Ассистент не дает инвестиционных рекомендаций. Критичные решения стоит проверять.",
     },
   ]
 
   return (
     <section className="my-20">
-      {/* Section Header */}
       <div className="mb-12 text-center">
         <h2 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
           Часто задаваемые вопросы
         </h2>
       </div>
 
-      {/* FAQ Grid */}
       <div className="grid gap-6 md:grid-cols-2">
         {faqs.map((faq, index) => (
           <div

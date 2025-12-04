@@ -2,27 +2,22 @@ export const ObjectionsSection = () => {
   const objections = [
     {
       question: "А почему не Finam/Smart-Lab бесплатно?",
-      answer: "Finam показывает цифры. Мы показываем, что они значат.",
-      details: [
-        {
-          source: "Finam",
-          text: "P/E = 5.2",
-        },
-        {
-          source: "Bull Run",
-          text: "P/E = 5.2 — в 2 раза ниже среднего по энергетике. Либо рынок недооценивает (аргументы), либо есть скрытые риски (аргументы). Аналоги в секторе: ...",
-        },
+      answer: "За экономию времени. AI прочитает отчет на 200 страниц за вас.",
+      benefits: [
+        "AI-саммари отчета на 200 страниц за 30 секунд",
+        "Не нужно переключаться между сайтами — всё в одном месте",
+        "Удобный интерфейс вместо таблиц из 90-х",
       ],
-      additional: "У нас AI-анализ документов, которого нет ни у кого в России.",
     },
     {
       question: "Зачем платить, если есть ChatGPT?",
       answer:
-        "ChatGPT не знает, где искать отчетность MOEX, и выдает устаревшие данные.",
+        "ChatGPT не знает, где искать отчетность MOEX, и может ошибаться из-за отстутствия нужного контекста",
       benefits: [
         "Прямой доступ к актуальным отчетам",
         "Метрики уже рассчитаны и обновляются автоматически",
         "Сравнение с индустрией из нашей базы",
+        "AI ассистентом с полным пониманием компании"
       ],
     },
   ]
@@ -35,37 +30,14 @@ export const ObjectionsSection = () => {
             key={index}
             className="rounded-2xl border border-border bg-card p-8"
           >
-            {/* Question */}
             <h3 className="mb-4 text-2xl font-bold">{objection.question}</h3>
 
-            {/* Answer */}
             <p className="mb-6 text-lg font-semibold text-primary">
               {objection.answer}
             </p>
 
-            {/* Details (for Finam comparison) */}
-            {objection.details && (
-              <div className="mb-6 space-y-4">
-                {objection.details.map((detail, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-lg border border-border bg-background/50 p-4"
-                  >
-                    <p className="mb-2 text-sm font-semibold text-muted-foreground">
-                      {detail.source}:
-                    </p>
-                    <p className="text-sm leading-relaxed">{detail.text}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Benefits (for ChatGPT comparison) */}
             {objection.benefits && (
-              <div className="mb-6 space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground">
-                  Bull Run:
-                </p>
+              <div className="space-y-3">
                 {objection.benefits.map((benefit, idx) => (
                   <div key={idx} className="flex items-start gap-2">
                     <svg
@@ -86,13 +58,6 @@ export const ObjectionsSection = () => {
                   </div>
                 ))}
               </div>
-            )}
-
-            {/* Additional info */}
-            {objection.additional && (
-              <p className="text-sm font-medium text-primary">
-                + {objection.additional}
-              </p>
             )}
           </div>
         ))}
