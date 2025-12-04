@@ -15,8 +15,8 @@ export const PricingSection = () => {
     },
     {
       name: "ESSENTIAL",
-      price: "1990₽/мес",
-      originalPrice: "2990₽",
+      price: "490₽/мес",
+      originalPrice: "990₽",
       description: "Для активных инвесторов",
       features: [
         "15 полных анализов",
@@ -30,13 +30,14 @@ export const PricingSection = () => {
     },
     {
       name: "РАЗОВЫЙ АНАЛИЗ",
-      price: "299₽",
+      price: "Бесплатно",
+      originalPrice: "299₽",
       description: "Для тех, кто анализирует редко",
       features: [
         "1 полный анализ компании",
         "Без подписки",
       ],
-      cta: "Купить анализ",
+      cta: "Получить анализ",
       ctaLink: "/auth/register",
       popular: false,
     },
