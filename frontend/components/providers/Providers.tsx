@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CookieBanner } from "@/components/CookieBanner";
 import { type ReactNode } from "react";
 
 interface ProvidersProps {
@@ -8,6 +9,11 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <AuthProvider>
+      {children}
+      <CookieBanner />
+    </AuthProvider>
+  );
 }
 

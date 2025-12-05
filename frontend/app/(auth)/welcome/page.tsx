@@ -149,15 +149,6 @@ export default function WelcomePage() {
               </li>
             </ul>
           </div>
-
-          <div className="flex flex-col gap-3 pt-4">
-            <Button asChild size="lg" className="w-full">
-              <Link href="/">Вернуться на главную</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="w-full">
-              <Link href="/auth">Войти в аккаунт</Link>
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>

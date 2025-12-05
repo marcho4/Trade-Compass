@@ -1,4 +1,5 @@
 import { Header } from "@/components/layout/Header"
+import { Footer } from "@/components/layout/Footer"
 import { HeroSection } from "@/components/home/HeroSection"
 import { DetailedFeatures } from "@/components/home/DetailedFeatures"
 import { ObjectionsSection } from "@/components/home/ObjectionsSection"
@@ -23,6 +24,7 @@ const Home = () => {
         <PricingSection />
         <FinalCTASection />
       </div>
+      <Footer />
     </div>
   )
 }
