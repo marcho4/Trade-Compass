@@ -1,0 +1,29 @@
+name: Build services
+on:
+  pull_request:
+  push:
+permissions:
+  contents: read
+concurrency:
+  group: ci-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install npm dependencies
+        run: cd frontend && npm install && npm run build
+
+      - name: Build auth service
+        run: cd auth-service && make build-prod

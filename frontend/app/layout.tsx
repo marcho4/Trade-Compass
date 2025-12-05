@@ -17,6 +17,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Trade Compass - Платформа для анализа российских акций",
   description: "Собирайте данные с MOEX, анализируйте финансовые отчеты, формируйте анализ на базе AI и держите портфель в балансе.",
+  applicationName: "Trade Compass",
+  openGraph: {
+    title: "Trade Compass - Платформа для анализа российских акций",
+    description: "AI помощник разберет отчетность за 2 минуты и покажет, что видят институционалы. Без финансового образования.",
+    siteName: "Trade Compass",
+    locale: "ru_RU",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Trade Compass - Платформа для анализа российских акций",
+    description: "AI помощник разберет отчетность за 2 минуты и покажет, что видят институционалы.",
+  },
 };
 
 export default function RootLayout({

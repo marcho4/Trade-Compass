@@ -308,6 +308,16 @@ export default function RegisterPage() {
           <div className="grid grid-cols-1 gap-4">
             <YandexAuthButton text="Зарегистрироваться через Яндекс" />
           </div>
+          <p className="text-xs text-muted-foreground text-center">
+              Нажимая «Зарегистрироваться», вы соглашаетесь с{" "}
+              <Link href="/terms" className="text-primary hover:underline">
+                Пользовательским соглашением
+              </Link>{" "}
+              и{" "}
+              <Link href="/privacy" className="text-primary hover:underline">
+                Политикой конфиденциальности
+              </Link>
+            </p>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm text-muted-foreground">
