@@ -1,8 +1,12 @@
+import logging
 import os
 import re
 import boto3
 from typing import Optional
 from botocore.exceptions import ClientError
+from application.exceptions import ConfigurationError
+
+logger = logging.getLogger(__name__)
 
 
 class S3ReportsStorage:
@@ -45,10 +49,10 @@ class S3ReportsStorage:
             return url
 
         except FileNotFoundError:
-            print(f"✗ Ошибка: файл не найден - {file_path}")
+            logger.error(f"Файл не найден: {file_path}")
             return None
         except Exception as e:
-            print(f"✗ Ошибка при загрузке файла: {e}")
+            logger.error(f"Ошибка при загрузке файла: {e}")
             return None
 
     def get_s3_report_link(self, ticker: str, year: int, period: str, extension: str = ".zip") -> Optional[str]:
@@ -64,12 +68,12 @@ class S3ReportsStorage:
                 return url
             except ClientError as e:
                 if e.response['Error']['Code'] == '404':
-                    print(f"✗ Файл не найден в S3: {object_key}")
+                    logger.warning(f"Файл не найден в S3: {object_key}")
                     return None
                 raise
 
         except Exception as e:
-            print(f"✗ Ошибка при получении ссылки: {e}")
+            logger.error(f"Ошибка при получении ссылки: {e}")
             return None
 
     def generate_presigned_url(self, ticker: str, year: int, period: str,
@@ -87,7 +91,7 @@ class S3ReportsStorage:
             return url
 
         except Exception as e:
-            print(f"✗ Ошибка при генерации подписанной ссылки: {e}")
+            logger.error(f"Ошибка при генерации подписанной ссылки: {e}")
             return None
 
     def __upload_file(self, bucket_name: str, object_key: str, file: bytes) -> dict:
@@ -107,5 +111,4 @@ class S3ReportsStorage:
     @staticmethod
     def validate_env(variable, name: str):
         if not variable:
-            print(f"Missing ENV variable: {name}")
-            exit(1)
+            raise ConfigurationError(f"Missing ENV variable: {name}")

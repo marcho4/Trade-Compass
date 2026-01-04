@@ -20,7 +20,11 @@ engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+
 def init_db():
+    from infra.models import ReportORM
+
     Base.metadata.create_all(bind=engine)
 
 @contextmanager

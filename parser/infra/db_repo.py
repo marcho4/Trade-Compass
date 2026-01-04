@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from domain.report import Report
+from infra.models import ReportORM
 
 logger = logging.getLogger(__name__)
 
@@ -11,8 +11,8 @@ class ReportsRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def create_report(self, ticker: str, year: int, period: str, s3_path: str) -> Optional[Report]:
-        report = Report(
+    def create_report(self, ticker: str, year: int, period: str, s3_path: str) -> Optional[ReportORM]:
+        report = ReportORM(
             ticker=ticker,
             year=year,
             period=period,
@@ -28,26 +28,26 @@ class ReportsRepository:
             logger.warning(f"Отчёт уже существует: {ticker} {year} {period}")
             return None
 
-    def get_report_by_id(self, report_id: int) -> Optional[Report]:
-        return self.session.query(Report).filter(Report.id == report_id).first()
+    def get_report_by_id(self, report_id: int) -> Optional[ReportORM]:
+        return self.session.query(ReportORM).filter(ReportORM.id == report_id).first()
 
-    def get_reports_by_ticker(self, ticker: str) -> List[Report]:
-        return self.session.query(Report).filter(Report.ticker == ticker).all()
+    def get_reports_by_ticker(self, ticker: str) -> List[ReportORM]:
+        return self.session.query(ReportORM).filter(ReportORM.ticker == ticker).all()
 
-    def get_reports_by_year(self, year: int) -> List[Report]:
-        return self.session.query(Report).filter(Report.year == year).all()
+    def get_reports_by_year(self, year: int) -> List[ReportORM]:
+        return self.session.query(ReportORM).filter(ReportORM.year == year).all()
 
-    def get_report_by_params(self, ticker: str, year: int, period: str) -> Optional[Report]:
-        return self.session.query(Report).filter(
-            Report.ticker == ticker,
-            Report.year == year,
-            Report.period == period
+    def get_report_by_params(self, ticker: str, year: int, period: str) -> Optional[ReportORM]:
+        return self.session.query(ReportORM).filter(
+            ReportORM.ticker == ticker,
+            ReportORM.year == year,
+            ReportORM.period == period
         ).first()
 
-    def get_all_reports(self, skip: int = 0, limit: int = 100) -> List[Report]:
-        return self.session.query(Report).offset(skip).limit(limit).all()
+    def get_all_reports(self, skip: int = 0, limit: int = 100) -> List[ReportORM]:
+        return self.session.query(ReportORM).offset(skip).limit(limit).all()
 
-    def update_report_s3_path(self, report_id: int, new_s3_path: str) -> Optional[Report]:
+    def update_report_s3_path(self, report_id: int, new_s3_path: str) -> Optional[ReportORM]:
         report = self.get_report_by_id(report_id)
         if report:
             report.s3_path = new_s3_path

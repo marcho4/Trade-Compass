@@ -1,43 +1,104 @@
 import logging
-import re
-from typing import Optional
+from infra.e_disclosure import EDisclosureClient
 from infra.s3_storage import S3ReportsStorage
-from infra.selenium_client import EDisclosureParser
 from infra.db_repo import ReportsRepository
+from application.utils import extract_year_from_period
 
 logger = logging.getLogger(__name__)
 
 
-class Parser:
-    def __init__(self, repo: ReportsRepository) -> None:
-        self.s3_client = S3ReportsStorage()
-        self.parser = EDisclosureParser()
+class ReportProcessor:
+    """Процессор для обработки отчетов компаний."""
+
+    def __init__(self, 
+                 s3_client: S3ReportsStorage, 
+                 repo: ReportsRepository
+                 ):
+        self.s3_client = s3_client
         self.repo = repo
 
-    def _extract_year_from_period(self, period: str) -> Optional[int]:
-        """
-        Извлечь год из строки периода.
-        
-        Примеры входных данных:
-        - "3 квартал 2024 года" → 2024
-        - "2024 год" → 2024
-        - "1 полугодие 2023" → 2023
-        - "2023" → 2023
-        """
-        # Ищем 4-значное число, начинающееся с 20 (2000-2099)
-        match = re.search(r'20\d{2}', period)
-        if match:
-            return int(match.group())
-        
-        logger.warning(f"Не удалось извлечь год из периода: {period}")
-        return None
+    def process_companies(self, companies_inn: list[str]) -> dict:
+        """Обработать список компаний по ИНН."""
+        results = {"processed": 0, "saved": 0, "errors": []}
 
-    def _save_report_to_db_with_year(self, ticker: str, year: int, period: str, s3_path: str) -> bool:
-        """Сохранить отчёт в базу данных"""
+        with EDisclosureClient() as client:
+            for inn in companies_inn:
+                try:
+                    result = self._process_company(client, inn)
+                    results["processed"] += 1
+                    results["saved"] += result["saved"]
+                except Exception as e:
+                    logger.error(f"Ошибка обработки {inn}: {e}")
+                    results["errors"].append({"inn": inn, "error": str(e)})
+
+            client.unzip_files()
+
+        return results
+
+    def _process_company(self, client: EDisclosureClient, inn: str) -> dict:
+        """Обработать одну компанию."""
+        logger.info(f"Поиск компании... {inn}")
+        companies = client.search_company(inn)
+
+        if not companies:
+            logger.warning(f"Компания не найдена: {inn}")
+            raise ValueError(f"Компания не найдена: {inn}")
+
+        logger.info(f"Найдено компаний: {len(companies)}")
+        for i, company in enumerate(companies[:5], 1):
+            logger.info(f"{i}. {company['name']} (ID: {company['id']})")
+
+        first_company = companies[0]
+        ticker = first_company.get("ticker", inn)
+        logger.info(f"Выбрана компания: {first_company['name']} (ID: {first_company['id']})")
+
+        logger.info("Получение отчетности эмитента...")
+        reports = client.get_reports(first_company)
+
+        saved = self._upload_and_save_reports(reports, ticker)
+
+        self._log_results(reports, saved)
+
+        return {"company": first_company["name"], "saved": None}
+
+    def _upload_and_save_reports(self, reports: list[dict], ticker: str) -> int:
+        """Загрузить в S3 и сохранить в БД."""
+        saved = 0
+        downloaded = [r for r in reports if r["status"] == "downloaded"]
+
+        logger.info("ОБРАБОТКА СКАЧАННЫХ ФАЙЛОВ:")
+        for report in downloaded:
+            size_mb = report.get("size", 0) / 1024 / 1024
+            local_path = report["path"]
+            period = report["period"]
+
+            logger.info(f"{period} - {size_mb:.2f} MB")
+            logger.info(f"  Локальный путь: {local_path}")
+
+            year = extract_year_from_period(period)
+            if year is None:
+                logger.warning(f"  Пропуск: не удалось определить год для {period}")
+                continue
+
+            try:
+                s3_path = self.s3_client.upload_report(ticker, year, period, local_path)
+                if s3_path is None:
+                    logger.error(f"  Ошибка загрузки в S3")
+                    continue
+                logger.info(f"  Загружено в S3: {s3_path}")
+
+                if self._save_report_to_db(ticker, year, period, s3_path):
+                    saved += 1
+            except Exception as e:
+                logger.error(f"  Ошибка загрузки в S3: {e}")
+
+        return saved
+
+    def _save_report_to_db(self, ticker: str, year: int, period: str, s3_path: str) -> bool:
+        """Сохранить отчёт в базу данных."""
         try:
             report = self.repo.create_report(ticker, year, period, s3_path)
             if report is None:
-                # Отчёт уже существует (IntegrityError был обработан в репозитории)
                 logger.info(f"Отчёт уже существует в БД: {ticker} {year} {period}")
                 return False
             logger.info(f"Отчёт сохранён в БД: {ticker} {year} {period}")
@@ -46,81 +107,20 @@ class Parser:
             logger.error(f"Ошибка сохранения отчёта в БД: {e}")
             return False
 
-    def run(self, companies_inn: list[str]):
-        for company_inn in companies_inn:
-            logger.info(f"Поиск компании... {company_inn}")
-            companies = self.parser.search_company(company_inn)
+    def _log_results(self, reports: list[dict], saved: int):
+        """Логирование результатов обработки."""
+        downloaded = [r for r in reports if r["status"] == "downloaded"]
+        errors = [r for r in reports if r["status"] == "error"]
 
-            if not companies:
-                logger.warning("Компания не найдена")
-                continue
+        logger.info(f"Всего файлов обработано: {len(reports)}")
+        logger.info(f"Успешно скачано: {len(downloaded)}")
+        logger.info(f"Ошибок: {len(errors)}")
 
-            logger.info("=" * 60)
-            logger.info(f"Найдено компаний: {len(companies)}")
-            for i, company in enumerate(companies[:5], 1):
-                logger.info(f"{i}. {company['name']} (ID: {company['id']})")
-            logger.info("=" * 60)
+        if errors:
+            logger.warning("ОШИБКИ:")
+            for report in errors:
+                logger.warning(f"  {report.get('name', 'Unknown')}")
 
-            first_company = companies[0]
-            ticker = first_company.get('ticker', company_inn)  # Используем ИНН как fallback
-            logger.info(f"Выбрана компания: {first_company['name']} (ID: {first_company['id']})")
-
-            logger.info("=" * 60)
-            logger.info("Получение отчетности эмитента...")
-            logger.info("=" * 60)
-
-            reports = self.parser.get_issuer_reports_by_click(first_company, download_dir='./downloads')
-
-            downloaded = [r for r in reports if r['status'] == 'downloaded']
-            errors = [r for r in reports if r['status'] == 'error']
-
-            logger.info("=" * 60)
-            logger.info("ИТОГОВАЯ СТАТИСТИКА")
-            logger.info("=" * 60)
-            logger.info(f"Всего файлов обработано: {len(reports)}")
-            logger.info(f"Успешно скачано: {len(downloaded)}")
-            logger.info(f"Ошибок: {len(errors)}")
-            logger.info("=" * 60)
-
-            # Загружаем скачанные файлы в S3 и сохраняем в БД
-            saved_count = 0
-            if downloaded:
-                logger.info("ОБРАБОТКА СКАЧАННЫХ ФАЙЛОВ:")
-                for report in downloaded:
-                    size_mb = report.get('size', 0) / 1024 / 1024
-                    local_path = report['path']
-                    period = report['period']
-
-                    logger.info(f"{period} - {size_mb:.2f} MB")
-                    logger.info(f"  Локальный путь: {local_path}")
-
-                    # Загружаем в S3
-                    try:
-                        year = self._extract_year_from_period(period)
-                        if year is None:
-                            logger.warning(f"  Пропуск: не удалось определить год для {period}")
-                            continue
-                        s3_path = self.s3_client.upload_report(ticker, year, period, local_path)
-                        if s3_path is None:
-                            logger.error(f"  Ошибка загрузки в S3")
-                            continue
-                        logger.info(f"  Загружено в S3: {s3_path}")
-
-                        # Сохраняем в БД
-                        if self._save_report_to_db_with_year(ticker, year, period, s3_path):
-                            saved_count += 1
-                    except Exception as e:
-                        logger.error(f"  Ошибка загрузки в S3: {e}")
-
-            if errors:
-                logger.warning("ОШИБКИ:")
-                for report in errors:
-                    logger.warning(f"  {report.get('name', 'Unknown')}")
-
-            logger.info("=" * 60)
-            logger.info(f"Сохранено в БД: {saved_count} отчётов")
-            logger.info("=" * 60)
-
-            self.parser.unzip_downloaded_files()
-
-    
+        logger.info("=" * 60)
+        logger.info(f"Сохранено в БД: {saved} отчётов")
+        logger.info("=" * 60)
