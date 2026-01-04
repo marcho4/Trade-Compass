@@ -16,3 +16,8 @@ class S3UploadError(ParserError):
 
 class ConfigurationError(ParserError):
     pass
+
+
+class PeriodParseError(ParserError):
+    """Ошибка парсинга периода отчета."""
+    pass

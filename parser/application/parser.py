@@ -2,7 +2,9 @@ import logging
 from infra.e_disclosure import EDisclosureClient
 from infra.s3_storage import S3ReportsStorage
 from infra.db_repo import ReportsRepository
-from application.utils import extract_year_from_period
+from application.utils import extract_year_and_period
+from application.exceptions import PeriodParseError
+from companies import get_ticker_by_inn
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +51,8 @@ class ReportProcessor:
             logger.info(f"{i}. {company['name']} (ID: {company['id']})")
 
         first_company = companies[0]
-        ticker = first_company.get("ticker", inn)
-        logger.info(f"Выбрана компания: {first_company['name']} (ID: {first_company['id']})")
+        ticker = get_ticker_by_inn(inn)
+        logger.info(f"Выбрана компания: {first_company['name']} (ID: {first_company['id']}, тикер: {ticker})")
 
         logger.info("Получение отчетности эмитента...")
         reports = client.get_reports(first_company)
@@ -70,14 +72,22 @@ class ReportProcessor:
         for report in downloaded:
             size_mb = report.get("size", 0) / 1024 / 1024
             local_path = report["path"]
-            period = report["period"]
+            period_raw = report["period"]
 
-            logger.info(f"{period} - {size_mb:.2f} MB")
+            logger.info(f"{period_raw} - {size_mb:.2f} MB")
             logger.info(f"  Локальный путь: {local_path}")
 
-            year = extract_year_from_period(period)
-            if year is None:
-                logger.warning(f"  Пропуск: не удалось определить год для {period}")
+            try:
+                year, period_months = extract_year_and_period(period_raw)
+            except PeriodParseError as e:
+                logger.warning(f"  Пропуск: {e}")
+                continue
+
+            period = str(period_months)
+
+            existing_s3_path = self.s3_client.get_s3_report_link(ticker, year, period)
+            if existing_s3_path:
+                logger.info(f"  Пропуск: файл уже существует в S3: {existing_s3_path}")
                 continue
 
             try:

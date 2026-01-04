@@ -14,10 +14,18 @@ logger = logging.getLogger(__name__)
 class ReportDownloader:
     """Загрузчик отчетов с e-disclosure.ru."""
 
+    ALLOWED_DOCUMENT_TYPES = ["эмитент", "квартальн"]
+
     def __init__(self, driver, metadata_parser: ReportMetadataParser = None):
         self.driver = driver
         self.base_url = config.base_url
         self.metadata_parser = metadata_parser or ReportMetadataParser()
+
+    def _is_allowed_document_type(self, document_type: str) -> bool:
+        if not document_type:
+            return False
+        doc_type_lower = document_type.lower()
+        return any(allowed in doc_type_lower for allowed in self.ALLOWED_DOCUMENT_TYPES)
 
     def download_reports(
         self, company: dict, download_dir: str = None
@@ -51,14 +59,20 @@ class ReportDownloader:
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
             metadata_list = self.metadata_parser.parse_table(soup)
 
+            filtered_metadata = [
+                m for m in metadata_list
+                if self._is_allowed_document_type(m.get("document_type", ""))
+            ]
+            logger.info(f"Найдено отчетов: {len(metadata_list)}, подходящих: {len(filtered_metadata)}")
+
             reports = []
-            for i, metadata in enumerate(metadata_list[:config.max_reports_per_company], 1):
+            for i, metadata in enumerate(filtered_metadata[:config.max_reports_per_company], 1):
                 report = self._download_single_report(
                     metadata, company_name, download_dir, i
                 )
                 reports.append(report)
 
-                if i < len(metadata_list):
+                if i < len(filtered_metadata[:config.max_reports_per_company]):
                     time.sleep(config.timeout_between_files)
 
             self._log_downloaded_files(download_dir)
