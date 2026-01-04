@@ -4,7 +4,7 @@ import tempfile
 from fastapi import APIRouter, Depends, BackgroundTasks, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 
-from application.parser import ReportProcessor
+from parser.application.reports_processor import ReportProcessor
 from companies import COMPANIES
 from infra.database import get_db, get_db_session
 from infra.db_repo import ReportsRepository

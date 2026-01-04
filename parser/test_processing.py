@@ -2,7 +2,7 @@ import logging
 from infra.database import get_db_session, init_db
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
-from application.parser import ReportProcessor
+from parser.application.reports_processor import ReportProcessor
 
 logging.basicConfig(
     level=logging.INFO,
