@@ -21,6 +21,29 @@ services:
       retries: 3
       start_period: 10s
 
+  parser:
+    build:
+      context: parser
+      dockerfile: Dockerfile
+    container_name: parser
+    ports:
+      - "8081:8081"
+    env_file:
+      - ./parser/.env
+    networks:
+      - main
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+
   postgres:
     image: postgres:17
     container_name: postgres

@@ -1,10 +1,8 @@
-"""Тестовый скрипт для проверки работоспособности парсера."""
 import logging
 from infra.database import get_db_session, init_db
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
 from application.parser import ReportProcessor
-from application.utils import parse_year_and_period
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +17,6 @@ def main():
     logger.info("Инициализация БД...")
     init_db()
 
-    
     with get_db_session() as db:
         repo = ReportsRepository(db)
         s3_client = S3ReportsStorage()
@@ -36,7 +33,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print(parse_year_and_period("2024, 12 месяцев"))
-    print(parse_year_and_period("2025, 6 месяцев"))
-    print(parse_year_and_period("2021, 2 квартал"))
 
