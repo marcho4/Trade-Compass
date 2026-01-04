@@ -25,8 +25,11 @@ class ParserConfig:
     max_reports_per_company: int = 10
 
     # Пути
-    download_dir: str = "./parser/downloads"
-    unzip_dir: str = "./parser/downloads/unzipped"
+    download_dir: str = "./downloads"
+    unzip_dir: str = "./downloads/unzipped"
+
+    # Безопасность
+    admin_api_key: str = ""
 
     @classmethod
     def from_env(cls) -> "ParserConfig":
@@ -37,6 +40,7 @@ class ParserConfig:
             ),
             download_dir=os.getenv("DOWNLOADS_DIR", cls.download_dir),
             unzip_dir=os.getenv("UNZIP_DIR", cls.unzip_dir),
+            admin_api_key=os.getenv("ADMIN_API_KEY", ""),
         )
 
 

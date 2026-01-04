@@ -1,7 +1,7 @@
 import logging
 import os
 import tempfile
-from fastapi import APIRouter, Depends, BackgroundTasks, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, BackgroundTasks, UploadFile, File, Form, HTTPException, Header
 from sqlalchemy.orm import Session
 
 from parser.application.reports_processor import ReportProcessor
@@ -9,6 +9,7 @@ from companies import COMPANIES
 from infra.database import get_db, get_db_session
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
+from infra.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +20,30 @@ def get_reports_repo(db: Session = Depends(get_db)) -> ReportsRepository:
     return ReportsRepository(db)
 
 
+def verify_admin_key(x_api_key: str = Header(..., alias="X-API-Key")):
+    if not config.admin_api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Admin API key not configured"
+        )
+    if x_api_key != config.admin_api_key:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid API key"
+        )
+    return True
+
+
 @router.get("/health")
 def health():
     return {"status": "ok"}
 
 
 @router.post("/start_parsing")
-def start_parsing(background_tasks: BackgroundTasks):
+def start_parsing(
+    background_tasks: BackgroundTasks,
+    _: bool = Depends(verify_admin_key)
+):
     background_tasks.add_task(run_parsing)
     return {"message": "Parsing started in background"}
 
