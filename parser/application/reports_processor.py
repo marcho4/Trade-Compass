@@ -27,12 +27,9 @@ class ReportProcessor:
                     logger.error(f"Ошибка обработки {inn}: {e}")
                     results["errors"].append({"inn": inn, "error": str(e)})
 
-            client.unzip_files()
-
         return results
 
     def _process_company(self, client: EDisclosureClient, inn: str) -> dict:
-        logger.info(f"Поиск компании... {inn}")
         companies = client.search_company(inn)
 
         if not companies:

@@ -31,7 +31,6 @@ def start_parsing(background_tasks: BackgroundTasks):
 
 
 def run_parsing():
-    """Фоновая задача парсинга."""
     with get_db_session() as db:
         repo = ReportsRepository(db)
         s3_client = S3ReportsStorage()

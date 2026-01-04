@@ -1,12 +1,19 @@
 import logging
 import os
-import re
 import time
 import requests
-from urllib.parse import urljoin
+
+from application.utils import extract_year_and_period, normalize_filename
+
 from bs4 import BeautifulSoup
+
+from domain.report_metadata import ReportMetadata
+
 from infra.config import config
 from infra.e_disclosure.metadata_parser import ReportMetadataParser
+from infra.e_disclosure.unzipper import FileUnzipper
+
+from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +54,12 @@ class ReportDownloader:
             time.sleep(config.timeout_page_load)
 
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
-            metadata_list = self.metadata_parser.parse_table(soup)
-
-            filtered_metadata = [
-                m for m in metadata_list
-                if self._is_allowed_document_type(m.get("document_type", ""))
-            ]
+            filtered_metadata: list[ReportMetadata] = list(
+                filter(
+                    lambda x: self._is_allowed_document_type(x.document_type), 
+                    self.metadata_parser.parse_table(soup),
+                )
+            )
 
             reports = []
             for i, metadata in enumerate(filtered_metadata[:config.max_reports_per_company], 1):
@@ -83,18 +90,17 @@ class ReportDownloader:
         time.sleep(config.timeout_page_load)
 
     def _download_single_report(
-        self, metadata: dict, company_name: str, download_dir: str, index: int
+        self, metadata: ReportMetadata, company_name: str, download_dir: str
     ) -> dict:
-        file_url = metadata["file_url"]
+        file_url = metadata.file_url
         if not file_url.startswith("http"):
             file_url = urljoin(self.base_url, file_url)
 
-        period = metadata.get("reporting_period", "unknown")
-        document_type = metadata.get("document_type", "")
-        file_id = metadata.get("file_id", "")
-        file_info = metadata.get("file_info", "")
+        document_type = metadata.document_type
+        file_id = metadata.file_id
+        year, period_months = extract_year_and_period(metadata.reporting_period)
 
-        file_name = self._generate_filename(company_name, period, file_id)
+        file_name = self._generate_filename(company_name, year, period_months, file_id)
 
         try:
             file_path = os.path.join(download_dir, file_name)
@@ -107,17 +113,30 @@ class ReportDownloader:
             with open(file_path, "wb") as f:
                 f.write(response.content)
 
+            unzipped_path = FileUnzipper.unzip_and_rename(file_path)
+            if not unzipped_path:
+                return {
+                    "name": file_name,
+                    "year": year,
+                    "period_months": period_months,
+                    "document_type": document_type,
+                    "url": file_url,
+                    "status": "error",
+                    "metadata": metadata,
+                }
+
             file_size = len(response.content)
 
             return {
                 "name": file_name,
-                "period": period,
+                "year": year,
+                "period_months": period_months,
                 "document_type": document_type,
-                "publication_date": metadata.get("publication_date", ""),
-                "base_date": metadata.get("base_date", ""),
+                "publication_date": metadata.publication_date,
+                "base_date": metadata.base_date,
                 "url": file_url,
                 "status": "downloaded",
-                "path": file_path,
+                "path": unzipped_path,
                 "size": file_size,
                 "metadata": metadata,
             }
@@ -125,14 +144,14 @@ class ReportDownloader:
         except Exception as e:
             return {
                 "name": file_name,
-                "period": period,
+                "year": year,
+                "period_months": period_months,
                 "document_type": document_type,
                 "url": file_url,
                 "status": "error",
                 "metadata": metadata,
             }
 
-    def _generate_filename(self, company_name: str, period: str, file_id: str) -> str:
-        file_name = f"{company_name}_{period}_{file_id}.zip"
-        file_name = re.sub(r"[^\w\s.-]", "_", file_name)
-        return re.sub(r"_+", "_", file_name)
+    def _generate_filename(self, company_name: str, year: int, period_months: int, file_id: str) -> str:
+        file_name = f"{company_name}_{year}_{period_months}M_{file_id}.zip"
+        return normalize_filename(file_name)
