@@ -12,10 +12,7 @@ logger = logging.getLogger(__name__)
 class ReportProcessor:
     """Процессор для обработки отчетов компаний."""
 
-    def __init__(self, 
-                 s3_client: S3ReportsStorage, 
-                 repo: ReportsRepository
-                 ):
+    def __init__(self, s3_client: S3ReportsStorage, repo: ReportsRepository):
         self.s3_client = s3_client
         self.repo = repo
 
