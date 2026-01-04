@@ -9,8 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 class SeleniumDriver:
-    """Менеджер Selenium WebDriver с поддержкой context manager."""
-
     def __init__(self):
         self.driver = None
 
@@ -26,7 +24,6 @@ class SeleniumDriver:
 
         service = Service(ChromeDriverManager().install())
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
-        logger.info("Selenium WebDriver инициализирован")
 
     def __enter__(self):
         self._setup_driver()
@@ -35,4 +32,3 @@ class SeleniumDriver:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.driver:
             self.driver.quit()
-            logger.info("Selenium WebDriver закрыт")

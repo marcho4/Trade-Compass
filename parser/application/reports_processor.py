@@ -10,14 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class ReportProcessor:
-    """Процессор для обработки отчетов компаний."""
-
     def __init__(self, s3_client: S3ReportsStorage, repo: ReportsRepository):
         self.s3_client = s3_client
         self.repo = repo
 
     def process_companies(self, companies_inn: list[str]) -> dict:
-        """Обработать список компаний по ИНН."""
         results = {"processed": 0, "saved": 0, "errors": []}
 
         with EDisclosureClient() as client:
@@ -35,7 +32,6 @@ class ReportProcessor:
         return results
 
     def _process_company(self, client: EDisclosureClient, inn: str) -> dict:
-        """Обработать одну компанию."""
         logger.info(f"Поиск компании... {inn}")
         companies = client.search_company(inn)
 
@@ -61,7 +57,6 @@ class ReportProcessor:
         return {"company": first_company["name"], "saved": None}
 
     def _upload_and_save_reports(self, reports: list[dict], ticker: str) -> int:
-        """Загрузить в S3 и сохранить в БД."""
         saved = 0
         downloaded = [r for r in reports if r["status"] == "downloaded"]
 

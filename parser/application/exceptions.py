@@ -19,5 +19,4 @@ class ConfigurationError(ParserError):
 
 
 class PeriodParseError(ParserError):
-    """Ошибка парсинга периода отчета."""
     pass

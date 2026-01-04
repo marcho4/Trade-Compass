@@ -5,10 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 class ReportMetadataParser:
-    """Парсер метаданных отчетов из HTML таблицы."""
-
     def parse_row(self, tr_element) -> dict | None:
-        """Парсинг одной строки таблицы отчетов."""
         try:
             cells = tr_element.find_all("td")
             if len(cells) < 6:
@@ -37,19 +34,15 @@ class ReportMetadataParser:
             return None
 
     def parse_table(self, soup: BeautifulSoup) -> list[dict]:
-        """Парсинг всей таблицы отчетов."""
         table = soup.find("table", class_="files-table")
         if not table:
-            logger.warning("Таблица с отчетами не найдена")
             return []
 
         tbody = table.find("tbody")
         if tbody:
             rows = tbody.find_all("tr")
         else:
-            rows = table.find_all("tr")[1:]  # Пропускаем заголовок
-
-        logger.info(f"Найдено строк в таблице отчетов: {len(rows)}")
+            rows = table.find_all("tr")[1:]
 
         results = []
         for tr in rows:

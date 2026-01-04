@@ -10,20 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 class CompanySearcher:
-    """Поиск компаний на e-disclosure.ru."""
-
     def __init__(self, driver):
         self.driver = driver
         self.base_url = config.base_url
 
     def search(self, query: str) -> list[dict]:
-        """Поиск компании по запросу (ИНН или название)."""
         search_url = f"{self.base_url}/poisk-po-kompaniyam"
 
         try:
-            logger.info("=== Поиск компании через Selenium ===")
-            logger.info(f"URL: {search_url}, Query: {query}")
-
             self.driver.get(search_url)
             time.sleep(config.timeout_between_requests)
 
@@ -66,15 +60,11 @@ class CompanySearcher:
                                 "element": link,
                             })
                     except Exception as e:
-                        logger.debug(f"Ошибка обработки ссылки: {e}")
+                        logger.error(f"Ошибка обработки ссылки: {e}")
                         continue
 
             except Exception as e:
-                logger.debug(f"Ошибка парсинга ссылок компаний: {e}")
-
-            logger.info(f"=== Найдено компаний: {len(companies)} ===")
-            for i, comp in enumerate(companies, 1):
-                logger.info(f"{i}. {comp['name']} (ID: {comp['id']})")
+                logger.error(f"Ошибка парсинга ссылок компаний: {e}")
 
             return companies
 

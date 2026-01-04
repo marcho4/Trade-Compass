@@ -10,9 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class S3ReportsStorage:
-    '''
-    Класс для работы с S3 хранением отчетов. Интерфейс - upload_report, get_s3_report_link
-    '''
     def __init__(self):
         key_id = os.environ.get("YANDEX_CLOUD_S3_ACCESS_KEY_ID")
         key_secret = os.environ.get("YANDEX_CLOUD_S3_SECRET_ACCESS_KEY")

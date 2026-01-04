@@ -26,7 +26,6 @@ def health():
 
 @router.post("/start_parsing")
 def start_parsing(background_tasks: BackgroundTasks):
-    """Запустить парсинг в фоне."""
     background_tasks.add_task(run_parsing)
     return {"message": "Parsing started in background"}
 
