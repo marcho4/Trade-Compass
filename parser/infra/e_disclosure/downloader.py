@@ -64,7 +64,7 @@ class ReportDownloader:
             reports = []
             for i, metadata in enumerate(filtered_metadata[:config.max_reports_per_company], 1):
                 report = self._download_single_report(
-                    metadata, company_name, download_dir, i
+                    metadata, company_name, download_dir
                 )
                 reports.append(report)
 
@@ -97,10 +97,9 @@ class ReportDownloader:
             file_url = urljoin(self.base_url, file_url)
 
         document_type = metadata.document_type
-        file_id = metadata.file_id
         year, period_months = extract_year_and_period(metadata.reporting_period)
 
-        file_name = self._generate_filename(company_name, year, period_months, file_id)
+        file_name = self._generate_filename(company_name, year, period_months)
 
         try:
             file_path = os.path.join(download_dir, file_name)
@@ -152,6 +151,6 @@ class ReportDownloader:
                 "metadata": metadata,
             }
 
-    def _generate_filename(self, company_name: str, year: int, period_months: int, file_id: str) -> str:
-        file_name = f"{company_name}_{year}_{period_months}M_{file_id}.zip"
+    def _generate_filename(self, company_name: str, year: int, period_months: int) -> str:
+        file_name = f"{company_name}_{year}_{period_months}M.zip"
         return normalize_filename(file_name)

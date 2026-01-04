@@ -2,8 +2,6 @@ import logging
 from infra.e_disclosure import EDisclosureClient
 from infra.s3_storage import S3ReportsStorage
 from infra.db_repo import ReportsRepository
-from application.utils import extract_year_and_period
-from application.exceptions import PeriodParseError
 from companies import get_ticker_by_inn
 
 logger = logging.getLogger(__name__)
@@ -51,7 +49,7 @@ class ReportProcessor:
 
         self._log_results(reports, saved)
 
-        return {"company": first_company["name"], "saved": None}
+        return {"company": first_company["name"], "saved": saved}
 
     def _upload_and_save_reports(self, reports: list[dict], ticker: str) -> int:
         saved = 0
@@ -61,16 +59,17 @@ class ReportProcessor:
         for report in downloaded:
             size_mb = report.get("size", 0) / 1024 / 1024
             local_path = report["path"]
-            period_raw = report["period"]
-
-            logger.info(f"{period_raw} - {size_mb:.2f} MB")
-            logger.info(f"  Локальный путь: {local_path}")
-
-            try:
-                year, period_months = extract_year_and_period(period_raw)
-            except PeriodParseError as e:
-                logger.warning(f"  Пропуск: {e}")
+            
+            # Данные уже распарсены в downloader
+            year = report.get("year")
+            period_months = report.get("period_months")
+            
+            if year is None or period_months is None:
+                logger.warning(f"  Пропуск: отсутствуют year или period_months в данных отчета")
                 continue
+
+            logger.info(f"{year}, {period_months} месяцев - {size_mb:.2f} MB")
+            logger.info(f"  Локальный путь: {local_path}")
 
             period = str(period_months)
 
