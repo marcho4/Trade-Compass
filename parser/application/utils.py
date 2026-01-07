@@ -18,6 +18,10 @@ def extract_year_and_period(period_str: str) -> Tuple[int, int]:
 
     try:
         parts = period_str.split(',')
+
+        if len(parts) == 1:
+            return int(parts[0].strip()), 12
+
         if len(parts) != 2:
             raise PeriodParseError(f"Неверный формат периода: {period_str}")
 
