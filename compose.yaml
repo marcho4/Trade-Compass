@@ -75,6 +75,23 @@ services:
       timeout: 5s
       retries: 5
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    expose:
+      - "6333"
+      - "6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    networks:
+      - main
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   frontend:
     build:
       context: frontend
@@ -122,3 +139,4 @@ networks:
 
 volumes:
   pgdata:
+  qdrant_storage:
