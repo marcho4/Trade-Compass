@@ -3,7 +3,7 @@ import time
 from typing import List, Optional
 
 from google import genai
-from google.genai.types import EmbedContentConfig
+from google.genai.types import ContentEmbedding, EmbedContentConfig
 
 from infra.config import config
 
@@ -32,12 +32,12 @@ class GeminiEmbeddingService:
 
     def generate_embeddings(
         self, texts: List[str], retry_delay: float = 1.0, max_retries: int = 3
-    ) -> List[List[float]]:
+    ) -> List[ContentEmbedding]:
         if not texts:
             logger.warning("Empty texts list provided")
             return []
 
-        all_embeddings: List[List[float]] = []
+        all_embeddings: List[ContentEmbedding] = []
         total_batches = (len(texts) + self.batch_size - 1) // self.batch_size
 
         logger.info(
@@ -69,7 +69,7 @@ class GeminiEmbeddingService:
         texts: List[str],
         retry_delay: float,
         max_retries: int,
-    ) -> List[List[float]]:
+    ) -> List[ContentEmbedding]:
         for attempt in range(max_retries):
             try:
                 result = self.client.models.embed_content(
@@ -83,9 +83,7 @@ class GeminiEmbeddingService:
                 if result.embeddings is None:
                     raise ValueError("No embeddings returned")
 
-                return [
-                    list(emb.values) for emb in result.embeddings if emb.values
-                ]
+                return list(result.embeddings)
 
             except Exception as e:
                 logger.warning(
