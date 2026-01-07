@@ -32,7 +32,7 @@ class ParserConfig:
     admin_api_key: str = ""
 
     # Qdrant
-    qdrant_host: str = "localhost"
+    qdrant_host: str = "qdrant"
     qdrant_port: int = 6333
     qdrant_collection_name: str = "reports_embeddings"
 
