@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class ReportDownloader:
-    ALLOWED_DOCUMENT_TYPES = ["эмитент", "квартальн"]
+    ALLOWED_DOCUMENT_TYPES = ["промежуточная", "годовая"]
 
-    def __init__(self, driver, metadata_parser: ReportMetadataParser = None):
+    def __init__(self, driver, metadata_parser: ReportMetadataParser):
         self.driver = driver
         self.base_url = config.base_url
         self.metadata_parser = metadata_parser or ReportMetadataParser()
@@ -49,7 +49,7 @@ class ReportDownloader:
         try:
             self._navigate_to_company(company_element, company.get("url"))
 
-            reports_url = f"{self.base_url}/portal/files.aspx?id={company_id}&type=5"
+            reports_url = f"{self.base_url}/portal/files.aspx?id={company_id}&type=4"
             self.driver.get(reports_url)
             time.sleep(config.timeout_page_load)
 

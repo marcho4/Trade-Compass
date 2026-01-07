@@ -31,6 +31,20 @@ class ParserConfig:
     # Безопасность
     admin_api_key: str = ""
 
+    # Qdrant
+    qdrant_host: str = "qdrant"
+    qdrant_port: int = 6333
+    qdrant_collection_name: str = "reports_embeddings"
+
+    # Gemini Embeddings
+    gemini_api_key: str = ""
+    embedding_model: str = "gemini-embedding-001"
+    embedding_batch_size: int = 100
+
+    # PDF Processing
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
+
     @classmethod
     def from_env(cls) -> "ParserConfig":
         return cls(
@@ -41,6 +55,18 @@ class ParserConfig:
             download_dir=os.getenv("DOWNLOADS_DIR", cls.download_dir),
             unzip_dir=os.getenv("UNZIP_DIR", cls.unzip_dir),
             admin_api_key=os.getenv("ADMIN_API_KEY", ""),
+            qdrant_host=os.getenv("QDRANT_HOST", cls.qdrant_host),
+            qdrant_port=int(os.getenv("QDRANT_PORT", str(cls.qdrant_port))),
+            qdrant_collection_name=os.getenv(
+                "QDRANT_COLLECTION_NAME", cls.qdrant_collection_name
+            ),
+            gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
+            embedding_model=os.getenv("EMBEDDING_MODEL", cls.embedding_model),
+            embedding_batch_size=int(
+                os.getenv("EMBEDDING_BATCH_SIZE", str(cls.embedding_batch_size))
+            ),
+            chunk_size=int(os.getenv("CHUNK_SIZE", str(cls.chunk_size))),
+            chunk_overlap=int(os.getenv("CHUNK_OVERLAP", str(cls.chunk_overlap))),
         )
 
 

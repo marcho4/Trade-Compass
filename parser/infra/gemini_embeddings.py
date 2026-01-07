@@ -1,9 +1,9 @@
 import logging
 import time
-from typing import List
+from typing import List, Optional
 
 from google import genai
-from google.genai.types import ContentEmbedding, EmbedContentConfig
+from google.genai.types import EmbedContentConfig
 
 from infra.config import config
 
@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 class GeminiEmbeddingService:
-    def __init__(self, api_key: str, model: str, batch_size: int):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        batch_size: Optional[int] = None,
+    ):
         self.api_key = api_key or config.gemini_api_key
         self.model = model or config.embedding_model
         self.batch_size = batch_size or config.embedding_batch_size
@@ -27,12 +32,12 @@ class GeminiEmbeddingService:
 
     def generate_embeddings(
         self, texts: List[str], retry_delay: float = 1.0, max_retries: int = 3
-    ) -> List[ContentEmbedding]:
+    ) -> List[List[float]]:
         if not texts:
             logger.warning("Empty texts list provided")
             return []
 
-        all_embeddings: List[ContentEmbedding] = []
+        all_embeddings: List[List[float]] = []
         total_batches = (len(texts) + self.batch_size - 1) // self.batch_size
 
         logger.info(
@@ -64,7 +69,7 @@ class GeminiEmbeddingService:
         texts: List[str],
         retry_delay: float,
         max_retries: int,
-    ) -> List[ContentEmbedding]:
+    ) -> List[List[float]]:
         for attempt in range(max_retries):
             try:
                 result = self.client.models.embed_content(
@@ -78,7 +83,9 @@ class GeminiEmbeddingService:
                 if result.embeddings is None:
                     raise ValueError("No embeddings returned")
 
-                return list(result.embeddings)
+                return [
+                    list(emb.values) for emb in result.embeddings if emb.values
+                ]
 
             except Exception as e:
                 logger.warning(
