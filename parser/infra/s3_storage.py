@@ -73,24 +73,6 @@ class S3ReportsStorage:
             logger.error(f"Ошибка при получении ссылки: {e}")
             return None
 
-    def generate_presigned_url(self, ticker: str, year: int, period: str,
-                              extension: str = ".zip", expiration: int = 3600) -> Optional[str]:
-        try:
-            ticker_normalized = self.__normalize_string(ticker)
-            period_normalized = self.__normalize_string(period)
-            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/report{extension}"
-
-            url = self.client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket_name, 'Key': object_key},
-                ExpiresIn=expiration
-            )
-            return url
-
-        except Exception as e:
-            logger.error(f"Ошибка при генерации подписанной ссылки: {e}")
-            return None
-
     def __upload_file(self, bucket_name: str, object_key: str, file: bytes) -> dict:
         response = self.client.put_object(
             Bucket=bucket_name,

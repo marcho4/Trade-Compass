@@ -53,6 +53,7 @@ class QdrantVectorStore:
         report_id: int,
         ticker: str,
         year: int,
+        period: str,
         chunk_ids: List[int],
         texts: Optional[List[str]] = None,
     ) -> None:
@@ -68,6 +69,7 @@ class QdrantVectorStore:
                 "report_id": report_id,
                 "ticker": ticker,
                 "year": year,
+                "period": period,
                 "chunk_id": chunk_id,
             }
 
@@ -111,54 +113,4 @@ class QdrantVectorStore:
             logger.info(f"Deleted vectors for report_id={report_id}")
         except Exception as e:
             logger.error(f"Error deleting vectors: {e}")
-            raise
-
-    def search_similar(
-        self,
-        query_vector: List[float],
-        limit: int = 10,
-        ticker: Optional[str] = None,
-        year: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
-        try:
-            filter_conditions = []
-            if ticker:
-                filter_conditions.append(
-                    FieldCondition(key="ticker", match=MatchValue(value=ticker))
-                )
-            if year:
-                filter_conditions.append(
-                    FieldCondition(key="year", match=MatchValue(value=year))
-                )
-
-            search_filter = Filter(must=filter_conditions) if filter_conditions else None
-
-            results = self.client.query_points(
-                collection_name=self.collection_name,
-                query=query_vector,
-                limit=limit,
-                query_filter=search_filter,
-            ).points
-
-            return [
-                {
-                    "id": hit.id,
-                    "score": hit.score,
-                    "payload": hit.payload,
-                }
-                for hit in results
-            ]
-        except Exception as e:
-            logger.error(f"Error searching vectors: {e}")
-            raise
-
-    def get_collection_info(self) -> Dict[str, Any]:
-        try:
-            info = self.client.get_collection(collection_name=self.collection_name)
-            return {
-                "points_count": info.points_count,
-                "status": info.status.value if info.status else "unknown",
-            }
-        except Exception as e:
-            logger.error(f"Error getting collection info: {e}")
             raise
