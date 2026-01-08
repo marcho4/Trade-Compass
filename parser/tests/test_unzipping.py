@@ -34,6 +34,7 @@ class TestUnzipAndRename:
         zip_path = temp_zip("Report.zip", "data.csv")
 
         result = FileUnzipper.unzip_and_rename(str(zip_path))
+        assert result is not None
 
         assert Path(result).suffix == ".csv"
 
@@ -42,6 +43,7 @@ class TestUnzipAndRename:
         zip_path = temp_zip("MyArchive.zip", "inner.txt")
 
         result = FileUnzipper.unzip_and_rename(str(zip_path))
+        assert result is not None
 
         result_path = Path(result)
         assert result_path.parent == tmp_path
