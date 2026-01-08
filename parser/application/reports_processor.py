@@ -7,7 +7,8 @@ from infra.db_repo import ReportsRepository
 from infra.models import ReportORM
 from companies import get_ticker_by_inn
 from application.vectorization_service import VectorizationService
-from domain.processing_result import *
+from domain.processing_result import ProcessingResult, ProcessingError, SingleCompanyProcessingResult
+from domain.report import DownloadedReport
 
 logger = logging.getLogger(__name__)
 
@@ -50,60 +51,84 @@ class ReportProcessor:
 
         logger.info("Получение отчетности эмитента для %s", ticker)
         reports = client.get_reports(first_company)
-        downloaded = [r for r in reports if r["status"] == "downloaded"]
+        downloaded = self._convert_to_downloaded_reports(reports)
 
         saved = self.upload_and_save_reports(downloaded, ticker)
 
-        self.log_results(downloaded, saved)
+        self._log_results(len(downloaded), saved)
 
         return SingleCompanyProcessingResult(ticker=ticker, saved=saved)
 
-    def upload_and_save_reports(self, reports: list[dict], ticker: str) -> int:
+    def _convert_to_downloaded_reports(self, reports: list[dict]) -> list[DownloadedReport]:
+        result = []
+        for r in reports:
+            if r.get("status") == "downloaded":
+                result.append(DownloadedReport(
+                    path=r["path"],
+                    size=r.get("size", 0),
+                    status=r["status"],
+                    year=r.get("year"),
+                    period_months=r.get("period_months"),
+                    name=r.get("name"),
+                ))
+        return result
+
+    def upload_and_save_reports(self, reports: list[DownloadedReport], ticker: str) -> int:
         saved = 0
-
         for report in reports:
-            size_mb = report.get("size", 0) / 1024 / 1024
-            local_path = report["path"]
-
-            year = report.get("year")
-            period_months = report.get("period_months")
-
-            if year is None or period_months is None:
-                logger.warning(f"  Пропуск: отсутствуют year или period_months в данных отчета")
-                continue
-
-            logger.info(f"{year}, {period_months} месяцев - {size_mb:.2f} MB")
-            logger.info(f"  Локальный путь: {local_path}")
-
-            period = str(period_months)
-
-            existing_s3_path = self.s3_client.get_s3_report_link(ticker, year, period)
-            if existing_s3_path:
-                logger.info(f"  Пропуск: файл уже существует в S3: {existing_s3_path}")
-                continue
-
-            s3_path = self.s3_client.upload_report(ticker, year, period, local_path)
-            if s3_path is None:
-                logger.error(f"  Ошибка загрузки в S3")
-                continue
-            logger.info(f"  Загружено в S3: {s3_path}")
-
-            report_orm = self.save_report_to_db(ticker, year, period, s3_path)
-            if report_orm:
+            if self._process_single_report(report, ticker):
                 saved += 1
-
-                self.vectorization_service.vectorize_report(
-                    report_id=cast(int, report_orm.id),
-                    file_path=local_path,
-                    ticker=ticker,
-                    year=year,
-                    period=period,
-                )
-                
-                    
         return saved
 
-    def save_report_to_db(self, ticker: str, year: int, period: str, s3_path: str) -> ReportORM | None:
+    def _process_single_report(self, report: DownloadedReport, ticker: str) -> bool:
+        if not report.is_valid():
+            logger.warning("Пропуск: отсутствуют year или period_months в данных отчета")
+            return False
+
+        logger.info(f"{report.year}, {report.period_months} месяцев - {report.size_mb:.2f} MB")
+        logger.info(f"  Локальный путь: {report.path}")
+
+        if self._report_exists_in_s3(ticker, report):
+            return False
+
+        s3_path = self._upload_to_s3(ticker, report)
+        if not s3_path:
+            return False
+
+        report_orm = self._save_report_to_db(ticker, report.year, report.period, s3_path)
+        if not report_orm:
+            return False
+
+        self._vectorize_report(report_orm, report, ticker)
+        return True
+
+    def _report_exists_in_s3(self, ticker: str, report: DownloadedReport) -> bool:
+        existing_s3_path = self.s3_client.get_s3_report_link(ticker, report.year, report.period)
+        if existing_s3_path:
+            logger.info(f"  Пропуск: файл уже существует в S3: {existing_s3_path}")
+            return True
+        return False
+
+    def _upload_to_s3(self, ticker: str, report: DownloadedReport) -> str | None:
+        s3_path = self.s3_client.upload_report(ticker, report.year, report.period, report.path)
+        if s3_path is None:
+            logger.error("Ошибка загрузки в S3")
+            return None
+        logger.info(f"  Загружено в S3: {s3_path}")
+        return s3_path
+
+    def _vectorize_report(self, report_orm: ReportORM, report: DownloadedReport, ticker: str) -> None:
+        result = self.vectorization_service.vectorize_report(
+            report_id=cast(int, report_orm.id),
+            file_path=report.path,
+            ticker=ticker,
+            year=report.year,
+            period=report.period,
+        )
+        if not result.get("success"):
+            logger.warning(f"Ошибка векторизации отчёта {ticker} {report.year}: {result.get('error')}")
+
+    def _save_report_to_db(self, ticker: str, year: int, period: str, s3_path: str) -> ReportORM | None:
         try:
             report = self.repo.create_report(ticker, year, period, s3_path)
             if report is None:
@@ -115,19 +140,8 @@ class ReportProcessor:
             logger.error(f"Ошибка сохранения отчёта в БД: {e}")
             return None
 
-    def log_results(self, reports: list[dict], saved: int):
-        downloaded = [r for r in reports if r["status"] == "downloaded"]
-        errors = [r for r in reports if r["status"] == "error"]
-
-        logger.info(f"Всего файлов обработано: {len(reports)}")
-        logger.info(f"Успешно скачано: {len(downloaded)}")
-        logger.info(f"Ошибок: {len(errors)}")
-
-        if errors:
-            logger.warning("ОШИБКИ:")
-            for report in errors:
-                logger.warning(f"  {report.get('name', 'Unknown')}")
-
+    def _log_results(self, downloaded_count: int, saved: int) -> None:
+        logger.info(f"Всего файлов обработано: {downloaded_count}")
         logger.info("=" * 60)
         logger.info(f"Сохранено в БД: {saved} отчётов")
         logger.info("=" * 60)
