@@ -3,7 +3,7 @@ from infra.database import get_db_session, init_db
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
 from application.reports_processor import ReportProcessor
-from parser.application.vectorization_service import VectorizationService
+from application.vectorization_service import VectorizationService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    test_company = ["4823006703"]
+    test_company = ["7712040126"]
 
     logger.info("Инициализация БД...")
     init_db()

@@ -36,7 +36,7 @@ class S3ReportsStorage:
 
             file_extension = os.path.splitext(file_path)[1]
 
-            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/report{file_extension}"
+            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/{ticker_normalized}_{year}_{period_normalized}{file_extension}"
 
             with open(file_path, 'rb') as file:
                 file_content = file.read()
@@ -52,12 +52,12 @@ class S3ReportsStorage:
             logger.error(f"Ошибка при загрузке файла: {e}")
             return None
 
-    def get_s3_report_link(self, ticker: str, year: int, period: str, extension: str = ".zip") -> Optional[str]:
+    def get_s3_report_link(self, ticker: str, year: int, period: str, extension: str = ".pdf") -> Optional[str]:
         try:
             ticker_normalized = self.__normalize_string(ticker)
             period_normalized = self.__normalize_string(period)
 
-            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/report{extension}"
+            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/{ticker_normalized}_{year}_{period_normalized}{extension}"
 
             try:
                 self.client.head_object(Bucket=self.bucket_name, Key=object_key)
