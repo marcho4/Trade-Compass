@@ -15,9 +15,9 @@ export const FinalCTASection = () => {
           href="/auth/register"
           className="group inline-flex items-center justify-center rounded-full bg-primary px-10 py-5 text-lg font-bold text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           tabIndex={0}
-          aria-label="Попробовать бесплатно"
+          aria-label="Анализ SBER бесплатно"
         >
-          Проанализировать первую акцию бесплатно
+          Проанализировать Сбербанк бесплатно
           <svg
             className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1"
             fill="none"
@@ -35,7 +35,7 @@ export const FinalCTASection = () => {
         </a>
 
         <p className="mt-6 text-sm text-foreground">
-          2 минуты на анализ • Без карты
+          10x быстрый анализ • Без карты
         </p>
       </div>
     </section>
