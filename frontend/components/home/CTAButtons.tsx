@@ -24,7 +24,7 @@ export const CTAButtons = () => {
         </svg>
       </a>
       <p className="text-sm text-foreground">
-        Без карты • Данные по всем компаниям Мосбиржи
+        Без карты • Данные по всем крупным компаниям Мосбиржи
       </p>
     </div>
   )
