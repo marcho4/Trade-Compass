@@ -13,7 +13,7 @@ export const HeroSection = () => {
             </h1>
 
             <p className="max-w-xl animate-fade-in-up text-lg leading-relaxed text-muted-foreground [animation-delay:200ms] md:text-xl">
-              AI помощник разберет отчетность за 2 минуты и покажет, что видят институционалы. Без финансового образования.
+              Анализируйте рынок в 10 раз быстрее. Без финансового образования.
             </p>
 
             <CTAButtons />
@@ -23,7 +23,7 @@ export const HeroSection = () => {
             <div className="relative overflow-hidden rounded-[2.5rem] border-2 border-gray-300 shadow-xl">
               <Image
                 src="/landing-image.png"
-                alt="Bull Run - AI инвестиционный помощник"
+                alt="Trade Compass - AI анализ акций российского фондового рынка"
                 width={550}
                 height={400}
                 className="h-auto w-full max-w-[600px] object-cover"
