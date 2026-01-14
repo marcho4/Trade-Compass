@@ -50,3 +50,22 @@ func (m *MoexPriceProvider) GetStockPrice(ticker string, daysBackwards int, inte
 	candles := domain.ParseCandles(response.Candles.Data)
 	return candles, nil
 }
+
+func (m *MoexPriceProvider) GetStockInfo(ticker string) {
+	// url := fmt.Sprintf("%s%s/securities.json", m.baseUrl, ticker)
+	// resp, err := m.client.Get(url)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer resp.Body.Close()
+	// body, err := io.ReadAll(resp.Body)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// var response domain.StockInfoApiResponse
+	// err = json.Unmarshal(body, &response)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return &response.StockInfo, nil
+}
