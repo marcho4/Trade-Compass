@@ -53,9 +53,6 @@ jobs:
           - image: parser
             context: ./parser
             dockerfile: Dockerfile
-          - image: cron-jobs
-            context: ./cron-jobs
-            dockerfile: Dockerfile
 
     steps:
       - uses: actions/checkout@v5
