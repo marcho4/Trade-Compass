@@ -20,7 +20,10 @@ func main() {
 	defer pool.Close()
 
 	ratiosRepo := infrastructure.NewRatiosRepository(pool)
+	priceProvider := infrastructure.NewMoexPriceProvider()
+
 	ratiosHandler := application.NewRatiosHandler(ratiosRepo)
+	priceHandler := application.NewPriceHandler(priceProvider)
 
 	r := chi.NewMux()
 
@@ -28,10 +31,12 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
-	r.Get("/ratios/{ticker}", ratiosHandler.HandleGetRatiosByTicker)
 
-	log.Println("Starting server on port 8080")
-	if err := http.ListenAndServe(":8080", r); err != nil {
+	r.Get("/ratios/{ticker}", ratiosHandler.HandleGetRatiosByTicker)
+	r.Get("/price", priceHandler.HandleGetPriceByTicker)
+
+	log.Println("Starting server on port 8082")
+	if err := http.ListenAndServe(":8082", r); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
