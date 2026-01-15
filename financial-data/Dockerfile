@@ -15,4 +15,5 @@ WORKDIR /app
 COPY --from=builder /app/financial-data .
 RUN chown -R appuser:appgroup /app
 USER appuser
+EXPOSE 8082
 ENTRYPOINT ["/app/financial-data"]
