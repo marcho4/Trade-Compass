@@ -36,7 +36,7 @@ class S3ReportsStorage:
 
             file_extension = os.path.splitext(file_path)[1]
 
-            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/report{file_extension}"
+            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/{ticker_normalized}_{year}_{period_normalized}{file_extension}"
 
             with open(file_path, 'rb') as file:
                 file_content = file.read()
@@ -52,12 +52,12 @@ class S3ReportsStorage:
             logger.error(f"Ошибка при загрузке файла: {e}")
             return None
 
-    def get_s3_report_link(self, ticker: str, year: int, period: str, extension: str = ".zip") -> Optional[str]:
+    def get_s3_report_link(self, ticker: str, year: int, period: str, extension: str = ".pdf") -> Optional[str]:
         try:
             ticker_normalized = self.__normalize_string(ticker)
             period_normalized = self.__normalize_string(period)
 
-            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/report{extension}"
+            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/{ticker_normalized}_{year}_{period_normalized}{extension}"
 
             try:
                 self.client.head_object(Bucket=self.bucket_name, Key=object_key)
@@ -71,24 +71,6 @@ class S3ReportsStorage:
 
         except Exception as e:
             logger.error(f"Ошибка при получении ссылки: {e}")
-            return None
-
-    def generate_presigned_url(self, ticker: str, year: int, period: str,
-                              extension: str = ".zip", expiration: int = 3600) -> Optional[str]:
-        try:
-            ticker_normalized = self.__normalize_string(ticker)
-            period_normalized = self.__normalize_string(period)
-            object_key = f"reports/{ticker_normalized}/{year}/{period_normalized}/report{extension}"
-
-            url = self.client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket_name, 'Key': object_key},
-                ExpiresIn=expiration
-            )
-            return url
-
-        except Exception as e:
-            logger.error(f"Ошибка при генерации подписанной ссылки: {e}")
             return None
 
     def __upload_file(self, bucket_name: str, object_key: str, file: bytes) -> dict:

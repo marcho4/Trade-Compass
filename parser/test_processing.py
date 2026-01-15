@@ -3,6 +3,7 @@ from infra.database import get_db_session, init_db
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
 from application.reports_processor import ReportProcessor
+from application.vectorization_service import VectorizationService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    test_company = ["4823006703"]
+    test_company = ["7712040126"]
 
     logger.info("Инициализация БД...")
     init_db()
@@ -20,13 +21,13 @@ def main():
     with get_db_session() as db:
         repo = ReportsRepository(db)
         s3_client = S3ReportsStorage()
+        vectorization_service = VectorizationService()
         logger.info("Запуск тестового парсинга...")
         processor = ReportProcessor(
-            s3_client, repo
+            s3_client, repo, vectorization_service
         )
 
     results = processor.process_companies(test_company)
-        
 
     logger.info(f"Результаты: {results}")
 
