@@ -21,6 +21,28 @@ services:
       retries: 3
       start_period: 10s
 
+  financial-data:
+    build:
+      context: financial-data
+      dockerfile: Dockerfile
+    container_name: financial-data
+    expose:
+      - "8082"
+    networks:
+      - main
+    restart: unless-stopped
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   parser:
     build:
       context: parser
@@ -41,8 +63,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
-    
+      start_period: 10
 
   postgres:
     image: postgres:17
