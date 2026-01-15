@@ -18,7 +18,7 @@ func NewMoexPriceProvider() *MoexPriceProvider {
 	m := MoexPriceProvider{}
 	m.baseUrl = "https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities/"
 	m.client = http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 3 * time.Second,
 	}
 	return &m
 }
