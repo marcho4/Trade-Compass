@@ -2,10 +2,12 @@ package application
 
 import (
 	"encoding/json"
-	"financial_data/domain"
-	"financial_data/infrastructure"
+	"financial_data/internal/domain"
+	"financial_data/internal/infrastructure"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi"
 )
 
 type PriceHandler struct {
@@ -14,6 +16,13 @@ type PriceHandler struct {
 
 func NewPriceHandler(priceProvider *infrastructure.MoexPriceProvider) *PriceHandler {
 	return &PriceHandler{priceProvider: priceProvider}
+}
+
+// RegisterPriceRoutes registers all price-related routes on the provided router
+func RegisterPriceRoutes(r chi.Router, priceProvider *infrastructure.MoexPriceProvider) {
+	handler := NewPriceHandler(priceProvider)
+
+	r.Get("/price", handler.HandleGetPriceByTicker)
 }
 
 func (h *PriceHandler) HandleGetPriceByTicker(w http.ResponseWriter, r *http.Request) {

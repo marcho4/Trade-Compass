@@ -2,7 +2,7 @@ package infrastructure
 
 import (
 	"encoding/json"
-	"financial_data/domain"
+	"financial_data/internal/domain"
 	"fmt"
 	"io"
 	"net/http"

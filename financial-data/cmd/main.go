@@ -2,11 +2,10 @@ package financial_data
 
 import (
 	"context"
+	"financial_data/internal/application"
+	"financial_data/internal/infrastructure"
 	"log"
 	"net/http"
-
-	"financial_data/application"
-	"financial_data/infrastructure"
 
 	"github.com/go-chi/chi"
 )
@@ -22,18 +21,20 @@ func main() {
 	ratiosRepo := infrastructure.NewRatiosRepository(pool)
 	priceProvider := infrastructure.NewMoexPriceProvider()
 
-	ratiosHandler := application.NewRatiosHandler(ratiosRepo)
-	priceHandler := application.NewPriceHandler(priceProvider)
+	// TODO: Add routes for macro data and news when handlers are implemented
+	// macroDataProvider := infrastructure.NewMacroDataProvider(pool)
+	// newsProvider := infrastructure.NewNewsProvider()
 
 	r := chi.NewMux()
 
+	// Health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
 
-	r.Get("/ratios/{ticker}", ratiosHandler.HandleGetRatiosByTicker)
-	r.Get("/price", priceHandler.HandleGetPriceByTicker)
+	application.RegisterRatiosRoutes(r, ratiosRepo)
+	application.RegisterPriceRoutes(r, priceProvider)
 
 	log.Println("Starting server on port 8082")
 	if err := http.ListenAndServe(":8082", r); err != nil {
