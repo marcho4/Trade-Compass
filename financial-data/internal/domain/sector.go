@@ -23,3 +23,7 @@ const (
 	Construction
 	Retail
 )
+
+func (s Sector) IsValid() bool {
+	return s >= 1 && s <= 19
+}
