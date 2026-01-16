@@ -2,9 +2,8 @@ package infrastructure
 
 import (
 	"context"
+	"financial_data/internal/domain"
 	"fmt"
-
-	"financial_data/domain"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

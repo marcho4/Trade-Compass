@@ -3,9 +3,8 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"financial_data/internal/domain"
 	"net/http"
-
-	"financial_data/domain"
 
 	"github.com/go-chi/chi"
 )
@@ -20,6 +19,12 @@ type RatiosHandler struct {
 
 func NewRatiosHandler(repo RatiosRepository) *RatiosHandler {
 	return &RatiosHandler{repo: repo}
+}
+
+func RegisterRatiosRoutes(r chi.Router, repo RatiosRepository) {
+	handler := NewRatiosHandler(repo)
+
+	r.Get("/ratios/{ticker}", handler.HandleGetRatiosByTicker)
 }
 
 func (h *RatiosHandler) HandleGetRatiosByTicker(w http.ResponseWriter, r *http.Request) {

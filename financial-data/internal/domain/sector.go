@@ -3,7 +3,7 @@ package domain
 type Sector int
 
 const (
-	Oils Sector = iota
+	Oils Sector = iota + 1
 	Finance
 	Technology
 	Telecom

@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS cb_rates("date" date NOT NULL, rate decimal(10, 2) NOT NULL);
