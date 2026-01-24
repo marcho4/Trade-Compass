@@ -1,23 +1,15 @@
 package application
 
 import (
-	"context"
 	"encoding/json"
 	"financial_data/internal/domain"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/go-chi/chi"
 )
-
-type RatiosRepository interface {
-	GetByTicker(ctx context.Context, ticker string) (*domain.Ratios, error)
-	GetBySector(ctx context.Context, sector domain.Sector) (*domain.Ratios, error)
-	Create(ctx context.Context, ticker string, sector domain.Sector, ratios *domain.Ratios) error
-	Update(ctx context.Context, ticker string, ratios *domain.Ratios) error
-	Delete(ctx context.Context, ticker string) error
-}
 
 type RatiosHandler struct {
 	repo RatiosRepository
@@ -90,6 +82,11 @@ func (h *RatiosHandler) HandleGetRatiosBySector(w http.ResponseWriter, r *http.R
 }
 
 func (h *RatiosHandler) HandleCreateRatios(w http.ResponseWriter, r *http.Request) {
+	if ok, err := validateApiKey(r); !ok {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		http.Error(w, "ticker is required", http.StatusBadRequest)
@@ -123,6 +120,11 @@ func (h *RatiosHandler) HandleCreateRatios(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *RatiosHandler) HandleUpdateRatios(w http.ResponseWriter, r *http.Request) {
+	if ok, err := validateApiKey(r); !ok {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		http.Error(w, "ticker is required", http.StatusBadRequest)
@@ -145,6 +147,11 @@ func (h *RatiosHandler) HandleUpdateRatios(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *RatiosHandler) HandleDeleteRatios(w http.ResponseWriter, r *http.Request) {
+	if ok, err := validateApiKey(r); !ok {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		http.Error(w, "ticker is required", http.StatusBadRequest)
@@ -157,4 +164,17 @@ func (h *RatiosHandler) HandleDeleteRatios(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func validateApiKey(r *http.Request) (bool, error) {
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey == "" {
+		return false, fmt.Errorf("X-API-Key header is required")
+	}
+
+	if apiKey != os.Getenv("ADMIN_API_KEY") {
+		return false, fmt.Errorf("Invalid API key")
+	}
+
+	return true, nil
 }
