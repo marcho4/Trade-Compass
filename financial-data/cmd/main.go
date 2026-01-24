@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
 func main() {
@@ -24,8 +25,13 @@ func main() {
 	// TODO: Add routes for macro data and news when handlers are implemented
 	// macroDataProvider := infrastructure.NewMacroDataProvider(pool)
 	// newsProvider := infrastructure.NewNewsProvider()
+	// rawDataProvider := infrastructure.NewRawDataProvider()
 
 	r := chi.NewMux()
+
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RequestID)
 
 	// Health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

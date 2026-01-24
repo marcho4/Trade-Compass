@@ -18,10 +18,8 @@ func NewPriceHandler(priceProvider *infrastructure.MoexPriceProvider) *PriceHand
 	return &PriceHandler{priceProvider: priceProvider}
 }
 
-// RegisterPriceRoutes registers all price-related routes on the provided router
 func RegisterPriceRoutes(r chi.Router, priceProvider *infrastructure.MoexPriceProvider) {
 	handler := NewPriceHandler(priceProvider)
-
 	r.Get("/price", handler.HandleGetPriceByTicker)
 }
 
