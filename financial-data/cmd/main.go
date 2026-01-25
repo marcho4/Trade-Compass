@@ -4,7 +4,7 @@ import (
 	"context"
 	"financial_data/internal/application"
 	"financial_data/internal/infrastructure"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -13,19 +13,26 @@ import (
 
 func main() {
 	ctx := context.Background()
+
+	if err := infrastructure.RunMigrations(); err != nil {
+		slog.Error("Failed to run migrations", "error", err)
+	}
+
 	pool, err := infrastructure.NewPostgresPool(ctx)
 	if err != nil {
-		log.Fatalf("Failed to connect to postgres: %v", err)
+		slog.Error("Failed to connect to postgres", "error", err)
 	}
 	defer pool.Close()
 
 	ratiosRepo := infrastructure.NewRatiosRepository(pool)
-	priceProvider := infrastructure.NewMoexPriceProvider()
+	rawDataRepo := infrastructure.NewRawDataRepository(pool)
+	companyRepo := infrastructure.NewCompanyRepository(pool)
+	sectorRepo := infrastructure.NewSectorRepository(pool)
+	dividendsRepo := infrastructure.NewDividendsRepository(pool)
+	cbRateRepo := infrastructure.NewCBRateRepository(pool)
+	newsRepo := infrastructure.NewNewsRepository(pool)
 
-	// TODO: Add routes for macro data and news when handlers are implemented
-	// macroDataProvider := infrastructure.NewMacroDataProvider(pool)
-	// newsProvider := infrastructure.NewNewsProvider()
-	// rawDataProvider := infrastructure.NewRawDataProvider()
+	priceProvider := infrastructure.NewMoexPriceProvider()
 
 	r := chi.NewMux()
 
@@ -33,17 +40,21 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 
-	// Health check endpoint
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
 
 	application.RegisterRatiosRoutes(r, ratiosRepo)
+	application.RegisterRawDataRoutes(r, rawDataRepo)
+	application.RegisterCompanyRoutes(r, companyRepo)
+	application.RegisterSectorRoutes(r, sectorRepo)
+	application.RegisterDividendsRoutes(r, dividendsRepo)
+	application.RegisterMacroRoutes(r, cbRateRepo)
+	application.RegisterNewsRoutes(r, newsRepo)
 	application.RegisterPriceRoutes(r, priceProvider)
 
-	log.Println("Starting server on port 8082")
 	if err := http.ListenAndServe(":8082", r); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		slog.Error("Failed to start server", "error", err)
 	}
 }
