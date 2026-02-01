@@ -8,7 +8,8 @@ RUN make build-prod
 
 # ==================== RUNTIME STAGE ====================
 FROM alpine:latest
-RUN apk add --no-cache ca-certificates tzdata curl
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache ca-certificates tzdata curl
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 WORKDIR /app
