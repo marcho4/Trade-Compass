@@ -10,7 +10,7 @@ from infra.database import get_db, get_db_session
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
 from infra.config import config
-from parser.application.vectorization_service import VectorizationService
+from application.vectorization_service import VectorizationService
 
 logger = logging.getLogger(__name__)
 
