@@ -22,7 +22,7 @@ func NewMigrator(dbURL, migrationsPath string) (*Migrator, error) {
 	if migrationsPath == "" {
 		return nil, errors.New("migrations path is required")
 	}
-
+	dbURL += "&x-migrations-table=financial_data_schema_migrations"
 	m, err := migrate.New(migrationsPath, dbURL)
 	if err != nil {
 		return nil, fmt.Errorf("create migrator: %w", err)

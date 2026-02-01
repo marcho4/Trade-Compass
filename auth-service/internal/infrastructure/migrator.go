@@ -25,6 +25,7 @@ func NewMigrator(dbURL, migrationsPath string, logger *slog.Logger) (*Migrator, 
 		return nil, errors.New("migrations path is required")
 	}
 
+	dbURL += "&x-migrations-table=auth_schema_migrations"
 	m, err := migrate.New(migrationsPath, dbURL)
 	if err != nil {
 		return nil, fmt.Errorf("create migrator: %w", err)
