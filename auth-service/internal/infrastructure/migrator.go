@@ -20,6 +20,7 @@ func NewMigrator(dbURL, migrationsPath string, logger *slog.Logger) (*Migrator, 
 	if dbURL == "" {
 		return nil, errors.New("database URL is required")
 	}
+	dbURL = dbURL + "?x-migrations-table=auth_schema_migrations"
 
 	if migrationsPath == "" {
 		return nil, errors.New("migrations path is required")
