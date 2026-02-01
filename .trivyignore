@@ -1,0 +1,4 @@
+# CVE-2026-24515 - libexpat null pointer dereference
+# Status: No fix available yet (affected)
+# Will be removed once Debian releases a patch
+CVE-2026-24515
