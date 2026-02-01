@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-type MoexPriceProvider struct {
+type MoexDataProvider struct {
 	baseUrl string
 	client  http.Client
 }
 
-func NewMoexPriceProvider() *MoexPriceProvider {
-	m := MoexPriceProvider{}
+func NewMoexDataProvider() *MoexDataProvider {
+	m := MoexDataProvider{}
 	m.baseUrl = "https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities/"
 	m.client = http.Client{
 		Timeout: 3 * time.Second,
@@ -23,7 +23,7 @@ func NewMoexPriceProvider() *MoexPriceProvider {
 	return &m
 }
 
-func (m *MoexPriceProvider) GetStockPrice(ticker string, daysBackwards int, interval domain.Period) ([]domain.Candle, error) {
+func (m *MoexDataProvider) GetStockPrice(ticker string, daysBackwards int, interval domain.Period) ([]domain.Candle, error) {
 	if daysBackwards > 500 {
 		return nil, fmt.Errorf("MOEX API doesn't support more than 500 days. Use pagination")
 	}
@@ -51,21 +51,33 @@ func (m *MoexPriceProvider) GetStockPrice(ticker string, daysBackwards int, inte
 	return candles, nil
 }
 
-func (m *MoexPriceProvider) GetStockInfo(ticker string) {
-	// url := fmt.Sprintf("%s%s/securities.json", m.baseUrl, ticker)
-	// resp, err := m.client.Get(url)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer resp.Body.Close()
-	// body, err := io.ReadAll(resp.Body)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// var response domain.StockInfoApiResponse
-	// err = json.Unmarshal(body, &response)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// return &response.StockInfo, nil
+func (m *MoexDataProvider) GetStockInfo(ticker string) (*domain.StockInfo, error) {
+	url := fmt.Sprintf("https://iss.moex.com/iss/securities/%s.json?iss.meta=off&iss.only=description&description.columns=name,title,value", ticker)
+	resp, err := m.client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("MOEX API returned status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var response domain.StockInfoApiResponse
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	stockInfo, err := domain.ParseStockInfo(response.Description.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	return stockInfo, nil
 }

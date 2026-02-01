@@ -27,9 +27,9 @@ func (r *CBRateRepository) GetCurrent(ctx context.Context) (*domain.CBRate, erro
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("no CB rates found")
+			return nil, NewDbError("no CB rates found", 0)
 		}
-		return nil, fmt.Errorf("failed to get current CB rate: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to get current CB rate: %v", err), 0)
 	}
 
 	return rate, nil
@@ -43,9 +43,9 @@ func (r *CBRateRepository) GetByDate(ctx context.Context, date time.Time) (*doma
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("CB rate not found for date %s", date.Format("2006-01-02"))
+			return nil, NewDbError(fmt.Sprintf("CB rate not found for date %s", date.Format("2006-01-02")), 0)
 		}
-		return nil, fmt.Errorf("failed to get CB rate: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to get CB rate: %v", err), 0)
 	}
 
 	return rate, nil
@@ -61,7 +61,7 @@ func (r *CBRateRepository) GetHistory(ctx context.Context, from, to time.Time) (
 
 	rows, err := r.pool.Query(ctx, query, from, to)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query CB rates history: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to query CB rates history: %v", err), 0)
 	}
 	defer rows.Close()
 
@@ -70,13 +70,17 @@ func (r *CBRateRepository) GetHistory(ctx context.Context, from, to time.Time) (
 		var rate domain.CBRate
 		err := rows.Scan(&rate.Date, &rate.Rate)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan CB rate: %w", err)
+			return nil, NewDbError(fmt.Sprintf("failed to scan CB rate: %v", err), 0)
 		}
 		rates = append(rates, rate)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating CB rates: %w", err)
+		return nil, NewDbError(fmt.Sprintf("error iterating CB rates: %v", err), 0)
+	}
+
+	if len(rates) == 0 {
+		return nil, NewDbError("no CB rates found for the specified period", 0)
 	}
 
 	return rates, nil
@@ -84,14 +88,14 @@ func (r *CBRateRepository) GetHistory(ctx context.Context, from, to time.Time) (
 
 func (r *CBRateRepository) Create(ctx context.Context, rate *domain.CBRate) error {
 	if rate == nil {
-		return fmt.Errorf("rate is nil")
+		return NewDbError("rate is nil", 0)
 	}
 
 	query := `INSERT INTO cb_rates (date, rate) VALUES ($1, $2)`
 
 	_, err := r.pool.Exec(ctx, query, rate.Date, rate.Rate)
 	if err != nil {
-		return fmt.Errorf("failed to create CB rate: %w", err)
+		return NewDbError(fmt.Sprintf("failed to create CB rate: %v", err), 0)
 	}
 
 	return nil
@@ -102,11 +106,11 @@ func (r *CBRateRepository) Update(ctx context.Context, date time.Time, rate floa
 
 	result, err := r.pool.Exec(ctx, query, date, rate)
 	if err != nil {
-		return fmt.Errorf("failed to update CB rate: %w", err)
+		return NewDbError(fmt.Sprintf("failed to update CB rate: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("CB rate not found for date %s", date.Format("2006-01-02"))
+		return NewDbError(fmt.Sprintf("CB rate not found for date %s", date.Format("2006-01-02")), 0)
 	}
 
 	return nil
@@ -117,11 +121,11 @@ func (r *CBRateRepository) Delete(ctx context.Context, date time.Time) error {
 
 	result, err := r.pool.Exec(ctx, query, date)
 	if err != nil {
-		return fmt.Errorf("failed to delete CB rate: %w", err)
+		return NewDbError(fmt.Sprintf("failed to delete CB rate: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("CB rate not found for date %s", date.Format("2006-01-02"))
+		return NewDbError(fmt.Sprintf("CB rate not found for date %s", date.Format("2006-01-02")), 0)
 	}
 
 	return nil

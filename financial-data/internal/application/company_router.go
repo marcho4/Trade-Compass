@@ -2,12 +2,13 @@ package application
 
 import (
 	"encoding/json"
+	"errors"
 	"financial_data/internal/domain"
-	"fmt"
+	"financial_data/internal/infrastructure"
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 type CompanyHandler struct {
@@ -32,146 +33,146 @@ func RegisterCompanyRoutes(r chi.Router, repo CompanyRepository) {
 func (h *CompanyHandler) HandleGetByTicker(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		http.Error(w, "ticker is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	company, err := h.repo.GetByTicker(r.Context(), ticker)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load company: %v", err), http.StatusInternalServerError)
+		var dbErr *infrastructure.DbError
+		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
+			RespondWithError(w, r, 404, dbErr.Message, err)
+			return
+		}
+		RespondWithError(w, r, 500, "failed to load company", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(company); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, company, "Successfully retrieved company")
 }
 
 func (h *CompanyHandler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 	companies, err := h.repo.GetAll(r.Context())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load companies: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to load companies", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(companies); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, companies, "Successfully retrieved companies")
 }
 
 func (h *CompanyHandler) HandleGetBySector(w http.ResponseWriter, r *http.Request) {
 	sectorIDStr := chi.URLParam(r, "sector_id")
 	if sectorIDStr == "" {
-		http.Error(w, "sector_id is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "sector_id is required", nil)
 		return
 	}
 
 	sectorID, err := strconv.Atoi(sectorIDStr)
 	if err != nil {
-		http.Error(w, "invalid sector_id", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid sector_id", err)
 		return
 	}
 
 	sector := domain.Sector(sectorID)
 	if !sector.IsValid() {
-		http.Error(w, "invalid sector_id (allowed values from 1 to 19)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid sector_id (allowed values from 1 to 19)", nil)
 		return
 	}
 
 	companies, err := h.repo.GetBySector(r.Context(), sectorID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load companies by sector: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to load companies by sector", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(companies); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, companies, "Successfully retrieved companies by sector")
 }
 
 func (h *CompanyHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	var company domain.Company
 	if err := json.NewDecoder(r.Body).Decode(&company); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	sector := domain.Sector(company.SectorID)
 	if !sector.IsValid() {
-		http.Error(w, "invalid sector_id (allowed values from 1 to 19)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid sector_id (allowed values from 1 to 19)", nil)
 		return
 	}
 
 	if err := h.repo.Create(r.Context(), &company); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create company: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to create company", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(company)
+	RespondWithSuccess(w, 201, company, "Company successfully created")
 }
 
 func (h *CompanyHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		http.Error(w, "ticker is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	var company domain.Company
 	if err := json.NewDecoder(r.Body).Decode(&company); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	sector := domain.Sector(company.SectorID)
 	if !sector.IsValid() {
-		http.Error(w, "invalid sector_id (allowed values from 1 to 19)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid sector_id (allowed values from 1 to 19)", nil)
 		return
 	}
 
 	if err := h.repo.Update(r.Context(), ticker, &company); err != nil {
-		http.Error(w, fmt.Sprintf("failed to update company: %v", err), http.StatusInternalServerError)
+		var dbErr *infrastructure.DbError
+		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
+			RespondWithError(w, r, 404, dbErr.Message, err)
+			return
+		}
+		RespondWithError(w, r, 500, "failed to update company", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	RespondWithSuccess(w, 200, map[string]string{"status": "updated"}, "Company successfully updated")
 }
 
 func (h *CompanyHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		http.Error(w, "ticker is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	if err := h.repo.Delete(r.Context(), ticker); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete company: %v", err), http.StatusInternalServerError)
+		var dbErr *infrastructure.DbError
+		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
+			RespondWithError(w, r, 404, dbErr.Message, err)
+			return
+		}
+		RespondWithError(w, r, 500, "failed to delete company", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	RespondWithSuccess(w, 204, nil, "Company successfully deleted")
 }

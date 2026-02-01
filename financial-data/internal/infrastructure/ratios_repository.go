@@ -20,7 +20,7 @@ func NewRatiosRepository(pool *pgxpool.Pool) *RatiosRepository {
 
 func (r *RatiosRepository) GetByTicker(ctx context.Context, ticker string) (*domain.Ratios, error) {
 	if ticker == "" {
-		return nil, fmt.Errorf("ticker is empty")
+		return nil, NewDbError("ticker is empty", 0)
 	}
 
 	query := `
@@ -51,9 +51,9 @@ func (r *RatiosRepository) GetByTicker(ctx context.Context, ticker string) (*dom
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("ratios not found for ticker %s", ticker)
+			return nil, NewDbError(fmt.Sprintf("ratios not found for ticker %s", ticker), 0)
 		}
-		return nil, fmt.Errorf("failed to get ratios: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to get ratios: %v", err), 0)
 	}
 
 	return ratios, nil
@@ -61,7 +61,7 @@ func (r *RatiosRepository) GetByTicker(ctx context.Context, ticker string) (*dom
 
 func (r *RatiosRepository) GetBySector(ctx context.Context, sector domain.Sector) (*domain.Ratios, error) {
 	if !sector.IsValid() {
-		return nil, fmt.Errorf("invalid sector: %d", sector)
+		return nil, NewDbError(fmt.Sprintf("invalid sector: %d", sector), 0)
 	}
 
 	query := `
@@ -91,7 +91,7 @@ func (r *RatiosRepository) GetBySector(ctx context.Context, sector domain.Sector
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get average ratios for sector: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to get average ratios for sector: %v", err), 0)
 	}
 
 	return ratios, nil
@@ -99,13 +99,13 @@ func (r *RatiosRepository) GetBySector(ctx context.Context, sector domain.Sector
 
 func (r *RatiosRepository) Create(ctx context.Context, ticker string, sector domain.Sector, ratios *domain.Ratios) error {
 	if ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 	if !sector.IsValid() {
-		return fmt.Errorf("invalid sector: %d", sector)
+		return NewDbError(fmt.Sprintf("invalid sector: %d", sector), 0)
 	}
 	if ratios == nil {
-		return fmt.Errorf("ratios is nil")
+		return NewDbError("ratios is nil", 0)
 	}
 
 	query := `
@@ -145,7 +145,7 @@ func (r *RatiosRepository) Create(ctx context.Context, ticker string, sector dom
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to create ratios: %w", err)
+		return NewDbError(fmt.Sprintf("failed to create ratios: %v", err), 0)
 	}
 
 	return nil
@@ -153,10 +153,10 @@ func (r *RatiosRepository) Create(ctx context.Context, ticker string, sector dom
 
 func (r *RatiosRepository) Update(ctx context.Context, ticker string, ratios *domain.Ratios) error {
 	if ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 	if ratios == nil {
-		return fmt.Errorf("ratios is nil")
+		return NewDbError("ratios is nil", 0)
 	}
 
 	query := `
@@ -185,11 +185,11 @@ func (r *RatiosRepository) Update(ctx context.Context, ticker string, ratios *do
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to update ratios: %w", err)
+		return NewDbError(fmt.Sprintf("failed to update ratios: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("ratios not found for ticker %s", ticker)
+		return NewDbError(fmt.Sprintf("ratios not found for ticker %s", ticker), 0)
 	}
 
 	return nil
@@ -197,18 +197,18 @@ func (r *RatiosRepository) Update(ctx context.Context, ticker string, ratios *do
 
 func (r *RatiosRepository) Delete(ctx context.Context, ticker string) error {
 	if ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 
 	query := `DELETE FROM ratios WHERE ticker = $1`
 
 	result, err := r.pool.Exec(ctx, query, ticker)
 	if err != nil {
-		return fmt.Errorf("failed to delete ratios: %w", err)
+		return NewDbError(fmt.Sprintf("failed to delete ratios: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("ratios not found for ticker %s", ticker)
+		return NewDbError(fmt.Sprintf("ratios not found for ticker %s", ticker), 0)
 	}
 
 	return nil

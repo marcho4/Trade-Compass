@@ -20,7 +20,7 @@ func NewCompanyRepository(pool *pgxpool.Pool) *CompanyRepository {
 
 func (r *CompanyRepository) GetByTicker(ctx context.Context, ticker string) (*domain.Company, error) {
 	if ticker == "" {
-		return nil, fmt.Errorf("ticker is empty")
+		return nil, NewDbError("ticker is empty", 0)
 	}
 
 	query := `
@@ -37,9 +37,9 @@ func (r *CompanyRepository) GetByTicker(ctx context.Context, ticker string) (*do
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("company not found for ticker %s", ticker)
+			return nil, NewDbError(fmt.Sprintf("company not found for ticker %s", ticker), 0)
 		}
-		return nil, fmt.Errorf("failed to get company: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to get company: %v", err), 0)
 	}
 
 	return company, nil
@@ -54,7 +54,7 @@ func (r *CompanyRepository) GetAll(ctx context.Context) ([]domain.Company, error
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query companies: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to query companies: %v", err), 0)
 	}
 	defer rows.Close()
 
@@ -66,13 +66,13 @@ func (r *CompanyRepository) GetAll(ctx context.Context) ([]domain.Company, error
 			&company.SectorID, &company.LotSize, &company.CEO, &company.Employees,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan company: %w", err)
+			return nil, NewDbError(fmt.Sprintf("failed to scan company: %v", err), 0)
 		}
 		companies = append(companies, company)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating companies: %w", err)
+		return nil, NewDbError(fmt.Sprintf("error iterating companies: %v", err), 0)
 	}
 
 	return companies, nil
@@ -88,7 +88,7 @@ func (r *CompanyRepository) GetBySector(ctx context.Context, sectorID int) ([]do
 
 	rows, err := r.pool.Query(ctx, query, sectorID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query companies by sector: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to query companies by sector: %v", err), 0)
 	}
 	defer rows.Close()
 
@@ -100,13 +100,13 @@ func (r *CompanyRepository) GetBySector(ctx context.Context, sectorID int) ([]do
 			&company.SectorID, &company.LotSize, &company.CEO, &company.Employees,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan company: %w", err)
+			return nil, NewDbError(fmt.Sprintf("failed to scan company: %v", err), 0)
 		}
 		companies = append(companies, company)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating companies: %w", err)
+		return nil, NewDbError(fmt.Sprintf("error iterating companies: %v", err), 0)
 	}
 
 	return companies, nil
@@ -114,13 +114,13 @@ func (r *CompanyRepository) GetBySector(ctx context.Context, sectorID int) ([]do
 
 func (r *CompanyRepository) Create(ctx context.Context, company *domain.Company) error {
 	if company == nil {
-		return fmt.Errorf("company is nil")
+		return NewDbError("company is nil", 0)
 	}
 	if company.INN == "" {
-		return fmt.Errorf("INN is empty")
+		return NewDbError("INN is empty", 0)
 	}
 	if company.Ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 
 	query := `
@@ -135,7 +135,7 @@ func (r *CompanyRepository) Create(ctx context.Context, company *domain.Company)
 	).Scan(&company.ID)
 
 	if err != nil {
-		return fmt.Errorf("failed to create company: %w", err)
+		return NewDbError(fmt.Sprintf("failed to create company: %v", err), 0)
 	}
 
 	return nil
@@ -143,10 +143,10 @@ func (r *CompanyRepository) Create(ctx context.Context, company *domain.Company)
 
 func (r *CompanyRepository) Update(ctx context.Context, ticker string, company *domain.Company) error {
 	if ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 	if company == nil {
-		return fmt.Errorf("company is nil")
+		return NewDbError("company is nil", 0)
 	}
 
 	query := `
@@ -161,11 +161,11 @@ func (r *CompanyRepository) Update(ctx context.Context, ticker string, company *
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to update company: %w", err)
+		return NewDbError(fmt.Sprintf("failed to update company: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("company not found for ticker %s", ticker)
+		return NewDbError(fmt.Sprintf("company not found for ticker %s", ticker), 0)
 	}
 
 	return nil
@@ -173,18 +173,18 @@ func (r *CompanyRepository) Update(ctx context.Context, ticker string, company *
 
 func (r *CompanyRepository) Delete(ctx context.Context, ticker string) error {
 	if ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 
 	query := `DELETE FROM companies WHERE ticker = $1`
 
 	result, err := r.pool.Exec(ctx, query, ticker)
 	if err != nil {
-		return fmt.Errorf("failed to delete company: %w", err)
+		return NewDbError(fmt.Sprintf("failed to delete company: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("company not found for ticker %s", ticker)
+		return NewDbError(fmt.Sprintf("company not found for ticker %s", ticker), 0)
 	}
 
 	return nil
