@@ -1,0 +1,1 @@
+DROP TABLE cb_rates IF EXISTS;
