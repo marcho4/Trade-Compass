@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { CompanyCard, ScreenerFilters } from "@/components/screener"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { financialDataApi, Sector } from "@/lib/api-client"
 
-// Типы для фильтров
 interface FilterValues {
   search: string
   sector: string
@@ -19,18 +19,6 @@ interface FilterValues {
   debtToEquityMax: string
   roeMin: string
 }
-
-// Моковые данные для демонстрации (в реальности будут приходить с бэкенда)
-const MOCK_SECTORS = [
-  { id: 1, name: "Нефть и газ" },
-  { id: 2, name: "Финансы" },
-  { id: 3, name: "Технологии" },
-  { id: 4, name: "Телекоммуникации" },
-  { id: 5, name: "Потребительские товары" },
-  { id: 6, name: "Металлургия" },
-  { id: 7, name: "Энергетика" },
-  { id: 8, name: "Транспорт" },
-]
 
 const MOCK_COMPANIES = [
   {
@@ -211,6 +199,8 @@ const ITEMS_PER_PAGE = 9
 export default function ScreenerPage() {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
+  const [sectors, setSectors] = useState<Sector[]>([])
+  const [sectorsLoading, setSectorsLoading] = useState(true)
   const [filters, setFilters] = useState<FilterValues>({
     search: "",
     sector: "",
@@ -223,6 +213,21 @@ export default function ScreenerPage() {
     debtToEquityMax: "",
     roeMin: "",
   })
+
+  useEffect(() => {
+    const loadSectors = async () => {
+      try {
+        const data = await financialDataApi.getSectors()
+        setSectors(data)
+      } catch (error) {
+        console.error("Failed to load sectors:", error)
+      } finally {
+        setSectorsLoading(false)
+      }
+    }
+    
+    loadSectors()
+  }, [])
 
   // Функция для обработки изменения фильтра
   const handleFilterChange = (key: keyof FilterValues, value: string) => {
@@ -260,7 +265,7 @@ export default function ScreenerPage() {
 
     // Фильтр по сектору
     if (filters.sector) {
-      const sector = MOCK_SECTORS.find((s) => s.id === parseInt(filters.sector))
+      const sector = sectors.find((s) => s.id === parseInt(filters.sector))
       if (sector && company.sector !== sector.name) {
         return false
       }
@@ -349,7 +354,7 @@ export default function ScreenerPage() {
           filters={filters}
           onFilterChange={handleFilterChange}
           onReset={handleResetFilters}
-          sectors={MOCK_SECTORS}
+          sectors={sectors}
         />
       </div>
 

@@ -243,5 +243,36 @@ export const api = {
   },
 };
 
+export interface Sector {
+  id: number;
+  name: string;
+}
+
+interface ApiResponse<T> {
+  status: string;
+  data: T;
+  message?: string;
+}
+
+const FINANCIAL_DATA_BASE_URL = 'https://trade-compass.ru/api/financial-data';
+
+export const financialDataApi = {
+  async getSectors(): Promise<Sector[]> {
+    const response = await fetch(`${FINANCIAL_DATA_BASE_URL}/sectors`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch sectors');
+    }
+    
+    const result: ApiResponse<Sector[]> = await response.json();
+    return result.data;
+  },
+};
+
 export default api;
 
