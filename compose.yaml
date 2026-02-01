@@ -28,8 +28,6 @@ services:
     container_name: financial-data
     expose:
       - "8082"
-    ports:
-      - 8082:8082
     env_file:
       - ./financial-data/.env
     networks:
@@ -74,8 +72,6 @@ services:
       POSTGRES_DB: trade-compass
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
