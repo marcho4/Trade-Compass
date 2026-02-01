@@ -19,7 +19,6 @@ func NewMigrator(dbURL, migrationsPath string) (*Migrator, error) {
 	if dbURL == "" {
 		return nil, errors.New("database URL is required")
 	}
-	dbURL = dbURL + "?x-migrations-table=financial_data_schema_migrations"
 	if migrationsPath == "" {
 		return nil, errors.New("migrations path is required")
 	}
