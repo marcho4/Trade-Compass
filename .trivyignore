@@ -2,3 +2,9 @@
 # Status: No fix available yet (affected)
 # Will be removed once Debian releases a patch
 CVE-2026-24515
+
+# CVE-2026-24842 - node-tar path traversal in hardlink
+# Status: Fixed in tar 7.5.7, but npm@latest still uses 7.5.4
+# This is in system npm, not in our app dependencies
+# Will be fixed when npm updates their tar dependency
+CVE-2026-24842
