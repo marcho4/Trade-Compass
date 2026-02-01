@@ -20,7 +20,7 @@ func NewDividendsRepository(pool *pgxpool.Pool) *DividendsRepository {
 
 func (r *DividendsRepository) GetByTicker(ctx context.Context, ticker string) ([]domain.Dividends, error) {
 	if ticker == "" {
-		return nil, fmt.Errorf("ticker is empty")
+		return nil, NewDbError("ticker is empty", 0)
 	}
 
 	query := `
@@ -33,7 +33,7 @@ func (r *DividendsRepository) GetByTicker(ctx context.Context, ticker string) ([
 
 	rows, err := r.pool.Query(ctx, query, ticker)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query dividends: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to query dividends: %v", err), 0)
 	}
 	defer rows.Close()
 
@@ -45,13 +45,13 @@ func (r *DividendsRepository) GetByTicker(ctx context.Context, ticker string) ([
 			&div.AmountPerShare, &div.DividendYield, &div.PayoutRatio, &div.Currency,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan dividend: %w", err)
+			return nil, NewDbError(fmt.Sprintf("failed to scan dividend: %v", err), 0)
 		}
 		dividends = append(dividends, div)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating dividends: %w", err)
+		return nil, NewDbError(fmt.Sprintf("error iterating dividends: %v", err), 0)
 	}
 
 	return dividends, nil
@@ -59,7 +59,7 @@ func (r *DividendsRepository) GetByTicker(ctx context.Context, ticker string) ([
 
 func (r *DividendsRepository) GetByID(ctx context.Context, id int) (*domain.Dividends, error) {
 	if id < 1 {
-		return nil, fmt.Errorf("invalid dividend ID: %d", id)
+		return nil, NewDbError(fmt.Sprintf("invalid dividend ID: %d", id), 0)
 	}
 
 	query := `
@@ -77,9 +77,9 @@ func (r *DividendsRepository) GetByID(ctx context.Context, id int) (*domain.Divi
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("dividend not found for ID %d", id)
+			return nil, NewDbError(fmt.Sprintf("dividend not found for ID %d", id), 0)
 		}
-		return nil, fmt.Errorf("failed to get dividend: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to get dividend: %v", err), 0)
 	}
 
 	return div, nil
@@ -87,10 +87,10 @@ func (r *DividendsRepository) GetByID(ctx context.Context, id int) (*domain.Divi
 
 func (r *DividendsRepository) Create(ctx context.Context, dividend *domain.Dividends) error {
 	if dividend == nil {
-		return fmt.Errorf("dividend is nil")
+		return NewDbError("dividend is nil", 0)
 	}
 	if dividend.Ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 
 	query := `
@@ -106,7 +106,7 @@ func (r *DividendsRepository) Create(ctx context.Context, dividend *domain.Divid
 	).Scan(&dividend.ID)
 
 	if err != nil {
-		return fmt.Errorf("failed to create dividend: %w", err)
+		return NewDbError(fmt.Sprintf("failed to create dividend: %v", err), 0)
 	}
 
 	return nil
@@ -114,10 +114,10 @@ func (r *DividendsRepository) Create(ctx context.Context, dividend *domain.Divid
 
 func (r *DividendsRepository) Update(ctx context.Context, id int, dividend *domain.Dividends) error {
 	if id < 1 {
-		return fmt.Errorf("invalid dividend ID: %d", id)
+		return NewDbError(fmt.Sprintf("invalid dividend ID: %d", id), 0)
 	}
 	if dividend == nil {
-		return fmt.Errorf("dividend is nil")
+		return NewDbError("dividend is nil", 0)
 	}
 
 	query := `
@@ -133,11 +133,11 @@ func (r *DividendsRepository) Update(ctx context.Context, id int, dividend *doma
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to update dividend: %w", err)
+		return NewDbError(fmt.Sprintf("failed to update dividend: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("dividend not found for ID %d", id)
+		return NewDbError(fmt.Sprintf("dividend not found for ID %d", id), 0)
 	}
 
 	return nil
@@ -145,18 +145,18 @@ func (r *DividendsRepository) Update(ctx context.Context, id int, dividend *doma
 
 func (r *DividendsRepository) Delete(ctx context.Context, id int) error {
 	if id < 1 {
-		return fmt.Errorf("invalid dividend ID: %d", id)
+		return NewDbError(fmt.Sprintf("invalid dividend ID: %d", id), 0)
 	}
 
 	query := `DELETE FROM dividends WHERE id = $1`
 
 	result, err := r.pool.Exec(ctx, query, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete dividend: %w", err)
+		return NewDbError(fmt.Sprintf("failed to delete dividend: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("dividend not found for ID %d", id)
+		return NewDbError(fmt.Sprintf("dividend not found for ID %d", id), 0)
 	}
 
 	return nil

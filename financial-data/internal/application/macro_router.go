@@ -2,12 +2,13 @@ package application
 
 import (
 	"encoding/json"
+	"errors"
 	"financial_data/internal/domain"
-	"fmt"
+	"financial_data/internal/infrastructure"
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 type MacroHandler struct {
@@ -31,15 +32,16 @@ func RegisterMacroRoutes(r chi.Router, repo MacroDataRepository) {
 func (h *MacroHandler) HandleGetCurrent(w http.ResponseWriter, r *http.Request) {
 	rate, err := h.repo.GetCurrent(r.Context())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load current CB rate: %v", err), http.StatusInternalServerError)
+		var dbErr *infrastructure.DbError
+		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
+			RespondWithError(w, r, 404, dbErr.Message, err)
+			return
+		}
+		RespondWithError(w, r, 500, "failed to load current CB rate", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(rate); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, rate, "Successfully got current central bank rate")
 }
 
 func (h *MacroHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request) {
@@ -47,38 +49,39 @@ func (h *MacroHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request) 
 	toStr := r.URL.Query().Get("to")
 
 	if fromStr == "" || toStr == "" {
-		http.Error(w, "from and to query parameters are required (format: YYYY-MM-DD)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "from and to query parameters are required (format: YYYY-MM-DD)", nil)
 		return
 	}
 
 	from, err := time.Parse("2006-01-02", fromStr)
 	if err != nil {
-		http.Error(w, "invalid from date format (expected YYYY-MM-DD)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid from date format (expected YYYY-MM-DD)", err)
 		return
 	}
 
 	to, err := time.Parse("2006-01-02", toStr)
 	if err != nil {
-		http.Error(w, "invalid to date format (expected YYYY-MM-DD)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid to date format (expected YYYY-MM-DD)", err)
 		return
 	}
 
 	rates, err := h.repo.GetHistory(r.Context(), from, to)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load CB rates history: %v", err), http.StatusInternalServerError)
+		var dbErr *infrastructure.DbError
+		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
+			RespondWithError(w, r, 404, dbErr.Message, err)
+			return
+		}
+		RespondWithError(w, r, 500, "failed to load CB rates history", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(rates); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, rates, "Successfully retrieved CB rates history")
 }
 
 func (h *MacroHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
@@ -88,13 +91,13 @@ func (h *MacroHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	date, err := time.Parse("2006-01-02", request.Date)
 	if err != nil {
-		http.Error(w, "invalid date format (expected YYYY-MM-DD)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid date format (expected YYYY-MM-DD)", err)
 		return
 	}
 
@@ -104,30 +107,28 @@ func (h *MacroHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Create(r.Context(), rate); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create CB rate: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to create CB rate", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+	RespondWithSuccess(w, 201, rate, "CB rate successfully created")
 }
 
 func (h *MacroHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	dateStr := r.URL.Query().Get("date")
 	if dateStr == "" {
-		http.Error(w, "date query parameter is required (format: YYYY-MM-DD)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "date query parameter is required (format: YYYY-MM-DD)", nil)
 		return
 	}
 
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
-		http.Error(w, "invalid date format (expected YYYY-MM-DD)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid date format (expected YYYY-MM-DD)", err)
 		return
 	}
 
@@ -136,41 +137,50 @@ func (h *MacroHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	if err := h.repo.Update(r.Context(), date, request.Rate); err != nil {
-		http.Error(w, fmt.Sprintf("failed to update CB rate: %v", err), http.StatusInternalServerError)
+		var dbErr *infrastructure.DbError
+		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
+			RespondWithError(w, r, 404, dbErr.Message, err)
+			return
+		}
+		RespondWithError(w, r, 500, "failed to update CB rate", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	RespondWithSuccess(w, 200, map[string]string{"status": "updated"}, "CB rate successfully updated")
 }
 
 func (h *MacroHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	dateStr := r.URL.Query().Get("date")
 	if dateStr == "" {
-		http.Error(w, "date query parameter is required (format: YYYY-MM-DD)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "date query parameter is required (format: YYYY-MM-DD)", nil)
 		return
 	}
 
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
-		http.Error(w, "invalid date format (expected YYYY-MM-DD)", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid date format (expected YYYY-MM-DD)", err)
 		return
 	}
 
 	if err := h.repo.Delete(r.Context(), date); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete CB rate: %v", err), http.StatusInternalServerError)
+		var dbErr *infrastructure.DbError
+		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
+			RespondWithError(w, r, 404, dbErr.Message, err)
+			return
+		}
+		RespondWithError(w, r, 500, "failed to delete CB rate", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	RespondWithSuccess(w, 204, nil, "CB rate successfully deleted")
 }

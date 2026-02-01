@@ -3,11 +3,10 @@ package application
 import (
 	"encoding/json"
 	"financial_data/internal/domain"
-	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 type DividendsHandler struct {
@@ -31,21 +30,17 @@ func RegisterDividendsRoutes(r chi.Router, repo DividendsRepository) {
 func (h *DividendsHandler) HandleGetByTicker(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		http.Error(w, "ticker is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	dividends, err := h.repo.GetByTicker(r.Context(), ticker)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load dividends: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to load dividends", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(dividends); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, dividends, "Successfully retrieved dividends by ticker")
 }
 
 func (h *DividendsHandler) HandleGetByID(w http.ResponseWriter, r *http.Request) {
@@ -53,62 +48,56 @@ func (h *DividendsHandler) HandleGetByID(w http.ResponseWriter, r *http.Request)
 	idStr := chi.URLParam(r, "id")
 
 	if ticker == "" || idStr == "" {
-		http.Error(w, "ticker and id are required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "ticker and id are required", nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid id", err)
 		return
 	}
 
 	dividend, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load dividend: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to load dividend", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(dividend); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, dividend, "Successfully retrieved dividend by id")
 }
 
 func (h *DividendsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		http.Error(w, "ticker is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	var dividend domain.Dividends
 	if err := json.NewDecoder(r.Body).Decode(&dividend); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	dividend.Ticker = ticker
 
 	if err := h.repo.Create(r.Context(), &dividend); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create dividend: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to create dividend", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(dividend)
+	RespondWithSuccess(w, 201, dividend, "Dividend successfully created")
 }
 
 func (h *DividendsHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
@@ -116,36 +105,35 @@ func (h *DividendsHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) 
 	idStr := chi.URLParam(r, "id")
 
 	if ticker == "" || idStr == "" {
-		http.Error(w, "ticker and id are required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "ticker and id are required", nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid id", err)
 		return
 	}
 
 	var dividend domain.Dividends
 	if err := json.NewDecoder(r.Body).Decode(&dividend); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	dividend.Ticker = ticker
 
 	if err := h.repo.Update(r.Context(), id, &dividend); err != nil {
-		http.Error(w, fmt.Sprintf("failed to update dividend: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to update dividend", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	RespondWithSuccess(w, 200, map[string]string{"status": "updated"}, "Dividend successfully updated")
 }
 
 func (h *DividendsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
@@ -153,20 +141,20 @@ func (h *DividendsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) 
 	idStr := chi.URLParam(r, "id")
 
 	if ticker == "" || idStr == "" {
-		http.Error(w, "ticker and id are required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "ticker and id are required", nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid id", err)
 		return
 	}
 
 	if err := h.repo.Delete(r.Context(), id); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete dividend: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to delete dividend", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	RespondWithSuccess(w, 204, nil, "Dividend successfully deleted")
 }

@@ -3,11 +3,10 @@ package application
 import (
 	"encoding/json"
 	"financial_data/internal/domain"
-	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 type SectorHandler struct {
@@ -31,120 +30,109 @@ func RegisterSectorRoutes(r chi.Router, repo SectorRepository) {
 func (h *SectorHandler) HandleGetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	if idStr == "" {
-		http.Error(w, "id is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "id is required", nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid id", err)
 		return
 	}
 
 	sector, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load sector: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to load sector", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(sector); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, sector, "Successfully retrieved sector by id")
 }
 
 func (h *SectorHandler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 	sectors, err := h.repo.GetAll(r.Context())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to load sectors: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to load sectors", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(sectors); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	RespondWithSuccess(w, 200, sectors, "Successfully retrieved all sectors")
 }
 
 func (h *SectorHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	var sector domain.SectorModel
 	if err := json.NewDecoder(r.Body).Decode(&sector); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	if err := h.repo.Create(r.Context(), &sector); err != nil {
-		http.Error(w, fmt.Sprintf("failed to create sector: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to create sector", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(sector)
+	RespondWithSuccess(w, 201, sector, "Sector successfully created")
 }
 
 func (h *SectorHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	idStr := chi.URLParam(r, "id")
 	if idStr == "" {
-		http.Error(w, "id is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "id is required", nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid id", err)
 		return
 	}
 
 	var sector domain.SectorModel
 	if err := json.NewDecoder(r.Body).Decode(&sector); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	if err := h.repo.Update(r.Context(), id, &sector); err != nil {
-		http.Error(w, fmt.Sprintf("failed to update sector: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to update sector", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	RespondWithSuccess(w, 200, map[string]string{"status": "updated"}, "Sector successfully updated")
 }
 
 func (h *SectorHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	if ok, err := validateApiKey(r); !ok {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		RespondWithError(w, r, 401, "unauthorized", err)
 		return
 	}
 
 	idStr := chi.URLParam(r, "id")
 	if idStr == "" {
-		http.Error(w, "id is required", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "id is required", nil)
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		RespondWithError(w, r, 400, "invalid id", err)
 		return
 	}
 
 	if err := h.repo.Delete(r.Context(), id); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete sector: %v", err), http.StatusInternalServerError)
+		RespondWithError(w, r, 500, "failed to delete sector", err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	RespondWithSuccess(w, 204, nil, "Sector successfully deleted")
 }

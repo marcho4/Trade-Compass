@@ -20,13 +20,13 @@ func NewRawDataRepository(pool *pgxpool.Pool) *RawDataRepository {
 
 func (r *RawDataRepository) GetByTickerAndPeriod(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.RawData, error) {
 	if ticker == "" {
-		return nil, fmt.Errorf("ticker is empty")
+		return nil, NewDbError("ticker is empty", 0)
 	}
 	if year < 1900 || year > 2100 {
-		return nil, fmt.Errorf("invalid year: %d", year)
+		return nil, NewDbError(fmt.Sprintf("invalid year: %d", year), 0)
 	}
 	if !period.IsValid() {
-		return nil, fmt.Errorf("invalid period: %s", period)
+		return nil, NewDbError(fmt.Sprintf("invalid period: %s", period), 0)
 	}
 
 	query := `
@@ -59,9 +59,9 @@ func (r *RawDataRepository) GetByTickerAndPeriod(ctx context.Context, ticker str
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("metrics not found for ticker %s, year %d, period %s", ticker, year, period)
+			return nil, NewDbError(fmt.Sprintf("metrics not found for ticker %s, year %d, period %s", ticker, year, period), 0)
 		}
-		return nil, fmt.Errorf("failed to get metrics: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to get metrics: %v", err), 0)
 	}
 
 	return rawData, nil
@@ -69,7 +69,7 @@ func (r *RawDataRepository) GetByTickerAndPeriod(ctx context.Context, ticker str
 
 func (r *RawDataRepository) GetLatestByTicker(ctx context.Context, ticker string) (*domain.RawData, error) {
 	if ticker == "" {
-		return nil, fmt.Errorf("ticker is empty")
+		return nil, NewDbError("ticker is empty", 0)
 	}
 
 	query := `
@@ -104,9 +104,9 @@ func (r *RawDataRepository) GetLatestByTicker(ctx context.Context, ticker string
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("no metrics found for ticker %s", ticker)
+			return nil, NewDbError(fmt.Sprintf("no metrics found for ticker %s", ticker), 0)
 		}
-		return nil, fmt.Errorf("failed to get latest metrics: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to get latest metrics: %v", err), 0)
 	}
 
 	return rawData, nil
@@ -114,7 +114,7 @@ func (r *RawDataRepository) GetLatestByTicker(ctx context.Context, ticker string
 
 func (r *RawDataRepository) GetHistoryByTicker(ctx context.Context, ticker string) ([]domain.RawData, error) {
 	if ticker == "" {
-		return nil, fmt.Errorf("ticker is empty")
+		return nil, NewDbError("ticker is empty", 0)
 	}
 
 	query := `
@@ -135,7 +135,7 @@ func (r *RawDataRepository) GetHistoryByTicker(ctx context.Context, ticker strin
 
 	rows, err := r.pool.Query(ctx, query, ticker)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query metrics: %w", err)
+		return nil, NewDbError(fmt.Sprintf("failed to query metrics: %v", err), 0)
 	}
 	defer rows.Close()
 
@@ -154,13 +154,13 @@ func (r *RawDataRepository) GetHistoryByTicker(ctx context.Context, ticker strin
 			&rawData.WorkingCapital, &rawData.CapitalEmployed, &rawData.EnterpriseValue, &rawData.NetDebt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan metrics: %w", err)
+			return nil, NewDbError(fmt.Sprintf("failed to scan metrics: %v", err), 0)
 		}
 		history = append(history, rawData)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating metrics: %w", err)
+		return nil, NewDbError(fmt.Sprintf("error iterating metrics: %v", err), 0)
 	}
 
 	return history, nil
@@ -168,16 +168,16 @@ func (r *RawDataRepository) GetHistoryByTicker(ctx context.Context, ticker strin
 
 func (r *RawDataRepository) Create(ctx context.Context, rawData *domain.RawData) error {
 	if rawData == nil {
-		return fmt.Errorf("rawData is nil")
+		return NewDbError("rawData is nil", 0)
 	}
 	if rawData.Ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 	if rawData.Year < 1900 || rawData.Year > 2100 {
-		return fmt.Errorf("invalid year: %d", rawData.Year)
+		return NewDbError(fmt.Sprintf("invalid year: %d", rawData.Year), 0)
 	}
 	if !rawData.Period.IsValid() {
-		return fmt.Errorf("invalid period: %s", rawData.Period)
+		return NewDbError(fmt.Sprintf("invalid period: %s", rawData.Period), 0)
 	}
 
 	query := `
@@ -217,7 +217,7 @@ func (r *RawDataRepository) Create(ctx context.Context, rawData *domain.RawData)
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to create metrics: %w", err)
+		return NewDbError(fmt.Sprintf("failed to create metrics: %v", err), 0)
 	}
 
 	return nil
@@ -225,16 +225,16 @@ func (r *RawDataRepository) Create(ctx context.Context, rawData *domain.RawData)
 
 func (r *RawDataRepository) Update(ctx context.Context, rawData *domain.RawData) error {
 	if rawData == nil {
-		return fmt.Errorf("rawData is nil")
+		return NewDbError("rawData is nil", 0)
 	}
 	if rawData.Ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 	if rawData.Year < 1900 || rawData.Year > 2100 {
-		return fmt.Errorf("invalid year: %d", rawData.Year)
+		return NewDbError(fmt.Sprintf("invalid year: %d", rawData.Year), 0)
 	}
 	if !rawData.Period.IsValid() {
-		return fmt.Errorf("invalid period: %s", rawData.Period)
+		return NewDbError(fmt.Sprintf("invalid period: %s", rawData.Period), 0)
 	}
 
 	query := `
@@ -263,11 +263,11 @@ func (r *RawDataRepository) Update(ctx context.Context, rawData *domain.RawData)
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to update metrics: %w", err)
+		return NewDbError(fmt.Sprintf("failed to update metrics: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("metrics not found for ticker %s, year %d, period %s", rawData.Ticker, rawData.Year, rawData.Period)
+		return NewDbError(fmt.Sprintf("metrics not found for ticker %s, year %d, period %s", rawData.Ticker, rawData.Year, rawData.Period), 0)
 	}
 
 	return nil
@@ -275,24 +275,24 @@ func (r *RawDataRepository) Update(ctx context.Context, rawData *domain.RawData)
 
 func (r *RawDataRepository) Delete(ctx context.Context, ticker string, year int, period domain.ReportPeriod) error {
 	if ticker == "" {
-		return fmt.Errorf("ticker is empty")
+		return NewDbError("ticker is empty", 0)
 	}
 	if year < 1900 || year > 2100 {
-		return fmt.Errorf("invalid year: %d", year)
+		return NewDbError(fmt.Sprintf("invalid year: %d", year), 0)
 	}
 	if !period.IsValid() {
-		return fmt.Errorf("invalid period: %s", period)
+		return NewDbError(fmt.Sprintf("invalid period: %s", period), 0)
 	}
 
 	query := `DELETE FROM metrics WHERE ticker = $1 AND year = $2 AND period = $3`
 
 	result, err := r.pool.Exec(ctx, query, ticker, year, period)
 	if err != nil {
-		return fmt.Errorf("failed to delete metrics: %w", err)
+		return NewDbError(fmt.Sprintf("failed to delete metrics: %v", err), 0)
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("metrics not found for ticker %s, year %d, period %s", ticker, year, period)
+		return NewDbError(fmt.Sprintf("metrics not found for ticker %s, year %d, period %s", ticker, year, period), 0)
 	}
 
 	return nil
