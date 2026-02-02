@@ -58,7 +58,7 @@ func (r *CompanyRepository) GetAll(ctx context.Context) ([]domain.Company, error
 	}
 	defer rows.Close()
 
-	var companies []domain.Company
+	companies := make([]domain.Company, 0)
 	for rows.Next() {
 		var company domain.Company
 		err := rows.Scan(
