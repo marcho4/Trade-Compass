@@ -1,0 +1,7 @@
+DROP INDEX IF EXISTS idx_companies_inn;
+
+ALTER TABLE companies
+    DROP COLUMN IF EXISTS inn,
+    DROP COLUMN IF EXISTS owner,
+    DROP COLUMN IF EXISTS employees,
+    ALTER COLUMN lot_size DROP NOT NULL;
