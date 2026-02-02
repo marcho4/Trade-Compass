@@ -1,0 +1,7 @@
+ALTER TABLE companies
+    ADD COLUMN IF NOT EXISTS inn VARCHAR(12),
+    ADD COLUMN IF NOT EXISTS owner TEXT,
+    ADD COLUMN IF NOT EXISTS employees INTEGER,
+    ALTER COLUMN lot_size SET NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_companies_inn ON companies(inn);

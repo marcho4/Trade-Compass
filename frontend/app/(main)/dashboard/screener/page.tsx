@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { CompanyCard, ScreenerFilters } from "@/components/screener"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { financialDataApi, Sector } from "@/lib/api-client"
+import { financialDataApi, Sector, Company } from "@/lib/api-client"
 
 interface FilterValues {
   search: string
@@ -20,179 +20,23 @@ interface FilterValues {
   roeMin: string
 }
 
-const MOCK_COMPANIES = [
-  {
-    id: 1,
-    ticker: "GAZP",
-    name: "ПАО Газпром",
-    sector: "Нефть и газ",
-    price: 155.32,
-    priceChange: 2.45,
-    priceChangePercent: 1.6,
-    rating: {
-      profitability: 5,
-      growth: 10,
-      valuation: 8,
-      financial_health: 12,
-      efficiency: 7,
-    },
-    marketCap: 3680000000000,
-    pe: 3.2,
-    dividendYield: 12.5,
-  },
-  {
-    id: 2,
-    ticker: "SBER",
-    name: "ПАО Сбербанк",
-    sector: "Финансы",
-    price: 289.5,
-    priceChange: -3.2,
-    priceChangePercent: -1.09,
-    rating: {
-      profitability: 25,
-      growth: 30,
-      valuation: 28,
-      financial_health: 32,
-      efficiency: 27,
-    },
-    marketCap: 6450000000000,
-    pe: 5.8,
-    dividendYield: 8.2,
-  },
-  {
-    id: 3,
-    ticker: "LKOH",
-    name: "ПАО НК ЛУКОЙЛ",
-    sector: "Нефть и газ",
-    price: 7245.0,
-    priceChange: 125.5,
-    priceChangePercent: 1.76,
-    rating: {
-      profitability: 45,
-      growth: 50,
-      valuation: 48,
-      financial_health: 52,
-      efficiency: 47,
-    },
-    marketCap: 5100000000000,
-    pe: 4.5,
-    dividendYield: 10.3,
-  },
-  {
-    id: 4,
-    ticker: "YNDX",
-    name: "Яндекс",
-    sector: "Технологии",
-    price: 4250.0,
-    priceChange: 85.0,
-    priceChangePercent: 2.04,
-    rating: {
-      profitability: 65,
-      growth: 68,
-      valuation: 62,
-      financial_health: 70,
-      efficiency: 67,
-    },
-    marketCap: 1350000000000,
-    pe: 18.5,
-    dividendYield: 0,
-  },
-  {
-    id: 5,
-    ticker: "ROSN",
-    name: "ПАО НК Роснефть",
-    sector: "Нефть и газ",
-    price: 625.8,
-    priceChange: -8.2,
-    priceChangePercent: -1.29,
-    rating: {
-      profitability: 80,
-      growth: 75,
-      valuation: 82,
-      financial_health: 78,
-      efficiency: 77,
-    },
-    marketCap: 6620000000000,
-    pe: 3.8,
-    dividendYield: 11.2,
-  },
-  {
-    id: 6,
-    ticker: "GMKN",
-    name: "ПАО ГМК Норильский никель",
-    sector: "Металлургия",
-    price: 16780.0,
-    priceChange: 220.0,
-    priceChangePercent: 1.33,
-    rating: {
-      profitability: 92,
-      growth: 88,
-      valuation: 95,
-      financial_health: 90,
-      efficiency: 93,
-    },
-    marketCap: 2660000000000,
-    pe: 6.2,
-    dividendYield: 15.8,
-  },
-  {
-    id: 7,
-    ticker: "MTSS",
-    name: "ПАО МТС",
-    sector: "Телекоммуникации",
-    price: 310.5,
-    priceChange: 4.3,
-    priceChangePercent: 1.4,
-    rating: {
-      profitability: 98,
-      growth: 95,
-      valuation: 100,
-      financial_health: 97,
-      efficiency: 96,
-    },
-    marketCap: 620000000000,
-    pe: 7.5,
-    dividendYield: 9.5,
-  },
-  {
-    id: 8,
-    ticker: "NVTK",
-    name: "ПАО НОВАТЭК",
-    sector: "Нефть и газ",
-    price: 1285.0,
-    priceChange: 15.0,
-    priceChangePercent: 1.18,
-    rating: {
-      profitability: 35,
-      growth: 40,
-      valuation: 38,
-      financial_health: 42,
-      efficiency: 37,
-    },
-    marketCap: 3840000000000,
-    pe: 8.9,
-    dividendYield: 7.8,
-  },
-  {
-    id: 9,
-    ticker: "TATN",
-    name: "ПАО Татнефть",
-    sector: "Нефть и газ",
-    price: 685.2,
-    priceChange: -5.8,
-    priceChangePercent: -0.84,
-    rating: {
-      profitability: 55,
-      growth: 58,
-      valuation: 52,
-      financial_health: 60,
-      efficiency: 57,
-    },
-    marketCap: 1450000000000,
-    pe: 4.2,
-    dividendYield: 13.2,
-  },
-]
+interface CompanyWithDetails extends Company {
+  name: string
+  sector: string
+  price: number
+  priceChange: number
+  priceChangePercent: number
+  rating: {
+    profitability: number
+    growth: number
+    valuation: number
+    financial_health: number
+    efficiency: number
+  }
+  marketCap?: number
+  pe?: number
+  dividendYield?: number
+}
 
 const ITEMS_PER_PAGE = 9
 
@@ -200,7 +44,8 @@ export default function ScreenerPage() {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
   const [sectors, setSectors] = useState<Sector[]>([])
-  const [sectorsLoading, setSectorsLoading] = useState(true)
+  const [companies, setCompanies] = useState<CompanyWithDetails[]>([])
+  const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<FilterValues>({
     search: "",
     sector: "",
@@ -215,18 +60,46 @@ export default function ScreenerPage() {
   })
 
   useEffect(() => {
-    const loadSectors = async () => {
+    const loadData = async () => {
       try {
-        const data = await financialDataApi.getSectors()
-        setSectors(data)
+        const [sectorsData, companiesData] = await Promise.all([
+          financialDataApi.getSectors(),
+          financialDataApi.getCompanies(),
+        ])
+        
+        setSectors(sectorsData)
+        
+        const companiesWithDetails: CompanyWithDetails[] = companiesData.map((company) => {
+          const sector = sectorsData.find((s) => s.id === company.sectorId)
+          return {
+            ...company,
+            name: company.ticker,
+            sector: sector?.name || "Неизвестно",
+            price: Math.random() * 1000 + 100,
+            priceChange: (Math.random() - 0.5) * 20,
+            priceChangePercent: (Math.random() - 0.5) * 5,
+            rating: {
+              profitability: Math.floor(Math.random() * 100),
+              growth: Math.floor(Math.random() * 100),
+              valuation: Math.floor(Math.random() * 100),
+              financial_health: Math.floor(Math.random() * 100),
+              efficiency: Math.floor(Math.random() * 100),
+            },
+            marketCap: Math.random() * 5000000000000 + 100000000000,
+            pe: Math.random() * 20 + 2,
+            dividendYield: Math.random() * 15,
+          }
+        })
+        
+        setCompanies(companiesWithDetails)
       } catch (error) {
-        console.error("Failed to load sectors:", error)
+        console.error("Failed to load data:", error)
       } finally {
-        setSectorsLoading(false)
+        setLoading(false)
       }
     }
     
-    loadSectors()
+    loadData()
   }, [])
 
   // Функция для обработки изменения фильтра
@@ -252,23 +125,19 @@ export default function ScreenerPage() {
     setCurrentPage(1)
   }
 
-  // Фильтрация компаний (в реальности будет на бэкенде)
-  const filteredCompanies = MOCK_COMPANIES.filter((company) => {
+  // Фильтрация компаний
+  const filteredCompanies = companies.filter((company) => {
     // Поиск по названию или тикеру
     if (
       filters.search &&
-      !company.name.toLowerCase().includes(filters.search.toLowerCase()) &&
       !company.ticker.toLowerCase().includes(filters.search.toLowerCase())
     ) {
       return false
     }
 
     // Фильтр по сектору
-    if (filters.sector) {
-      const sector = sectors.find((s) => s.id === parseInt(filters.sector))
-      if (sector && company.sector !== sector.name) {
-        return false
-      }
+    if (filters.sector && company.sectorId !== parseInt(filters.sector)) {
+      return false
     }
 
     // Фильтр по P/E
@@ -282,6 +151,7 @@ export default function ScreenerPage() {
     // Фильтр по дивидендной доходности
     if (
       filters.dividendYieldMin &&
+      company.dividendYield &&
       company.dividendYield < parseFloat(filters.dividendYieldMin)
     ) {
       return false
@@ -337,6 +207,16 @@ export default function ScreenerPage() {
 
   const handleCompanyClick = (ticker: string) => {
     router.push(`/dashboard/${ticker}`)
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Загрузка компаний...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -20,6 +20,7 @@ func NewPriceHandler(priceProvider *infrastructure.MoexDataProvider) *PriceHandl
 func RegisterPriceRoutes(r chi.Router, priceProvider *infrastructure.MoexDataProvider) {
 	handler := NewPriceHandler(priceProvider)
 	r.Get("/price", handler.HandleGetPriceByTicker)
+	r.Get("/stock-info", handler.HandleGetStockInfo)
 }
 
 func (h *PriceHandler) HandleGetPriceByTicker(w http.ResponseWriter, r *http.Request) {
@@ -51,4 +52,16 @@ func (h *PriceHandler) HandleGetPriceByTicker(w http.ResponseWriter, r *http.Req
 	}
 
 	RespondWithSuccess(w, 200, price, "Success")
+}
+
+func (h *PriceHandler) HandleGetStockInfo(w http.ResponseWriter, r *http.Request) {
+	ticker := r.URL.Query().Get("ticker")
+	if ticker == "" {
+		RespondWithError(w, r, 400, "provide ticker in the url params", nil)
+	}
+	stockInfo, err := h.priceProvider.GetStockInfo(ticker)
+	if err != nil {
+		RespondWithError(w, r, 500, "Error happened while retrieving data", err)
+	}
+	RespondWithSuccess(w, 200, stockInfo, "Successfully got stock info")
 }

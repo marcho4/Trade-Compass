@@ -1,16 +1,12 @@
 // Типы для анализа компаний
 
 export interface Company {
-  id: string
-  inn: number
+  id: number
   ticker: string
-  name: string
-  owner: string
   sectorId: number
   sector?: string
-  lotSize: number
-  ceo: string
-  employees: number
+  lotSize?: number
+  ceo?: string
   currentPrice?: number
   priceChange24h?: number
 }
