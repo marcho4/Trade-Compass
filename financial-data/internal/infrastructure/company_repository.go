@@ -24,15 +24,14 @@ func (r *CompanyRepository) GetByTicker(ctx context.Context, ticker string) (*do
 	}
 
 	query := `
-		SELECT id, inn, ticker, owner, sector_id, lot_size, ceo, employees
+		SELECT id, ticker, sector_id, lot_size, ceo
 		FROM companies
 		WHERE ticker = $1
 	`
 
 	company := &domain.Company{}
 	err := r.pool.QueryRow(ctx, query, ticker).Scan(
-		&company.ID, &company.INN, &company.Ticker, &company.Owner,
-		&company.SectorID, &company.LotSize, &company.CEO, &company.Employees,
+		&company.ID, &company.Ticker, &company.SectorID, &company.LotSize, &company.CEO,
 	)
 
 	if err != nil {
@@ -47,7 +46,7 @@ func (r *CompanyRepository) GetByTicker(ctx context.Context, ticker string) (*do
 
 func (r *CompanyRepository) GetAll(ctx context.Context) ([]domain.Company, error) {
 	query := `
-		SELECT id, inn, ticker, owner, sector_id, lot_size, ceo, employees
+		SELECT id, ticker, sector_id, lot_size, ceo
 		FROM companies
 		ORDER BY ticker
 	`
@@ -62,8 +61,7 @@ func (r *CompanyRepository) GetAll(ctx context.Context) ([]domain.Company, error
 	for rows.Next() {
 		var company domain.Company
 		err := rows.Scan(
-			&company.ID, &company.INN, &company.Ticker, &company.Owner,
-			&company.SectorID, &company.LotSize, &company.CEO, &company.Employees,
+			&company.ID, &company.Ticker, &company.SectorID, &company.LotSize, &company.CEO,
 		)
 		if err != nil {
 			return nil, NewDbError(fmt.Sprintf("failed to scan company: %v", err), 0)
@@ -80,7 +78,7 @@ func (r *CompanyRepository) GetAll(ctx context.Context) ([]domain.Company, error
 
 func (r *CompanyRepository) GetBySector(ctx context.Context, sectorID int) ([]domain.Company, error) {
 	query := `
-		SELECT id, inn, ticker, owner, sector_id, lot_size, ceo, employees
+		SELECT id, ticker, sector_id, lot_size, ceo
 		FROM companies
 		WHERE sector_id = $1
 		ORDER BY ticker
@@ -96,8 +94,7 @@ func (r *CompanyRepository) GetBySector(ctx context.Context, sectorID int) ([]do
 	for rows.Next() {
 		var company domain.Company
 		err := rows.Scan(
-			&company.ID, &company.INN, &company.Ticker, &company.Owner,
-			&company.SectorID, &company.LotSize, &company.CEO, &company.Employees,
+			&company.ID, &company.Ticker, &company.SectorID, &company.LotSize, &company.CEO,
 		)
 		if err != nil {
 			return nil, NewDbError(fmt.Sprintf("failed to scan company: %v", err), 0)
@@ -116,22 +113,18 @@ func (r *CompanyRepository) Create(ctx context.Context, company *domain.Company)
 	if company == nil {
 		return NewDbError("company is nil", 0)
 	}
-	if company.INN == "" {
-		return NewDbError("INN is empty", 0)
-	}
 	if company.Ticker == "" {
 		return NewDbError("ticker is empty", 0)
 	}
 
 	query := `
-		INSERT INTO companies (inn, ticker, owner, sector_id, lot_size, ceo, employees)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO companies (ticker, sector_id, lot_size, ceo)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id
 	`
 
 	err := r.pool.QueryRow(ctx, query,
-		company.INN, company.Ticker, company.Owner, company.SectorID,
-		company.LotSize, company.CEO, company.Employees,
+		company.Ticker, company.SectorID, company.LotSize, company.CEO,
 	).Scan(&company.ID)
 
 	if err != nil {
@@ -151,13 +144,12 @@ func (r *CompanyRepository) Update(ctx context.Context, ticker string, company *
 
 	query := `
 		UPDATE companies SET
-			inn = $2, owner = $3, sector_id = $4, lot_size = $5, ceo = $6, employees = $7
+			sector_id = $2, lot_size = $3, ceo = $4
 		WHERE ticker = $1
 	`
 
 	result, err := r.pool.Exec(ctx, query,
-		ticker, company.INN, company.Owner, company.SectorID,
-		company.LotSize, company.CEO, company.Employees,
+		ticker, company.SectorID, company.LotSize, company.CEO,
 	)
 
 	if err != nil {

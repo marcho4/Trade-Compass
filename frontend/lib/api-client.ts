@@ -248,6 +248,14 @@ export interface Sector {
   name: string;
 }
 
+export interface Company {
+  id: number;
+  ticker: string;
+  sectorId: number;
+  lotSize?: number;
+  ceo?: string;
+}
+
 interface ApiResponse<T> {
   status: string;
   data: T;
@@ -270,6 +278,54 @@ export const financialDataApi = {
     }
     
     const result: ApiResponse<Sector[]> = await response.json();
+    return result.data;
+  },
+
+  async getCompanies(): Promise<Company[]> {
+    const response = await fetch(`${FINANCIAL_DATA_BASE_URL}/companies`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch companies');
+    }
+    
+    const result: ApiResponse<Company[]> = await response.json();
+    return result.data;
+  },
+
+  async getCompanyByTicker(ticker: string): Promise<Company> {
+    const response = await fetch(`${FINANCIAL_DATA_BASE_URL}/companies/${ticker}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch company ${ticker}`);
+    }
+    
+    const result: ApiResponse<Company> = await response.json();
+    return result.data;
+  },
+
+  async getCompaniesBySector(sectorId: number): Promise<Company[]> {
+    const response = await fetch(`${FINANCIAL_DATA_BASE_URL}/companies/sector/${sectorId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch companies for sector ${sectorId}`);
+    }
+    
+    const result: ApiResponse<Company[]> = await response.json();
     return result.data;
   },
 };
