@@ -81,3 +81,17 @@ func (m *MoexDataProvider) GetStockInfo(ticker string) (*domain.StockInfo, error
 
 	return stockInfo, nil
 }
+
+func (m *MoexDataProvider) GetMarketCap(ticker string) (float64, error) {
+	price, err := m.GetStockPrice(ticker, 1, domain.Period(60))
+	if err != nil {
+		return 0, err
+	}
+
+	stockInfo, err := m.GetStockInfo(ticker)
+	if err != nil {
+		return 0, err
+	}
+
+	return price[0].Close * float64(stockInfo.NumberOfShares), nil
+}

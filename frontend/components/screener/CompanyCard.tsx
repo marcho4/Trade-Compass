@@ -11,6 +11,9 @@ import {
   PolarRadiusAxis,
 } from "recharts"
 import { TrendingUp, TrendingDown } from "lucide-react"
+import { useState, useEffect } from "react"
+import { financialDataApi } from "@/lib/api-client"
+import { formatLargeNumber } from "@/lib/utils"
 
 interface CompanyRating {
   profitability: number // Рентабельность (ROE, ROA)
@@ -48,6 +51,25 @@ export const CompanyCard = ({
   dividendYield,
   onClick,
 }: CompanyCardProps) => {
+  const [currentPrice, setCurrentPrice] = useState(price)
+  const [currentMarketCap, setCurrentMarketCap] = useState(marketCap)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [priceData, marketCapData] = await Promise.all([
+          financialDataApi.getLatestPrice(ticker),
+          financialDataApi.getMarketCap(ticker)
+        ])
+        if (priceData) setCurrentPrice(priceData)
+        if (marketCapData) setCurrentMarketCap(marketCapData)
+      } catch (error) {
+        console.error(`Failed to fetch data for ${ticker}:`, error)
+      }
+    }
+    fetchData()
+  }, [ticker])
+
   const isPositiveChange = priceChange >= 0
 
   // Подготовка данных для радар чарта
@@ -217,7 +239,7 @@ export const CompanyCard = ({
                       style: "currency",
                       currency: "RUB",
                       maximumFractionDigits: 2,
-                    }).format(price)}
+                    }).format(currentPrice)}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 mt-1">
@@ -251,15 +273,11 @@ export const CompanyCard = ({
 
               {/* Дополнительные метрики */}
               <div className="space-y-2 text-xs">
-                {marketCap && (
+                {currentMarketCap && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Капитализация:</span>
                     <span className="font-medium">
-                      {new Intl.NumberFormat("ru-RU", {
-                        notation: "compact",
-                        compactDisplay: "short",
-                        maximumFractionDigits: 1,
-                      }).format(marketCap)} ₽
+                      {formatLargeNumber(currentMarketCap)} ₽
                     </span>
                   </div>
                 )}
@@ -285,4 +303,3 @@ export const CompanyCard = ({
     </div>
   )
 }
-
