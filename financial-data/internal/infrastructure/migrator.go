@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -19,11 +20,16 @@ func NewMigrator(dbURL, migrationsPath string) (*Migrator, error) {
 	if dbURL == "" {
 		return nil, errors.New("database URL is required")
 	}
-	dbURL = dbURL + "?x-migrations-table=financial_data_schema_migrations"
+
 	if migrationsPath == "" {
 		return nil, errors.New("migrations path is required")
 	}
-	dbURL += "&x-migrations-table=financial_data_schema_migrations"
+
+	separator := "?"
+	if strings.Contains(dbURL, "?") {
+		separator = "&"
+	}
+	dbURL = dbURL + separator + "x-migrations-table=financial_data_schema_migrations"
 	m, err := migrate.New(migrationsPath, dbURL)
 	if err != nil {
 		return nil, fmt.Errorf("create migrator: %w", err)

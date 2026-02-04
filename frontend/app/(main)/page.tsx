@@ -8,7 +8,7 @@ import { FAQSection } from "@/components/home/FAQSection"
 import { PricingSection } from "@/components/home/PricingSection"
 import { FinalCTASection } from "@/components/home/FinalCTASection"
 
-const Home = () => {
+const LandingPage = () => {
   return (
     <div className="flex flex-col">
       <Header />
@@ -29,4 +29,4 @@ const Home = () => {
   )
 }
 
-export default Home
+export default LandingPage

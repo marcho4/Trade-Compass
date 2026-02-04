@@ -328,6 +328,38 @@ export const financialDataApi = {
     const result: ApiResponse<Company[]> = await response.json();
     return result.data;
   },
+
+  async getLatestPrice(ticker: string): Promise<number> {
+    const response = await fetch(`${FINANCIAL_DATA_BASE_URL}/price/latest?ticker=${ticker}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch latest price for ${ticker}`);
+    }
+    
+    const result: ApiResponse<number> = await response.json();
+    return result.data;
+  },
+
+  async getMarketCap(ticker: string): Promise<number> {
+    const response = await fetch(`${FINANCIAL_DATA_BASE_URL}/market-cap?ticker=${ticker}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch market cap for ${ticker}`);
+    }
+    
+    const result: ApiResponse<number> = await response.json();
+    return result.data;
+  },
 };
 
 export default api;
