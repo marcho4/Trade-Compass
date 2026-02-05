@@ -251,6 +251,7 @@ export interface Sector {
 export interface Company {
   id: number;
   ticker: string;
+  name?: string;
   sectorId: number;
   lotSize?: number;
   ceo?: string;
