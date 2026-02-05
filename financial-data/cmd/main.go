@@ -69,7 +69,7 @@ func run() error {
 
 	application.RegisterRatiosRoutes(r, ratiosRepo)
 	application.RegisterRawDataRoutes(r, rawDataRepo)
-	application.RegisterCompanyRoutes(r, companyRepo)
+	application.RegisterCompanyRoutes(r, companyRepo, priceProvider)
 	application.RegisterSectorRoutes(r, sectorRepo)
 	application.RegisterDividendsRoutes(r, dividendsRepo)
 	application.RegisterMacroRoutes(r, cbRateRepo)
