@@ -3,6 +3,7 @@
 export interface Company {
   id: number
   ticker: string
+  name?: string
   sectorId: number
   sector?: string
   lotSize?: number

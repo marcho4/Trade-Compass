@@ -73,7 +73,7 @@ export default function ScreenerPage() {
           const sector = sectorsData.find((s) => s.id === company.sectorId)
           return {
             ...company,
-            name: company.ticker,
+            name: company.name || company.ticker,
             sector: sector?.name || "Неизвестно",
             price: Math.random() * 1000 + 100,
             priceChange: (Math.random() - 0.5) * 20,
