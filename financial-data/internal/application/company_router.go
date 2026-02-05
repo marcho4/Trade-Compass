@@ -12,15 +12,16 @@ import (
 )
 
 type CompanyHandler struct {
-	repo CompanyRepository
+	repo          CompanyRepository
+	marketService domain.MarketService
 }
 
-func NewCompanyHandler(repo CompanyRepository) *CompanyHandler {
-	return &CompanyHandler{repo: repo}
+func NewCompanyHandler(repo CompanyRepository, marketService domain.MarketService) *CompanyHandler {
+	return &CompanyHandler{repo: repo, marketService: marketService}
 }
 
-func RegisterCompanyRoutes(r chi.Router, repo CompanyRepository) {
-	handler := NewCompanyHandler(repo)
+func RegisterCompanyRoutes(r chi.Router, repo CompanyRepository, marketService domain.MarketService) {
+	handler := NewCompanyHandler(repo, marketService)
 
 	r.Get("/companies", handler.HandleGetAll)
 	r.Get("/companies/{ticker}", handler.HandleGetByTicker)
@@ -105,6 +106,16 @@ func (h *CompanyHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if !sector.IsValid() {
 		RespondWithError(w, r, 400, "invalid sector_id (allowed values from 1 to 19)", nil)
 		return
+	}
+
+	stockInfo, err := h.marketService.GetStockInfo(company.Ticker)
+	if err != nil {
+		RespondWithError(w, r, 400, "Company with this ticker is not traded on MOEX", err)
+		return
+	}
+
+	if stockInfo != nil {
+		company.Name = stockInfo.Name
 	}
 
 	if err := h.repo.Create(r.Context(), &company); err != nil {
