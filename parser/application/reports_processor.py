@@ -19,7 +19,7 @@ class ReportProcessor:
         self.repo = repo
         self.vectorization_service = vectorization_service
 
-    def process_companies(self, companies_inn: list[str]) -> ProcessingResult:
+    def process_companies(self, companies_inn: list[str], skip_indexing: bool = False) -> ProcessingResult:
         results = ProcessingResult(
             processed=0,
             errors=[],
@@ -29,7 +29,7 @@ class ReportProcessor:
         with EDisclosureClient() as client:
             for inn in companies_inn:
                 try:
-                    result = self.process_company(client, inn)
+                    result = self.process_company(client, inn, skip_indexing=skip_indexing)
                     results.processed += 1
                     results.saved += result.saved
                 except Exception as e:
@@ -38,7 +38,7 @@ class ReportProcessor:
 
         return results
 
-    def process_company(self, client: EDisclosureClient, inn: str) -> SingleCompanyProcessingResult:
+    def process_company(self, client: EDisclosureClient, inn: str, skip_indexing: bool = False) -> SingleCompanyProcessingResult:
         companies = client.search_company(inn)
 
         if not companies:
@@ -53,7 +53,7 @@ class ReportProcessor:
         reports = client.get_reports(first_company)
         downloaded = self._convert_to_downloaded_reports(reports)
 
-        saved = self.upload_and_save_reports(downloaded, ticker)
+        saved = self.upload_and_save_reports(downloaded, ticker, skip_indexing=skip_indexing)
 
         self._log_results(len(downloaded), saved)
 
@@ -73,14 +73,14 @@ class ReportProcessor:
                 ))
         return result
 
-    def upload_and_save_reports(self, reports: list[DownloadedReport], ticker: str) -> int:
+    def upload_and_save_reports(self, reports: list[DownloadedReport], ticker: str, skip_indexing: bool = False) -> int:
         saved = 0
         for report in reports:
-            if self._process_single_report(report, ticker):
+            if self._process_single_report(report, ticker, skip_indexing=skip_indexing):
                 saved += 1
         return saved
 
-    def _process_single_report(self, report: DownloadedReport, ticker: str) -> bool:
+    def _process_single_report(self, report: DownloadedReport, ticker: str, skip_indexing: bool = False) -> bool:
         if not report.is_valid():
             logger.warning("Пропуск: отсутствуют year или period_months в данных отчета")
             return False
@@ -99,7 +99,8 @@ class ReportProcessor:
         if not report_orm:
             return False
 
-        self._vectorize_report(report_orm, report, ticker)
+        if not skip_indexing:
+            self._vectorize_report(report_orm, report, ticker)
         return True
 
     def _report_exists_in_s3(self, ticker: str, report: DownloadedReport) -> bool:

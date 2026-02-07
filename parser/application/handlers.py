@@ -1,7 +1,7 @@
 import logging
 import os
 import tempfile
-from fastapi import APIRouter, Depends, BackgroundTasks, UploadFile, File, Form, HTTPException, Header
+from fastapi import APIRouter, Depends, BackgroundTasks, UploadFile, File, Form, HTTPException, Header, Query
 from sqlalchemy.orm import Session
 
 from application.reports_processor import ReportProcessor
@@ -43,19 +43,20 @@ def health():
 @router.post("/start_parsing")
 def start_parsing(
     background_tasks: BackgroundTasks,
+    skip_indexing: bool = Query(False, description="Пропустить индексацию (векторизацию)"),
     _: bool = Depends(verify_admin_key)
 ):
-    background_tasks.add_task(run_parsing)
-    return {"message": "Parsing started in background"}
+    background_tasks.add_task(run_parsing, skip_indexing)
+    return {"message": "Parsing started in background", "skip_indexing": skip_indexing}
 
 
-def run_parsing():
+def run_parsing(skip_indexing: bool = False):
     with get_db_session() as db:
         repo = ReportsRepository(db)
         s3_client = S3ReportsStorage()
         vectorization_service = VectorizationService()
         processor = ReportProcessor(s3_client, repo, vectorization_service)
-        results = processor.process_companies(list(COMPANIES.keys()))
+        results = processor.process_companies(list(COMPANIES.keys()), skip_indexing=skip_indexing)
         logger.info(f"Parsing completed: {results}")
 
 
