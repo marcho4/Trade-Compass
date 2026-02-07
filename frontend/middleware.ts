@@ -28,19 +28,18 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const accessToken = request.cookies.get("accessToken")?.value;
-  const hasToken = Boolean(accessToken);
+  // const accessToken = request.cookies.get("accessToken")?.value;
+  // const hasToken = Boolean(accessToken);
 
-  if (isProtectedRoute(pathname) && !hasToken) {
-    const loginUrl = new URL("/auth", request.url);
-    loginUrl.searchParams.set("redirect", pathname); // Сохранение урла редиректа
-    return NextResponse.redirect(loginUrl);
-  }
+  // if (isProtectedRoute(pathname) && !hasToken) {
+  //   const loginUrl = new URL("/auth", request.url);
+  //   loginUrl.searchParams.set("redirect", pathname);
+  //   return NextResponse.redirect(loginUrl);
+  // }
 
-  if (isAuthRoute(pathname) && hasToken) {
-    // const redirectTo = request.nextUrl.searchParams.get("redirect");
-    // const dashboardUrl = new URL(redirectTo || "/dashboard", request.url);
-    const dashboardUrl = new URL("/welcome", request.url);
+  if (isAuthRoute(pathname)) {
+    const redirectTo = request.nextUrl.searchParams.get("redirect");
+    const dashboardUrl = new URL(redirectTo || "/dashboard/screener", request.url);
     return NextResponse.redirect(dashboardUrl);
   }
 

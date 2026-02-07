@@ -14,6 +14,7 @@ import { TrendingUp, TrendingDown } from "lucide-react"
 import { useState, useEffect } from "react"
 import { financialDataApi } from "@/lib/api-client"
 import { formatLargeNumber } from "@/lib/utils"
+import { usePriceData } from "@/hooks/use-price-data"
 
 interface CompanyRating {
   profitability: number // Рентабельность (ROE, ROA)
@@ -51,26 +52,30 @@ export const CompanyCard = ({
   dividendYield,
   onClick,
 }: CompanyCardProps) => {
-  const [currentPrice, setCurrentPrice] = useState(price)
+  const { price: fetchedPrice, priceChange: actualPriceChange, priceChangePercent: actualPriceChangePercent, loading: priceLoading } = usePriceData(ticker)
   const [currentMarketCap, setCurrentMarketCap] = useState(marketCap)
 
   useEffect(() => {
-    const fetchData = async () => {
+    const controller = new AbortController()
+
+    const fetchMarketCap = async () => {
       try {
-        const [priceData, marketCapData] = await Promise.all([
-          financialDataApi.getLatestPrice(ticker),
-          financialDataApi.getMarketCap(ticker)
-        ])
-        if (priceData) setCurrentPrice(priceData)
+        const marketCapData = await financialDataApi.getMarketCap(ticker, controller.signal)
         if (marketCapData) setCurrentMarketCap(marketCapData)
       } catch (error) {
-        console.error(`Failed to fetch data for ${ticker}:`, error)
+        if (error instanceof DOMException && error.name === "AbortError") return
+        console.error(`Failed to fetch market cap for ${ticker}:`, error)
       }
     }
-    fetchData()
+    fetchMarketCap()
+
+    return () => controller.abort()
   }, [ticker])
 
-  const isPositiveChange = priceChange >= 0
+  const currentPrice = priceLoading ? price : fetchedPrice
+  const displayPriceChange = priceLoading ? priceChange : actualPriceChange
+  const displayPriceChangePercent = priceLoading ? priceChangePercent : actualPriceChangePercent
+  const isPositiveChange = displayPriceChange >= 0
 
   // Подготовка данных для радар чарта
   const radarData = [
@@ -254,7 +259,7 @@ export const CompanyCard = ({
                     }`}
                   >
                     {isPositiveChange ? "+" : ""}
-                    {priceChangePercent.toFixed(2)}%
+                    {displayPriceChangePercent.toFixed(2)}%
                   </span>
                   <span
                     className={`text-xs ${
@@ -266,7 +271,7 @@ export const CompanyCard = ({
                       style: "currency",
                       currency: "RUB",
                       maximumFractionDigits: 2,
-                    }).format(priceChange)})
+                    }).format(displayPriceChange)})
                   </span>
                 </div>
               </div>
