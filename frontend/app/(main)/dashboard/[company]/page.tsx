@@ -3,7 +3,8 @@
 import { use, useEffect, useState } from "react"
 import { notFound } from "next/navigation"
 import { 
-  CompanyHeader, 
+  CompanyHeader,
+  CompanyReports,
   KeyMetricsGrid, 
   FinancialChart, 
   FinancialStatements 
@@ -30,7 +31,6 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
   const [company, setCompany] = useState<CompanyType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
   useEffect(() => {
     const loadCompany = async () => {
       try {
@@ -48,8 +48,6 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
           sector: sector?.name,
           lotSize: companyData.lotSize,
           ceo: companyData.ceo,
-          currentPrice: Math.random() * 1000 + 100,
-          priceChange24h: (Math.random() - 0.5) * 5,
         })
       } catch (err) {
         console.error("Failed to load company:", err)
@@ -58,7 +56,7 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
         setLoading(false)
       }
     }
-    
+
     loadCompany()
   }, [decodedTicker])
 
@@ -112,9 +110,10 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
       {/* Tabs для переключения между разными видами данных */}
       {latestMetrics && latestIndicators ? (
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
             <TabsTrigger value="overview">Обзор</TabsTrigger>
-            <TabsTrigger value="financials">Отчетность</TabsTrigger>
+            <TabsTrigger value="financials">Финансы</TabsTrigger>
+            <TabsTrigger value="reports">Отчёты</TabsTrigger>
             <TabsTrigger value="charts">Графики</TabsTrigger>
           </TabsList>
 
@@ -181,6 +180,11 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
           {/* Финансовая отчетность */}
           <TabsContent value="financials" className="space-y-6 mt-6">
             <FinancialStatements metrics={latestMetrics} />
+          </TabsContent>
+
+          {/* Отчёты */}
+          <TabsContent value="reports" className="mt-6">
+            <CompanyReports ticker={decodedTicker} />
           </TabsContent>
 
           {/* Графики */}

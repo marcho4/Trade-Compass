@@ -263,6 +263,17 @@ interface ApiResponse<T> {
   message?: string;
 }
 
+export interface Candle {
+  open: number;
+  close: number;
+  high: number;
+  low: number;
+  value: number;
+  volume: number;
+  begin: string;
+  end: string;
+}
+
 const FINANCIAL_DATA_BASE_URL = 'https://trade-compass.ru/api/financial-data';
 
 export const financialDataApi = {
@@ -330,12 +341,31 @@ export const financialDataApi = {
     return result.data;
   },
 
-  async getLatestPrice(ticker: string): Promise<number> {
+  async getPriceCandles(ticker: string, days: number, interval: number, signal?: AbortSignal): Promise<Candle[]> {
+    const response = await fetch(
+      `${FINANCIAL_DATA_BASE_URL}/price?ticker=${ticker}&days=${days}&interval=${interval}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch price candles for ${ticker}`);
+    }
+
+    const result: ApiResponse<Candle[]> = await response.json();
+    return result.data;
+  },
+
+  async getLatestPrice(ticker: string, signal?: AbortSignal): Promise<number> {
     const response = await fetch(`${FINANCIAL_DATA_BASE_URL}/price/latest?ticker=${ticker}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      signal,
     });
     
     if (!response.ok) {
@@ -346,12 +376,13 @@ export const financialDataApi = {
     return result.data;
   },
 
-  async getMarketCap(ticker: string): Promise<number> {
+  async getMarketCap(ticker: string, signal?: AbortSignal): Promise<number> {
     const response = await fetch(`${FINANCIAL_DATA_BASE_URL}/market-cap?ticker=${ticker}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      signal,
     });
     
     if (!response.ok) {
@@ -365,3 +396,23 @@ export const financialDataApi = {
 
 export default api;
 
+import type { Report, ReportsResponse } from '@/types';
+
+export const parserApi = {
+  async getReportsByTicker(ticker: string, signal?: AbortSignal): Promise<Report[]> {
+    const response = await fetch(`${API_BASE_URL}/reports/${ticker}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch reports for ${ticker}`);
+    }
+
+    const result: ReportsResponse = await response.json();
+    return result.reports;
+  },
+};
