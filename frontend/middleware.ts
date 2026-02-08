@@ -37,11 +37,11 @@ export function middleware(request: NextRequest) {
   //   return NextResponse.redirect(loginUrl);
   // }
 
-  if (isAuthRoute(pathname)) {
-    const redirectTo = request.nextUrl.searchParams.get("redirect");
-    const dashboardUrl = new URL(redirectTo || "/dashboard/screener", request.url);
-    return NextResponse.redirect(dashboardUrl);
-  }
+  // if (isAuthRoute(pathname)) {
+  //   const redirectTo = request.nextUrl.searchParams.get("redirect");
+  //   const dashboardUrl = new URL(redirectTo || "/dashboard/screener", request.url);
+  //   return NextResponse.redirect(dashboardUrl);
+  // }
 
   return NextResponse.next();
 }

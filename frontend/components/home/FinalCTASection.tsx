@@ -6,7 +6,7 @@ export const FinalCTASection = () => {
           Хватит читать отчёты на 200 страниц
         </h2>
 
-        <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground md:text-xl">
+        <p className="mx-auto mb-8 max-w-2xl text-lg text-foreground md:text-xl">
           Trade Compass собирает данные, AI объясняет их смысл, ты принимаешь
           решения. Как должно быть.
         </p>

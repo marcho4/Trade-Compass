@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export const PricingSection = () => {
   const plans = [
     {
@@ -5,55 +7,41 @@ export const PricingSection = () => {
       price: "Бесплатно",
       description: "Для пробы и разовых проверок",
       features: [
-        "2 полных AI-анализа",
+        "3 компании бесплатно",
         "Базовые метрики всех компаний",
-        "Snowflake-оценка",
+        "Разбор отчетов за последний год",
       ],
       cta: "Начать бесплатно",
       ctaLink: "/auth/register",
       popular: false,
     },
     {
-      name: "ESSENTIAL",
-      price: "490₽/мес",
-      originalPrice: "990₽",
-      description: "Для активных инвесторов",
+      name: "Pro",
+      price: "19990₽/квартал",
+      originalPrice: "39990₽",
+      description: "Для активных инвесторов. Помимо базовых метрик по компании, вы получаете следующее:",
       features: [
-        "15 полных анализов",
-        "50 быстрых проверок",
-        "Идеи по ребалансировке",
-        "100 объяснений терминов",
+        "Безлимитный доступ к нейроассистенту от Google по всем отчетам на платформе - 5000₽ ценность",
+        "Безлимитный доступ к анализу отчетов от топовых LLM моделей - 200 000₽ ценность",
+        "Ведение портфеля акций с анализом от нейроассистента - 6000₽ ценность",
+        "Персональная поддержка в телеграме от основателя со средним временем ответа не больше 10 минут",
+        "Безусловная гарантия возврата денег, если не устроил сервис"
       ],
-      cta: "Попробовать 7 дней",
+      cta: "Стать Pro",
       ctaLink: "/auth/register",
       popular: true,
-    },
-    {
-      name: "РАЗОВЫЙ АНАЛИЗ",
-      price: "Бесплатно",
-      originalPrice: "299₽",
-      description: "Для тех, кто анализирует редко",
-      features: [
-        "1 полный анализ компании",
-        "Без подписки",
-      ],
-      cta: "Получить анализ",
-      ctaLink: "/auth/register",
-      popular: false,
-    },
+    }
   ]
 
   return (
     <section className="my-20">
-      {/* Section Header */}
       <div className="mb-12 text-center">
         <h2 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
           Начни бесплатно, плати когда нужно больше
         </h2>
       </div>
 
-      {/* Pricing Grid */}
-      <div className="grid gap-8 md:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-2">
         {plans.map((plan, index) => (
           <div
             key={index}
@@ -63,21 +51,18 @@ export const PricingSection = () => {
                 : "border-border bg-card"
             }`}
           >
-            {/* Popular Badge */}
             {plan.popular && (
               <div className="absolute right-4 top-4">
                 <span className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
-                  MOST POPULAR
+                  ПОПУЛЯРНО
                 </span>
               </div>
             )}
 
-            {/* Plan Name */}
             <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
               {plan.name}
             </h3>
 
-            {/* Price */}
             <div className="mb-4">
               {plan.originalPrice && (
                 <p className="text-sm text-muted-foreground line-through">
@@ -87,12 +72,10 @@ export const PricingSection = () => {
               <p className="text-4xl font-bold">{plan.price}</p>
             </div>
 
-            {/* Description */}
             <p className="mb-6 text-sm text-muted-foreground">
               {plan.description}
             </p>
 
-            {/* Features */}
             <ul className="mb-8 space-y-3">
               {plan.features.map((feature, idx) => (
                 <li key={idx} className="flex items-start gap-2">
@@ -115,8 +98,7 @@ export const PricingSection = () => {
               ))}
             </ul>
 
-            {/* CTA Button */}
-            <a
+            <Link
               href={plan.ctaLink}
               className={`block w-full rounded-full py-3 text-center text-sm font-semibold transition-all hover:scale-105 ${
                 plan.popular
@@ -127,7 +109,7 @@ export const PricingSection = () => {
               aria-label={plan.cta}
             >
               {plan.cta}
-            </a>
+            </Link>
           </div>
         ))}
       </div>

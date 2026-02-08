@@ -46,15 +46,16 @@ export const TopNavbar = () => {
         "bg-background/90 backdrop-blur-xl border-b border-border/50"
       )}
     >
-      <nav className="h-full max-w-screen-2xl mx-auto flex items-center justify-between px-6">
+      <nav className="h-full max-w-screen-2xl mx-auto flex items-center justify-between px-2 sm:px-6">
         <Link
           href="/dashboard/screener"
-          className="text-lg font-bold tracking-tight text-foreground transition-colors hover:text-primary"
+          className="text-base sm:text-lg font-bold tracking-tight text-foreground transition-colors hover:text-primary"
         >
-          TradeCompass
+          Trade<br/>
+          Compass
         </Link>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 sm:gap-5">
           {navItems.map((item) => {
             const Icon = item.icon
             const active = isActive(item.href)
@@ -64,7 +65,7 @@ export const TopNavbar = () => {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "gap-2 px-4 h-9 transition-all duration-200",
+                    "gap-1 sm:gap-2 px-2 sm:px-4 h-7 sm:h-9 transition-all duration-200",
                     active &&
                       "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground",
                     !active && "text-muted-foreground hover:text-foreground"
@@ -84,7 +85,7 @@ export const TopNavbar = () => {
             size="icon"
             className="h-9 w-9 rounded-full hover:scale-105 transition-all duration-200"
           >
-            <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary via-[hsl(var(--chart-1))] to-[hsl(var(--chart-3))] flex items-center justify-center shadow-sm">
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-sm">
               <User className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
           </Button>
