@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { financialDataApi } from "@/lib/api-client"
+import { financialDataApi } from "@/lib/api"
 
 export interface PriceData {
   price: number

@@ -35,6 +35,8 @@ RUN groupadd --gid 1000 appgroup \
 
 COPY --chown=appuser:appgroup . .
 
+RUN mkdir -p /app/downloads && chown appuser:appgroup /app/downloads
+
 USER appuser
 
 EXPOSE 8081

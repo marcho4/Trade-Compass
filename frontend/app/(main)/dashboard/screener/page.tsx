@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { CompanyCard, ScreenerFilters } from "@/components/screener"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { financialDataApi, Sector, Company } from "@/lib/api-client"
+import { financialDataApi, Sector, Company } from "@/lib/api"
 
 interface FilterValues {
   search: string

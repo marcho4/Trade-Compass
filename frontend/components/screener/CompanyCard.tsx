@@ -12,7 +12,7 @@ import {
 } from "recharts"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { useState, useEffect } from "react"
-import { financialDataApi } from "@/lib/api-client"
+import { financialDataApi } from "@/lib/api"
 import { formatLargeNumber } from "@/lib/utils"
 import { usePriceData } from "@/hooks/use-price-data"
 

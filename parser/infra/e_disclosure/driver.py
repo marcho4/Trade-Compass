@@ -1,11 +1,13 @@
 import logging
+import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 from infra.config import config
 
 logger = logging.getLogger(__name__)
+
+CHROMEDRIVER_PATH = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
 
 
 class SeleniumDriver:
@@ -22,7 +24,7 @@ class SeleniumDriver:
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option("useAutomationExtension", False)
 
-        service = Service(ChromeDriverManager().install())
+        service = Service(executable_path=CHROMEDRIVER_PATH)
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
 
     def __enter__(self):

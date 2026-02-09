@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { authApi, type UserResponse } from "@/lib/api-client";
+import { authApi, type UserResponse } from "@/lib/api";
 
 
 interface AuthState {
