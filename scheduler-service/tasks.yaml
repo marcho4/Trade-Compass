@@ -1,0 +1,14 @@
+tasks:
+  - name: "find_new_reports"
+    cron: "0 9 * * *"
+    topic: "parser.find_reports"
+    message:
+      action: "find_new_reports"
+      time: "morning"
+
+  - name: "find_new_reports_in_the_evening"
+    cron: "0 20 * * *"
+    topic: "parser.find_reports"
+    message:
+      action: "find_new_reports"
+      time: "evening"
