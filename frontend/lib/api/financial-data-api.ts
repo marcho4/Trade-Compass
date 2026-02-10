@@ -23,6 +23,8 @@ export interface Candle {
   end: string;
 }
 
+export type { RawData } from '@/types/raw-data';
+
 interface ApiResponse<T> {
   status: string;
   data: T;
@@ -146,5 +148,71 @@ export const financialDataApi = {
 
     const result: ApiResponse<number> = await response.json();
     return result.data;
+  },
+
+  async getRawData(ticker: string, year: number, period: string): Promise<import('@/types/raw-data').RawData> {
+    const response = await fetch(
+      `${FINANCIAL_DATA_BASE_URL}/raw-data/${ticker}?year=${year}&period=${period}`,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    if (!response.ok) throw new Error(`Failed to fetch raw data for ${ticker}`);
+    return response.json();
+  },
+
+  async getRawDataHistory(ticker: string): Promise<import('@/types/raw-data').RawData[]> {
+    const response = await fetch(
+      `${FINANCIAL_DATA_BASE_URL}/raw-data/${ticker}/history`,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    if (!response.ok) throw new Error(`Failed to fetch raw data history for ${ticker}`);
+    return response.json();
+  },
+
+  async getDrafts(ticker: string): Promise<import('@/types/raw-data').RawData[]> {
+    const response = await fetch(
+      `${FINANCIAL_DATA_BASE_URL}/raw-data/${ticker}/drafts`,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    if (!response.ok) throw new Error(`Failed to fetch drafts for ${ticker}`);
+    return response.json();
+  },
+
+  async getDraft(ticker: string, year: number, period: string): Promise<import('@/types/raw-data').RawData | null> {
+    const response = await fetch(
+      `${FINANCIAL_DATA_BASE_URL}/raw-data/${ticker}/draft?year=${year}&period=${period}`,
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Failed to fetch draft for ${ticker}`);
+    return response.json();
+  },
+
+  async updateRawData(ticker: string, year: number, period: string, data: import('@/types/raw-data').RawData): Promise<void> {
+    const response = await fetch(
+      `${FINANCIAL_DATA_BASE_URL}/raw-data/${ticker}?year=${year}&period=${period}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': process.env.NEXT_PUBLIC_ADMIN_API_KEY || '',
+        },
+        body: JSON.stringify(data),
+      }
+    );
+    if (!response.ok) throw new Error(`Failed to update raw data for ${ticker}`);
+  },
+
+  async confirmDraft(ticker: string, year: number, period: string): Promise<void> {
+    const response = await fetch(
+      `${FINANCIAL_DATA_BASE_URL}/raw-data/${ticker}/confirm?year=${year}&period=${period}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': process.env.NEXT_PUBLIC_ADMIN_API_KEY || '',
+        },
+      }
+    );
+    if (!response.ok) throw new Error(`Failed to confirm draft for ${ticker}`);
   },
 };

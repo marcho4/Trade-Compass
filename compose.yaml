@@ -65,6 +65,30 @@ services:
       retries: 3
       start_period: 10s
 
+  ai-service:
+    build:
+      context: ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    expose:
+      - "8083"
+    env_file:
+      - ./ai-service/.env
+    networks:
+      - main
+    restart: unless-stopped
+    depends_on:
+      parser:
+        condition: service_healthy
+      financial-data:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   postgres:
     image: postgres:17
     container_name: postgres

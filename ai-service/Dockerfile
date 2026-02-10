@@ -15,7 +15,7 @@ WORKDIR /app
 COPY --from=builder /app/ai-service .
 RUN chown -R appuser:appgroup /app
 USER appuser
-EXPOSE 8082
+EXPOSE 8083
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8082/health || exit 1
+    CMD curl -f http://localhost:8083/health || exit 1
 ENTRYPOINT ["/app/ai-service"]

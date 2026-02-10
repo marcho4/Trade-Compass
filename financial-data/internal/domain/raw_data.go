@@ -1,6 +1,5 @@
 package domain
 
-// ReportPeriod represents the reporting period for financial metrics
 type ReportPeriod string
 
 const (
@@ -11,7 +10,6 @@ const (
 	YEAR ReportPeriod = "YEAR"
 )
 
-// IsValid checks if the reporting period is valid
 func (rp ReportPeriod) IsValid() bool {
 	switch rp {
 	case Q1, Q2, Q3, Q4, YEAR:
@@ -21,13 +19,27 @@ func (rp ReportPeriod) IsValid() bool {
 	}
 }
 
-// RawData contains raw financial metrics from company reports
-// These metrics are used to calculate various financial ratios
+type MetricsStatus string
+
+const (
+	StatusDraft     MetricsStatus = "draft"
+	StatusConfirmed MetricsStatus = "confirmed"
+)
+
+func (s MetricsStatus) IsValid() bool {
+	switch s {
+	case StatusDraft, StatusConfirmed:
+		return true
+	default:
+		return false
+	}
+}
+
 type RawData struct {
-	// Primary identifiers
-	Ticker string       `json:"ticker"`
-	Year   int          `json:"year"`
-	Period ReportPeriod `json:"period"`
+	Ticker string        `json:"ticker"`
+	Year   int           `json:"year"`
+	Period ReportPeriod  `json:"period"`
+	Status MetricsStatus `json:"status"`
 
 	// P&L (Profit & Loss Statement / Отчёт о прибылях и убытках)
 	Revenue           *int64 `json:"revenue,omitempty"`            // Выручка

@@ -36,6 +36,9 @@ type RawDataRepository interface {
 	GetByTickerAndPeriod(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.RawData, error)
 	GetLatestByTicker(ctx context.Context, ticker string) (*domain.RawData, error)
 	GetHistoryByTicker(ctx context.Context, ticker string) ([]domain.RawData, error)
+	GetDraftByTickerAndPeriod(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.RawData, error)
+	GetDraftsByTicker(ctx context.Context, ticker string) ([]domain.RawData, error)
+	ConfirmDraft(ctx context.Context, ticker string, year int, period domain.ReportPeriod) error
 	Create(ctx context.Context, rawData *domain.RawData) error
 	Update(ctx context.Context, rawData *domain.RawData) error
 	Delete(ctx context.Context, ticker string, year int, period domain.ReportPeriod) error
