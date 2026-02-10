@@ -3,6 +3,7 @@ package config
 import "os"
 
 type Config struct {
+	APIKey              string
 	GeminiAPIKey        string
 	S3AccessKey         string
 	S3SecretKey         string
@@ -16,6 +17,7 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
+		APIKey:              getEnv("AI_SERVICE_API_KEY", ""),
 		GeminiAPIKey:        getEnv("GEMINI_API_KEY", ""),
 		S3AccessKey:         getEnv("S3_ACCESS_KEY", ""),
 		S3SecretKey:         getEnv("S3_SECRET_KEY", ""),

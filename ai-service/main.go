@@ -5,6 +5,7 @@ import (
 	"ai-service/infrastructure/config"
 	"ai-service/infrastructure/financialdata"
 	"ai-service/infrastructure/gemini"
+	authmw "ai-service/infrastructure/middleware"
 	"ai-service/infrastructure/parser"
 	"ai-service/infrastructure/s3"
 	"context"
@@ -38,6 +39,10 @@ func main() {
 	extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
 	extractorHandler := application.NewExtractorHandler(extractorService)
 
+	if cfg.APIKey == "" {
+		log.Fatal("AI_SERVICE_API_KEY is required")
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -47,7 +52,10 @@ func main() {
 		w.Write([]byte("OK"))
 	})
 
-	r.Get("/extract", extractorHandler.HandleExtract)
+	r.Group(func(r chi.Router) {
+		r.Use(authmw.APIKeyAuth(cfg.APIKey))
+		r.Get("/extract", extractorHandler.HandleExtract)
+	})
 
 	addr := ":" + cfg.Port
 	log.Printf("AI Service starting on %s", addr)
@@ -74,7 +82,7 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(ctx); err != nil {
-			log.Printf("Failed to shutdown server: %v", err)
+			log.Fatalf("Failed to shutdown server: %v", err)
 		}
 		log.Println("Server stopped gracefully")
 	}
