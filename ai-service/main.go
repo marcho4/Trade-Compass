@@ -5,6 +5,7 @@ import (
 	"ai-service/infrastructure/config"
 	"ai-service/infrastructure/financialdata"
 	"ai-service/infrastructure/gemini"
+	kafkaclient "ai-service/infrastructure/kafka"
 	authmw "ai-service/infrastructure/middleware"
 	"ai-service/infrastructure/parser"
 	"ai-service/infrastructure/s3"
@@ -33,11 +34,15 @@ func main() {
 		log.Fatalf("Failed to create S3 client: %v", err)
 	}
 
+	kafkaClient := kafkaclient.NewKafkaClient(cfg.KafkaURL, cfg.KafkaTopic)
+
 	parserClient := parser.NewClient(cfg.ParserURL)
 	fdClient := financialdata.NewClient(cfg.FinancialDataURL, cfg.FinancialDataAPIKey)
 
 	extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
 	extractorHandler := application.NewExtractorHandler(extractorService)
+	taskProcessor := application.NewTaskProcessor(10, kafkaClient)
+	taskProcessor.Start(context.Background())
 
 	if cfg.APIKey == "" {
 		log.Fatal("AI_SERVICE_API_KEY is required")
@@ -61,8 +66,8 @@ func main() {
 	log.Printf("AI Service starting on %s", addr)
 
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      r,
+		Addr:    addr,
+		Handler: r,
 	}
 
 	shutdown := make(chan os.Signal, 1)
@@ -81,6 +86,12 @@ func main() {
 		log.Printf("Received signal %v, shutting down gracefully...", sig)
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
+
+		taskProcessor.Stop(ctx)
+		if err := kafkaClient.Close(); err != nil {
+			log.Printf("Failed to close Kafka client: %v", err)
+		}
+
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Fatalf("Failed to shutdown server: %v", err)
 		}

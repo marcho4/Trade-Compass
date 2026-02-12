@@ -13,6 +13,8 @@ type Config struct {
 	FinancialDataURL    string
 	FinancialDataAPIKey string
 	Port                string
+	KafkaURL            string
+	KafkaTopic          string
 }
 
 func Load() *Config {
@@ -27,6 +29,8 @@ func Load() *Config {
 		FinancialDataURL:    getEnv("FINANCIAL_DATA_URL", "http://financial-data:8082"),
 		FinancialDataAPIKey: getEnv("FINANCIAL_DATA_API_KEY", ""),
 		Port:                getEnv("PORT", "8083"),
+		KafkaURL:            getEnv("KAFKA_URL", "kafka:9092"),
+		KafkaTopic:          getEnv("KAFKA_TOPIC", "ai-analyze-tasks"),
 	}
 }
 
