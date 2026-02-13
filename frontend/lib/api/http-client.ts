@@ -5,7 +5,7 @@ const SKIP_REFRESH_URLS = ['/auth/login', '/auth/register', '/auth/refresh', '/a
 let isRefreshing = false;
 
 let failedQueue: Array<{
-  resolve: (value: unknown) => void;
+  resolve: () => void;
   reject: (reason?: unknown) => void;
 }> = [];
 
@@ -14,10 +14,10 @@ const processQueue = (error: Error | null) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(undefined);
+      prom.resolve();
     }
   });
-  failedQueue = [];
+  failedQueue = []
 };
 
 async function refreshTokens(): Promise<boolean> {
@@ -54,7 +54,7 @@ export async function fetchWithAuth(
 
   if (response.status === 401 && !shouldSkipRefresh(url)) {
     if (isRefreshing) {
-      return new Promise<Response>((resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         failedQueue.push({ resolve, reject });
       }).then(() => {
         return fetch(`${API_BASE_URL}${url}`, mergedOptions);
