@@ -15,14 +15,15 @@ type Producer struct {
 
 func NewProducer(brokers []string, topic string) *Producer {
 	writer := &kafka.Writer{
-		Addr:         kafka.TCP(brokers...),
-		Topic:        topic,
-		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: kafka.RequireAll,
-		MaxAttempts:  3,
-		BatchTimeout: 10 * time.Millisecond,
-		Compression:  compress.Snappy,
-		Async:        false,
+		Addr:                   kafka.TCP(brokers...),
+		Topic:                  topic,
+		Balancer:               &kafka.LeastBytes{},
+		RequiredAcks:           kafka.RequireAll,
+		MaxAttempts:            3,
+		BatchTimeout:           10 * time.Millisecond,
+		Compression:            compress.Snappy,
+		Async:                  false,
+		AllowAutoTopicCreation: true,
 	}
 	return &Producer{writer: writer}
 }
