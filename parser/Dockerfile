@@ -5,6 +5,7 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
+    librdkafka-dev \
     && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
@@ -18,6 +19,7 @@ FROM python:3.12-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libpq5 \
+    librdkafka1 \
     chromium \
     chromium-driver \
     && apt-get upgrade -y \

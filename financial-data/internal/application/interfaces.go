@@ -65,6 +65,10 @@ type PriceRepository interface {
 	GetStockPrice(ticker string, daysBackwards int, interval domain.Period) ([]domain.Candle, error)
 }
 
+type EventPublisher interface {
+	PublishCompanyCreated(ctx context.Context, ticker string) error
+}
+
 type RatiosRepository interface {
 	GetByTicker(ctx context.Context, ticker string) (*domain.Ratios, error)
 	GetBySector(ctx context.Context, sector domain.Sector) (*domain.Ratios, error)

@@ -41,6 +41,11 @@ class ParserConfig:
     embedding_model: str = "gemini-embedding-001"
     embedding_batch_size: int = 100
 
+    # Kafka
+    kafka_bootstrap_servers: str = "kafka:9092"
+    kafka_parse_ticker_topic: str = "parser.parse_ticker"
+    kafka_consumer_group: str = "parser-group"
+
     # PDF Processing
     chunk_size: int = 1000
     chunk_overlap: int = 200
@@ -65,6 +70,9 @@ class ParserConfig:
             embedding_batch_size=int(
                 os.getenv("EMBEDDING_BATCH_SIZE", str(cls.embedding_batch_size))
             ),
+            kafka_bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", cls.kafka_bootstrap_servers),
+            kafka_parse_ticker_topic=os.getenv("KAFKA_PARSE_TICKER_TOPIC", cls.kafka_parse_ticker_topic),
+            kafka_consumer_group=os.getenv("KAFKA_CONSUMER_GROUP", cls.kafka_consumer_group),
             chunk_size=int(os.getenv("CHUNK_SIZE", str(cls.chunk_size))),
             chunk_overlap=int(os.getenv("CHUNK_OVERLAP", str(cls.chunk_overlap))),
         )

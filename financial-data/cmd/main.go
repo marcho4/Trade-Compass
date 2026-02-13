@@ -4,6 +4,7 @@ import (
 	"context"
 	"financial_data/internal/application"
 	"financial_data/internal/infrastructure"
+	kafkaClient "financial_data/internal/infrastructure/kafka"
 	"log/slog"
 	"net/http"
 	"os"
@@ -52,6 +53,13 @@ func run() error {
 
 	priceProvider := infrastructure.NewMoexDataProvider()
 
+	kafkaBrokers := []string{getEnv("KAFKA_URL", "kafka:9092")}
+	parserTopic := getEnv("KAFKA_PARSER_TOPIC", "parser.parse_ticker")
+	kafkaProducer := kafkaClient.NewProducer(kafkaBrokers, parserTopic)
+	defer kafkaProducer.Close()
+	eventPublisher := kafkaClient.NewKafkaEventPublisher(kafkaProducer)
+	slog.Info("Kafka producer initialized", "topic", parserTopic)
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -69,7 +77,7 @@ func run() error {
 
 	application.RegisterRatiosRoutes(r, ratiosRepo)
 	application.RegisterRawDataRoutes(r, rawDataRepo)
-	application.RegisterCompanyRoutes(r, companyRepo, priceProvider)
+	application.RegisterCompanyRoutes(r, companyRepo, priceProvider, eventPublisher)
 	application.RegisterSectorRoutes(r, sectorRepo)
 	application.RegisterDividendsRoutes(r, dividendsRepo)
 	application.RegisterMacroRoutes(r, cbRateRepo)
@@ -111,4 +119,11 @@ func run() error {
 	}
 
 	return nil
+}
+
+func getEnv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }

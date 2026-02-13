@@ -15,5 +15,12 @@ COMPANIES = {
 }
 
 
+TICKER_TO_INN = {ticker: inn for inn, ticker in COMPANIES.items()}
+
+
 def get_ticker_by_inn(inn: str) -> str:
     return COMPANIES.get(inn, inn)
+
+
+def get_inn_by_ticker(ticker: str) -> str | None:
+    return TICKER_TO_INN.get(ticker)

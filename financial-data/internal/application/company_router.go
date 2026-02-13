@@ -5,6 +5,7 @@ import (
 	"errors"
 	"financial_data/internal/domain"
 	"financial_data/internal/infrastructure"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -12,16 +13,17 @@ import (
 )
 
 type CompanyHandler struct {
-	repo          CompanyRepository
-	marketService domain.MarketService
+	repo           CompanyRepository
+	marketService  domain.MarketService
+	eventPublisher EventPublisher
 }
 
-func NewCompanyHandler(repo CompanyRepository, marketService domain.MarketService) *CompanyHandler {
-	return &CompanyHandler{repo: repo, marketService: marketService}
+func NewCompanyHandler(repo CompanyRepository, marketService domain.MarketService, eventPublisher EventPublisher) *CompanyHandler {
+	return &CompanyHandler{repo: repo, marketService: marketService, eventPublisher: eventPublisher}
 }
 
-func RegisterCompanyRoutes(r chi.Router, repo CompanyRepository, marketService domain.MarketService) {
-	handler := NewCompanyHandler(repo, marketService)
+func RegisterCompanyRoutes(r chi.Router, repo CompanyRepository, marketService domain.MarketService, eventPublisher EventPublisher) {
+	handler := NewCompanyHandler(repo, marketService, eventPublisher)
 
 	r.Get("/companies", handler.HandleGetAll)
 	r.Get("/companies/{ticker}", handler.HandleGetByTicker)
@@ -121,6 +123,10 @@ func (h *CompanyHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if err := h.repo.Create(r.Context(), &company); err != nil {
 		RespondWithError(w, r, 500, "failed to create company", err)
 		return
+	}
+
+	if err := h.eventPublisher.PublishCompanyCreated(r.Context(), company.Ticker); err != nil {
+		slog.Error("failed to publish company created event", "ticker", company.Ticker, "error", err)
 	}
 
 	RespondWithSuccess(w, 201, company, "Company successfully created")
