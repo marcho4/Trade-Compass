@@ -1,10 +1,4 @@
-import { fetchWithAuth, API_BASE_URL } from './http-client';
-
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
+import { fetchWithAuth } from './http-client';
 
 export interface UserResponse {
   id: number;
@@ -26,17 +20,17 @@ export interface RegisterRequest {
 
 export const authApi = {
   async getYandexAuthUrl(): Promise<string> {
-    const response = await fetchWithAuth('/auth/yandex/url', {
-      method: 'GET',
-    });
+    const response = await fetchWithAuth('/auth/yandex/url');
+
     if (!response.ok) {
       throw new Error('Failed to get Yandex OAuth URL');
     }
+
     const data = await response.json();
     return data.url;
   },
 
-  async login(credentials: LoginRequest): Promise<AuthResponse> {
+  async login(credentials: LoginRequest): Promise<void> {
     const response = await fetchWithAuth('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
@@ -46,11 +40,9 @@ export const authApi = {
       const error = await response.json();
       throw new Error(error.error || 'Login failed');
     }
-
-    return response.json();
   },
 
-  async register(data: RegisterRequest): Promise<AuthResponse> {
+  async register(data: RegisterRequest): Promise<void> {
     const response = await fetchWithAuth('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -60,14 +52,10 @@ export const authApi = {
       const error = await response.json();
       throw new Error(error.error || 'Registration failed');
     }
-
-    return response.json();
   },
 
   async getCurrentUser(): Promise<UserResponse> {
-    const response = await fetchWithAuth('/auth/me', {
-      method: 'GET',
-    });
+    const response = await fetchWithAuth('/auth/me');
 
     if (!response.ok) {
       throw new Error('Not authenticated');
@@ -80,21 +68,5 @@ export const authApi = {
     await fetchWithAuth('/auth/logout', {
       method: 'POST',
     });
-  },
-
-  async refresh(): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Refresh failed');
-    }
-
-    return response.json();
   },
 };

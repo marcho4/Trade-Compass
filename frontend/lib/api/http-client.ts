@@ -1,5 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
+const SKIP_REFRESH_URLS = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout'];
+
 let isRefreshing = false;
 
 let failedQueue: Array<{
@@ -23,19 +25,16 @@ async function refreshTokens(): Promise<boolean> {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
     });
-
-    if (response.ok) {
-      return true;
-    }
-    return false;
+    return response.ok;
   } catch {
     return false;
   }
 }
+
+const shouldSkipRefresh = (url: string): boolean => {
+  return SKIP_REFRESH_URLS.some((skipUrl) => url.startsWith(skipUrl));
+};
 
 export async function fetchWithAuth(
   url: string,
@@ -53,9 +52,9 @@ export async function fetchWithAuth(
 
   let response = await fetch(`${API_BASE_URL}${url}`, mergedOptions);
 
-  if (response.status === 401 && !url.includes('/auth/')) {
+  if (response.status === 401 && !shouldSkipRefresh(url)) {
     if (isRefreshing) {
-      return new Promise((resolve, reject) => {
+      return new Promise<Response>((resolve, reject) => {
         failedQueue.push({ resolve, reject });
       }).then(() => {
         return fetch(`${API_BASE_URL}${url}`, mergedOptions);
@@ -64,18 +63,20 @@ export async function fetchWithAuth(
 
     isRefreshing = true;
 
-    const refreshSuccess = await refreshTokens();
+    try {
+      const refreshSuccess = await refreshTokens();
 
-    if (refreshSuccess) {
-      isRefreshing = false;
-      processQueue(null);
-      response = await fetch(`${API_BASE_URL}${url}`, mergedOptions);
-    } else {
-      isRefreshing = false;
-      processQueue(new Error('Refresh token failed'));
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth';
+      if (refreshSuccess) {
+        processQueue(null);
+        response = await fetch(`${API_BASE_URL}${url}`, mergedOptions);
+      } else {
+        processQueue(new Error('Refresh failed'));
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth';
+        }
       }
+    } finally {
+      isRefreshing = false;
     }
   }
 

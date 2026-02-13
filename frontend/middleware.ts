@@ -5,17 +5,21 @@ const PROTECTED_ROUTES = ["/dashboard"];
 
 const AUTH_ROUTES = ["/auth", "/auth/register", "/auth/forgot-password"];
 
-const PUBLIC_ROUTES = ["/", "/welcome"];
-
-function isProtectedRoute(pathname: string): boolean {
+const isProtectedRoute = (pathname: string): boolean => {
   return PROTECTED_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
-}
+};
 
-function isAuthRoute(pathname: string): boolean {
+const isAuthRoute = (pathname: string): boolean => {
   return AUTH_ROUTES.some((route) => pathname === route);
-}
+};
+
+const hasAuthCookies = (request: NextRequest): boolean => {
+  const accessToken = request.cookies.get("accessToken")?.value;
+  const refreshToken = request.cookies.get("refreshToken")?.value;
+  return Boolean(accessToken) || Boolean(refreshToken);
+};
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -28,27 +32,27 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // const accessToken = request.cookies.get("accessToken")?.value;
-  // const hasToken = Boolean(accessToken);
+  const isAuthenticated = hasAuthCookies(request);
 
-  // if (isProtectedRoute(pathname) && !hasToken) {
-  //   const loginUrl = new URL("/auth", request.url);
-  //   loginUrl.searchParams.set("redirect", pathname);
-  //   return NextResponse.redirect(loginUrl);
-  // }
+  if (isProtectedRoute(pathname) && !isAuthenticated) {
+    const loginUrl = new URL("/auth", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
-  // if (isAuthRoute(pathname)) {
-  //   const redirectTo = request.nextUrl.searchParams.get("redirect");
-  //   const dashboardUrl = new URL(redirectTo || "/dashboard/screener", request.url);
-  //   return NextResponse.redirect(dashboardUrl);
-  // }
+  if (isAuthRoute(pathname) && isAuthenticated) {
+    const redirectTo = request.nextUrl.searchParams.get("redirect");
+    const dashboardUrl = new URL(
+      redirectTo || "/dashboard/screener",
+      request.url
+    );
+    return NextResponse.redirect(dashboardUrl);
+  }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
 

@@ -39,16 +39,6 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-type RefreshTokenRequest struct {
-	RefreshToken string `json:"refreshToken"`
-}
-
-type AuthResponse struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-	ExpiresIn    int64  `json:"expiresIn"`
-}
-
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
