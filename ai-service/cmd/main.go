@@ -1,14 +1,14 @@
 package main
 
 import (
-	"ai-service/application"
-	"ai-service/infrastructure/config"
-	"ai-service/infrastructure/financialdata"
-	"ai-service/infrastructure/gemini"
-	kafkaclient "ai-service/infrastructure/kafka"
-	authmw "ai-service/infrastructure/middleware"
-	"ai-service/infrastructure/parser"
-	"ai-service/infrastructure/s3"
+	"ai-service/internal/application"
+	"ai-service/internal/infrastructure/config"
+	"ai-service/internal/infrastructure/financialdata"
+	"ai-service/internal/infrastructure/gemini"
+	kafkaclient "ai-service/internal/infrastructure/kafka"
+	authmw "ai-service/internal/infrastructure/middleware"
+	"ai-service/internal/infrastructure/parser"
+	"ai-service/internal/infrastructure/s3"
 	"context"
 	"log"
 	"net/http"

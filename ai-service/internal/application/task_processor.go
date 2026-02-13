@@ -1,8 +1,8 @@
 package application
 
 import (
-	"ai-service/domain"
-	kafkaclient "ai-service/infrastructure/kafka"
+	"ai-service/internal/domain"
+	kafkaclient "ai-service/internal/infrastructure/kafka"
 	"context"
 	"encoding/json"
 	"errors"

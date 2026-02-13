@@ -1,7 +1,7 @@
 package gemini
 
 import (
-	"ai-service/domain"
+	"ai-service/internal/domain"
 	"context"
 	"encoding/json"
 	"fmt"

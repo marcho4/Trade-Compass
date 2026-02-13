@@ -1,7 +1,7 @@
 package financialdata
 
 import (
-	"ai-service/domain"
+	"ai-service/internal/domain"
 	"bytes"
 	"context"
 	"encoding/json"

@@ -1,11 +1,11 @@
 package application
 
 import (
-	"ai-service/domain"
-	"ai-service/infrastructure/financialdata"
-	"ai-service/infrastructure/gemini"
-	"ai-service/infrastructure/parser"
-	"ai-service/infrastructure/s3"
+	"ai-service/internal/domain"
+	"ai-service/internal/infrastructure/financialdata"
+	"ai-service/internal/infrastructure/gemini"
+	"ai-service/internal/infrastructure/parser"
+	"ai-service/internal/infrastructure/s3"
 	"context"
 	"encoding/json"
 	"fmt"
