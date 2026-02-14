@@ -72,7 +72,11 @@ export async function fetchWithAuth(
       } else {
         processQueue(new Error('Refresh failed'));
         if (typeof window !== 'undefined') {
-          window.location.href = '/auth';
+          const pathname = window.location.pathname;
+          const isAuthPage = pathname === '/auth' || pathname.startsWith('/auth/');
+          if (!isAuthPage) {
+            window.location.href = '/auth';
+          }
         }
       }
     } finally {
