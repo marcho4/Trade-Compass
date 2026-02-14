@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"strings"
 
 	"google.golang.org/genai"
@@ -30,11 +32,27 @@ func (c *Client) GenerateText(ctx context.Context, prompt string) (string, error
 	return text, nil
 }
 
-func NewClient(apiKey string) (*Client, error) {
-	client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
+func NewClient(apiKey string, proxyURL string) (*Client, error) {
+	cfg := &genai.ClientConfig{
 		APIKey:  apiKey,
 		Backend: genai.BackendGeminiAPI,
-	})
+	}
+
+	if proxyURL != "" {
+		parsedURL, err := url.Parse(proxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse proxy URL %q: %w", proxyURL, err)
+		}
+
+		cfg.HTTPClient = &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyURL(parsedURL),
+			},
+		}
+		log.Printf("Gemini client using proxy: %s", proxyURL)
+	}
+
+	client, err := genai.NewClient(context.Background(), cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gemini client: %w", err)
 	}

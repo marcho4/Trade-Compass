@@ -24,7 +24,7 @@ import (
 func main() {
 	cfg := config.Load()
 
-	geminiClient, err := gemini.NewClient(cfg.GeminiAPIKey)
+	geminiClient, err := gemini.NewClient(cfg.GeminiAPIKey, cfg.GeminiProxyURL)
 	if err != nil {
 		log.Fatalf("Failed to create Gemini client: %v", err)
 	}
