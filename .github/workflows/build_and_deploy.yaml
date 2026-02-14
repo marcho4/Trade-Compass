@@ -58,7 +58,7 @@ jobs:
             git reset --hard origin/master
             git remote set-url origin "$ORIGINAL_ORIGIN"
 
-            docker compose build --no-cache
+            docker compose build
             docker compose down
             
             docker compose up -d --force-recreate --no-build
