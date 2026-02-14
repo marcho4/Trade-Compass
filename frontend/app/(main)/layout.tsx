@@ -2,17 +2,28 @@
 
 import { TopNavbar } from "@/components/layout/TopNavbar"
 import { AIChatPanel } from "@/components/layout/AIChatPanel"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { portfolioPrompts, screenerPrompts, companyAnalysisPrompts, defaultPrompts } from "@/lib/ai-prompts"
 import { MessageSquare, X } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const isLandingPage = pathname === "/"
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const { isAuthenticated, isLoading } = useAuth()
+
+  const isDashboardRoute = pathname.startsWith("/dashboard")
+
+  useEffect(() => {
+    if (isDashboardRoute && !isLoading && !isAuthenticated) {
+      router.replace(`/auth?redirect=${encodeURIComponent(pathname)}`)
+    }
+  }, [isDashboardRoute, isLoading, isAuthenticated, pathname, router])
 
   // Определяем какие промпты показывать в зависимости от страницы
   const getPromptExamples = () => {

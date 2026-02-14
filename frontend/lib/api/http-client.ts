@@ -71,13 +71,6 @@ export async function fetchWithAuth(
         response = await fetch(`${API_BASE_URL}${url}`, mergedOptions);
       } else {
         processQueue(new Error('Refresh failed'));
-        if (typeof window !== 'undefined') {
-          const pathname = window.location.pathname;
-          const isAuthPage = pathname === '/auth' || pathname.startsWith('/auth/');
-          if (!isAuthPage) {
-            window.location.href = '/auth';
-          }
-        }
       }
     } finally {
       isRefreshing = false;
