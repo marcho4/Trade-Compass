@@ -16,6 +16,20 @@ type Client struct {
 	model  string
 }
 
+func (c *Client) GenerateText(ctx context.Context, prompt string) (string, error) {
+	result, err := c.client.Models.GenerateContent(ctx, c.model, genai.Text(prompt), nil)
+	if err != nil {
+		return "", fmt.Errorf("gemini API call failed: %w", err)
+	}
+
+	text := strings.TrimSpace(result.Text())
+	if text == "" {
+		return "", fmt.Errorf("gemini returned empty response")
+	}
+
+	return text, nil
+}
+
 func NewClient(apiKey string) (*Client, error) {
 	client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
 		APIKey:  apiKey,
@@ -27,7 +41,7 @@ func NewClient(apiKey string) (*Client, error) {
 
 	return &Client{
 		client: client,
-		model:  "gemini-2.0-flash",
+		model:  "gemini-3-flash-preview",
 	}, nil
 }
 
