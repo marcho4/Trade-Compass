@@ -44,4 +44,4 @@ USER appuser
 
 EXPOSE 8081
 
-CMD ["uvicorn", "main:api", "--host", "0.0.0.0", "--port", "8081"]
+CMD ["python", "run.py"]
