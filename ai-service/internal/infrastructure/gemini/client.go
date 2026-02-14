@@ -96,8 +96,6 @@ const extractionPrompt = `Ты финансовый аналитик. Извле
   "financingCashFlow": <int64 или null>,
   "capex": <int64 или null>,
   "freeCashFlow": <int64 или null>,
-  "sharesOutstanding": <int64 или null>,
-  "marketCap": <int64 или null>,
   "workingCapital": <int64 или null>,
   "capitalEmployed": <int64 или null>,
   "enterpriseValue": <int64 или null>,
@@ -131,7 +129,6 @@ const extractionPrompt = `Ты финансовый аналитик. Извле
 - financingCashFlow = Чистые денежные средства от финансовых операций
 - capex = Капитальные затраты (приобретение основных средств, обычно отрицательное число — верни как положительное)
 - freeCashFlow = operatingCashFlow - capex
-- sharesOutstanding = Количество акций в обращении (если есть в отчете)
 - workingCapital = currentAssets - currentLiabilities
 - capitalEmployed = totalAssets - currentLiabilities
 - netDebt = debt - cashAndEquivalents
@@ -182,6 +179,32 @@ func (c *Client) ExtractFromPDF(ctx context.Context, pdfBytes []byte, ticker str
 	rawData.Status = "draft"
 
 	return &rawData, nil
+}
+
+func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string) (string, error) {
+	contents := []*genai.Content{
+		{
+			Role: "user",
+			Parts: []*genai.Part{
+				genai.NewPartFromBytes(pdfBytes, "application/pdf"),
+			},
+		},
+	}
+
+	config := &genai.GenerateContentConfig{
+		SystemInstruction: &genai.Content{
+			Parts: []*genai.Part{
+				genai.NewPartFromText(systemPrompt),
+			},
+		},
+	}
+
+	result, err := c.client.Models.GenerateContent(ctx, c.model, contents, config)
+	if err != nil {
+		return "", fmt.Errorf("gemini API call failed: %w", err)
+	}
+
+	return strings.TrimSpace(result.Text()), nil
 }
 
 func cleanJSONResponse(text string) string {
