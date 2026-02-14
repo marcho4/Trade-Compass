@@ -8,6 +8,7 @@ import (
 
 type CompanyCreatedEvent struct {
 	Ticker string `json:"ticker"`
+	Name   string `json:"name"`
 }
 
 type KafkaEventPublisher struct {
@@ -18,8 +19,8 @@ func NewKafkaEventPublisher(producer *Producer) *KafkaEventPublisher {
 	return &KafkaEventPublisher{producer: producer}
 }
 
-func (p *KafkaEventPublisher) PublishCompanyCreated(ctx context.Context, ticker string) error {
-	event := CompanyCreatedEvent{Ticker: ticker}
+func (p *KafkaEventPublisher) PublishCompanyCreated(ctx context.Context, ticker, name string) error {
+	event := CompanyCreatedEvent{Ticker: ticker, Name: name}
 	value, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("marshal company created event: %w", err)

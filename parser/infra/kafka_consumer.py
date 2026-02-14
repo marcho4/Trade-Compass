@@ -4,9 +4,9 @@ import threading
 
 from confluent_kafka import Consumer, KafkaError
 
-from companies import get_inn_by_ticker
 from application.reports_processor import ReportProcessor
 from application.vectorization_service import VectorizationService
+from infra.e_disclosure import EDisclosureClient
 from infra.database import get_db_session
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
@@ -61,16 +61,16 @@ class TickerParseConsumer:
 
     def _handle_message(self, data: dict):
         ticker = data.get("ticker")
+        name = data.get("name")
         if not ticker:
             logger.warning("Received message without ticker: %s", data)
             return
 
-        inn = get_inn_by_ticker(ticker)
-        if not inn:
-            logger.warning("No INN found for ticker %s -- skipping", ticker)
+        if not name:
+            logger.warning("Received message without name for ticker %s: %s", ticker, data)
             return
 
-        logger.info("Processing parsing request for ticker=%s, inn=%s", ticker, inn)
+        logger.info("Processing parsing request for ticker=%s, name=%s", ticker, name)
 
         try:
             with get_db_session() as db:
@@ -78,7 +78,13 @@ class TickerParseConsumer:
                 s3_client = S3ReportsStorage()
                 vectorization_service = VectorizationService()
                 processor = ReportProcessor(s3_client, repo, vectorization_service)
-                result = processor.process_companies([inn], skip_indexing=True)
+                with EDisclosureClient() as client:
+                    result = processor.process_company_by_query(
+                        client,
+                        query=name,
+                        ticker=ticker,
+                        skip_indexing=True,
+                    )
                 logger.info("Parsing result for %s: %s", ticker, result)
         except Exception as e:
             logger.error("Failed to process ticker %s: %s", ticker, e)

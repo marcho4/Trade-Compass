@@ -39,14 +39,28 @@ class ReportProcessor:
         return results
 
     def process_company(self, client: EDisclosureClient, inn: str, skip_indexing: bool = False) -> SingleCompanyProcessingResult:
-        companies = client.search_company(inn)
+        ticker = get_ticker_by_inn(inn)
+        return self.process_company_by_query(
+            client,
+            query=inn,
+            ticker=ticker,
+            skip_indexing=skip_indexing,
+        )
+
+    def process_company_by_query(
+        self,
+        client: EDisclosureClient,
+        query: str,
+        ticker: str,
+        skip_indexing: bool = False,
+    ) -> SingleCompanyProcessingResult:
+        companies = client.search_company(query)
 
         if not companies:
-            logger.warning(f"Компания не найдена: {inn}")
-            raise ValueError(f"Компания не найдена: {inn}")
+            logger.warning(f"Компания не найдена: {query}")
+            raise ValueError(f"Компания не найдена: {query}")
 
         first_company = companies[0]
-        ticker = get_ticker_by_inn(inn)
         logger.info(f"Выбрана компания: {first_company['name']} (ID: {first_company['id']}, тикер: {ticker})")
 
         logger.info("Получение отчетности эмитента для %s", ticker)
