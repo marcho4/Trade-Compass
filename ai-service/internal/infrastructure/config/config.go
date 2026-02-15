@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"fmt"
+	"os"
+)
 
 type Config struct {
 	APIKey              string
@@ -16,6 +19,7 @@ type Config struct {
 	Port                string
 	KafkaURL            string
 	KafkaTopic          string
+	PostgresURL         string
 }
 
 func Load() *Config {
@@ -33,6 +37,7 @@ func Load() *Config {
 		Port:                getEnv("PORT", "8083"),
 		KafkaURL:            getEnv("KAFKA_URL", "kafka:9092"),
 		KafkaTopic:          getEnv("KAFKA_TOPIC", "ai-analyze-tasks"),
+		PostgresURL:         getEnv("POSTGRES_URL", ""),
 	}
 }
 
@@ -41,4 +46,39 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func (c *Config) Validate() error {
+	if c.APIKey == "" {
+		return fmt.Errorf("API_KEY is not set")
+	}
+
+	if c.GeminiAPIKey == "" {
+		return fmt.Errorf("GeminiAPIKey is not set")
+	}
+
+	if c.GeminiProxyURL == "" {
+		return fmt.Errorf("GeminiProxyURL is not set")
+	}
+
+	if c.PostgresURL == "" {
+		return fmt.Errorf("POSTGRES_URL is not set")
+	}
+
+	if c.FinancialDataAPIKey == "" {
+		return fmt.Errorf("FINANCIAL_DATA_API_KEY is not set")
+	}
+
+	if c.S3AccessKey == "" {
+		return fmt.Errorf("S3AccessKey is not set")
+	}
+
+	if c.S3BucketName == "" {
+		return fmt.Errorf("S3BucketName is not set")
+	}
+
+	if c.S3SecretKey == "" {
+		return fmt.Errorf("S3SecretKey is not set")
+	}
+	return nil
 }

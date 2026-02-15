@@ -78,6 +78,8 @@ services:
       - main
     restart: unless-stopped
     depends_on:
+      postgres_ai:
+        condition: service_healthy
       parser:
         condition: service_healthy
       financial-data:
@@ -100,6 +102,24 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - main
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres_ai:
+    image: postgres:17
+    container_name: postgres_ai
+    environment:
+      POSTGRES_DB: ai-service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata_ai:/var/lib/postgresql/data
     networks:
       - main
     restart: unless-stopped
@@ -254,6 +274,7 @@ networks:
 
 volumes:
   pgdata:
+  pgdata_ai:
   qdrant_storage:
   pgdata_financial:
   zookeeper_data:

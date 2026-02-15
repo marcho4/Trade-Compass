@@ -8,9 +8,10 @@ import (
 	kafkaclient "ai-service/internal/infrastructure/kafka"
 	authmw "ai-service/internal/infrastructure/middleware"
 	"ai-service/internal/infrastructure/parser"
+	"ai-service/internal/infrastructure/postgres"
 	"ai-service/internal/infrastructure/s3"
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,16 +24,31 @@ import (
 
 func main() {
 	cfg := config.Load()
+	err := cfg.Validate()
+	if err != nil {
+		slog.Error("Config is not valid", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
 
 	geminiClient, err := gemini.NewClient(cfg.GeminiAPIKey, cfg.GeminiProxyURL)
 	if err != nil {
-		log.Fatalf("Failed to create Gemini client: %v", err)
+		slog.Error("Failed to create Gemini client", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	s3Client, err := s3.NewClient(cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3BucketName, cfg.S3Endpoint)
 	if err != nil {
-		log.Fatalf("Failed to create S3 client: %v", err)
+		slog.Error("Failed to create S3 client", slog.Any("error", err))
+		os.Exit(1)
 	}
+
+	db, err := postgres.NewDBRepo(ctx, cfg.PostgresURL)
+	if err != nil {
+		slog.Error("Failed to create DB Repo", slog.Any("error", err))
+	}
+	defer db.Close()
 
 	kafkaClient := kafkaclient.NewKafkaClient(cfg.KafkaURL, cfg.KafkaTopic)
 
@@ -43,10 +59,6 @@ func main() {
 	extractorHandler := application.NewExtractorHandler(extractorService)
 	taskProcessor := application.NewTaskProcessor(10, kafkaClient)
 	taskProcessor.Start(context.Background())
-
-	if cfg.APIKey == "" {
-		log.Fatal("AI_SERVICE_API_KEY is required")
-	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -63,7 +75,7 @@ func main() {
 	})
 
 	addr := ":" + cfg.Port
-	log.Printf("AI Service starting on %s", addr)
+	slog.Info("AI Service starting", slog.Any("addr", addr))
 
 	srv := &http.Server{
 		Addr:    addr,
@@ -81,20 +93,21 @@ func main() {
 
 	select {
 	case err := <-serverErrors:
-		log.Fatalf("Failed to start server: %v", err)
+		slog.Error("Failed to start server", slog.Any("error", err))
 	case sig := <-shutdown:
-		log.Printf("Received signal %v, shutting down gracefully...", sig)
+		slog.Info("Received signal, shutting down gracefully...", slog.Any("signal", sig))
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		taskProcessor.Stop(ctx)
 		if err := kafkaClient.Close(); err != nil {
-			log.Printf("Failed to close Kafka client: %v", err)
+			slog.Error("Failed to close Kafka client", slog.Any("error", err))
 		}
 
 		if err := srv.Shutdown(ctx); err != nil {
-			log.Fatalf("Failed to shutdown server: %v", err)
+			slog.Error("Failed to shutdown server", slog.Any("error", err))
+			os.Exit(1)
 		}
-		log.Println("Server stopped gracefully")
+		slog.Info("Server stopped gracefully")
 	}
 }
