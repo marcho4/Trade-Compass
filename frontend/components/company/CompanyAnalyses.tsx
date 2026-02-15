@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import ReactMarkdown from "react-markdown"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -216,8 +217,8 @@ export const CompanyAnalyses = ({ ticker }: CompanyAnalysesProps) => {
                           ) : analysisError && !cachedText ? (
                             <p className="text-sm text-muted-foreground">{analysisError}</p>
                           ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
-                              {cachedText}
+                            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
+                              <ReactMarkdown>{cachedText}</ReactMarkdown>
                             </div>
                           )}
                         </div>

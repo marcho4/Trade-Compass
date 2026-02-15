@@ -51,8 +51,11 @@ class ReportMetadataParser:
 
         results: list[ReportMetadata] = []
         for tr in rows:
-            metadata = self.parse_row(tr)
-            if metadata and metadata.file_url:
-                results.append(metadata)
+            try:
+                metadata = self.parse_row(tr)
+                if metadata and metadata.file_url:
+                    results.append(metadata)
+            except Exception as e:
+                logger.error(f"Error while parsing table {e}")
 
         return results
