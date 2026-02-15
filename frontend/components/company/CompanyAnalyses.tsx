@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { BrainCircuit, CalendarDays, Loader2, ChevronDown, ChevronUp } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { BrainCircuit, CalendarDays, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { aiApi } from "@/lib/api"
-import type { AnalysisReport } from "@/lib/api"
+import type { AvailablePeriod } from "@/lib/api"
 
 interface CompanyAnalysesProps {
   ticker: string
@@ -26,37 +27,67 @@ const periodBadgeVariant = (period: number) => {
   return period === 12 ? "default" as const : "secondary" as const
 }
 
+const periodKey = (p: AvailablePeriod) => `${p.year}-${p.period}`
+
 export const CompanyAnalyses = ({ ticker }: CompanyAnalysesProps) => {
-  const [analyses, setAnalyses] = useState<AnalysisReport[]>([])
+  const [periods, setPeriods] = useState<AvailablePeriod[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
+  const [analysisCache, setAnalysisCache] = useState<Record<string, string>>({})
+  const [analysisLoading, setAnalysisLoading] = useState<string | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
 
-    const fetchAnalyses = async () => {
+    const fetchPeriods = async () => {
       try {
         setLoading(true)
         setError(null)
-        const data = await aiApi.getAnalysesByTicker(ticker, controller.signal)
-        setAnalyses(data)
+        const data = await aiApi.getAvailablePeriods(ticker, controller.signal)
+        setPeriods(data)
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return
-        console.error(`Failed to fetch analyses for ${ticker}:`, err)
+        console.error(`Failed to fetch periods for ${ticker}:`, err)
         setError("Не удалось загрузить анализы")
       } finally {
         setLoading(false)
       }
     }
 
-    fetchAnalyses()
+    fetchPeriods()
     return () => controller.abort()
   }, [ticker])
 
-  const groupedByYear = analyses.reduce<Record<number, AnalysisReport[]>>((acc, report) => {
-    if (!acc[report.year]) acc[report.year] = []
-    acc[report.year].push(report)
+  const toggleExpand = useCallback(async (p: AvailablePeriod) => {
+    const key = periodKey(p)
+
+    if (expandedKey === key) {
+      setExpandedKey(null)
+      return
+    }
+
+    setExpandedKey(key)
+    setAnalysisError(null)
+
+    if (analysisCache[key]) return
+
+    try {
+      setAnalysisLoading(key)
+      const text = await aiApi.getAnalysis(ticker, p.year, p.period)
+      setAnalysisCache(prev => ({ ...prev, [key]: text }))
+    } catch (err) {
+      console.error(`Failed to fetch analysis for ${key}:`, err)
+      setAnalysisError("Не удалось загрузить анализ")
+    } finally {
+      setAnalysisLoading(null)
+    }
+  }, [ticker, expandedKey, analysisCache])
+
+  const groupedByYear = periods.reduce<Record<number, AvailablePeriod[]>>((acc, p) => {
+    if (!acc[p.year]) acc[p.year] = []
+    acc[p.year].push(p)
     return acc
   }, {})
 
@@ -64,16 +95,20 @@ export const CompanyAnalyses = ({ ticker }: CompanyAnalysesProps) => {
     .map(Number)
     .sort((a, b) => b - a)
 
-  const toggleExpand = (id: number) => {
-    setExpandedId(prev => prev === id ? null : id)
-  }
-
   if (loading) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Загрузка анализов...</span>
+        <CardHeader className="pb-4">
+          <Skeleton className="h-6 w-32" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+            </div>
+          ))}
         </CardContent>
       </Card>
     )
@@ -89,7 +124,7 @@ export const CompanyAnalyses = ({ ticker }: CompanyAnalysesProps) => {
     )
   }
 
-  if (analyses.length === 0) {
+  if (periods.length === 0) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 gap-2">
@@ -111,13 +146,13 @@ export const CompanyAnalyses = ({ ticker }: CompanyAnalysesProps) => {
             AI Анализ
           </CardTitle>
           <span className="text-sm text-muted-foreground">
-            {analyses.length} {formatAnalysisCount(analyses.length)}
+            {periods.length} {formatAnalysisCount(periods.length)}
           </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {sortedYears.map((year) => {
-          const yearAnalyses = groupedByYear[year].sort(
+          const yearPeriods = groupedByYear[year].sort(
             (a, b) => b.period - a.period
           )
 
@@ -128,49 +163,68 @@ export const CompanyAnalyses = ({ ticker }: CompanyAnalysesProps) => {
                 <h3 className="text-sm font-semibold text-muted-foreground">{year}</h3>
               </div>
               <div className="space-y-2">
-                {yearAnalyses.map((report) => (
-                  <div
-                    key={report.id}
-                    className="rounded-lg border bg-card transition-colors"
-                  >
+                {yearPeriods.map((p) => {
+                  const key = periodKey(p)
+                  const isExpanded = expandedKey === key
+                  const cachedText = analysisCache[key]
+                  const isLoading = analysisLoading === key
+
+                  return (
                     <div
-                      className="flex items-center justify-between p-3 cursor-pointer hover:bg-accent/50 rounded-lg"
-                      onClick={() => toggleExpand(report.id)}
+                      key={key}
+                      className="rounded-lg border bg-card transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-md bg-primary/10">
-                          <BrainCircuit className="h-4 w-4 text-primary" />
+                      <div
+                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-accent/50 rounded-lg"
+                        onClick={() => toggleExpand(p)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-md bg-primary/10">
+                            <BrainCircuit className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {ticker} — {periodLabel(p.period)} {p.year}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {ticker} — {periodLabel(report.period)} {report.year}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={periodBadgeVariant(p.period)}>
+                            {periodLabel(p.period)}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
+                            {isExpanded
+                              ? <ChevronUp className="h-4 w-4" />
+                              : <ChevronDown className="h-4 w-4" />}
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={periodBadgeVariant(report.period)}>
-                          {periodLabel(report.period)}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                        >
-                          {expandedId === report.id
-                            ? <ChevronUp className="h-4 w-4" />
-                            : <ChevronDown className="h-4 w-4" />}
-                        </Button>
-                      </div>
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pt-2 border-t">
+                          {isLoading ? (
+                            <div className="space-y-3">
+                              <Skeleton className="h-4 w-full" />
+                              <Skeleton className="h-4 w-[90%]" />
+                              <Skeleton className="h-4 w-[95%]" />
+                              <Skeleton className="h-4 w-[85%]" />
+                              <Skeleton className="h-4 w-[70%]" />
+                            </div>
+                          ) : analysisError && !cachedText ? (
+                            <p className="text-sm text-muted-foreground">{analysisError}</p>
+                          ) : (
+                            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
+                              {cachedText}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {expandedId === report.id && (
-                      <div className="px-4 pb-4 pt-2 border-t">
-                        <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
-                          {report.analysis}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )

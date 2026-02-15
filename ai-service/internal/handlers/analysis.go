@@ -5,6 +5,7 @@ import (
 	"ai-service/internal/infrastructure/postgres"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -26,14 +27,14 @@ func (h *AnalysisHandler) HandleGetAnalysesByTicker(w http.ResponseWriter, r *ht
 		return
 	}
 
-	reports, err := h.db.GetAnalysesByTicker(r.Context(), ticker)
+	periods, err := h.db.GetAvailablePeriods(r.Context(), ticker)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "failed to get analyses")
+		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("failed to get available periods %v", err))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": reports})
+	json.NewEncoder(w).Encode(map[string]any{"data": periods})
 }
 
 func (h *AnalysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Request) {

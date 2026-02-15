@@ -2,14 +2,9 @@ import { RawData } from '@/types/raw-data';
 
 const AI_BASE_URL = '/api/ai';
 
-export interface AnalysisReport {
-  id: number;
-  ticker: string;
+export interface AvailablePeriod {
   year: number;
   period: number;
-  analysis: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export const aiApi = {
@@ -38,10 +33,10 @@ export const aiApi = {
     return response.json();
   },
 
-  async getAnalysesByTicker(
+  async getAvailablePeriods(
     ticker: string,
     signal?: AbortSignal
-  ): Promise<AnalysisReport[]> {
+  ): Promise<AvailablePeriod[]> {
     const params = new URLSearchParams({ ticker });
 
     const response = await fetch(`${AI_BASE_URL}/analyses?${params}`, {
@@ -52,10 +47,37 @@ export const aiApi = {
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(body.error || `Failed to fetch analyses (${response.status})`);
+      throw new Error(body.error || `Failed to fetch available periods (${response.status})`);
     }
 
     const json = await response.json();
     return json.data || [];
+  },
+
+  async getAnalysis(
+    ticker: string,
+    year: number,
+    period: number,
+    signal?: AbortSignal
+  ): Promise<string> {
+    const params = new URLSearchParams({
+      ticker,
+      year: year.toString(),
+      period: period.toString(),
+    });
+
+    const response = await fetch(`${AI_BASE_URL}/analysis?${params}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || `Failed to fetch analysis (${response.status})`);
+    }
+
+    const json = await response.json();
+    return json.data;
   },
 };
