@@ -13,6 +13,7 @@ RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 WORKDIR /app
 COPY --from=builder /app/ai-service .
+COPY --from=builder /app/migrations ./migrations
 RUN chown -R appuser:appgroup /app
 USER appuser
 EXPOSE 8083
