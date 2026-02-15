@@ -17,6 +17,13 @@ var MonthsToPeriod = map[string]ReportPeriod{
 	"12": YEAR,
 }
 
+var PeriodToMonths = map[string]int{
+	string(Q1):   3,
+	string(Q2):   6,
+	string(Q3):   9,
+	string(YEAR): 12,
+}
+
 type RawData struct {
 	Ticker string       `json:"ticker"`
 	Year   int          `json:"year"`

@@ -3,6 +3,7 @@ package application
 import (
 	"ai-service/internal/domain"
 	kafkaclient "ai-service/internal/infrastructure/kafka"
+	"ai-service/internal/infrastructure/postgres"
 	"context"
 	"encoding/json"
 	"errors"
@@ -18,11 +19,17 @@ type TaskProcessor struct {
 	numWorkers    int
 	kafkaClient   *kafkaclient.KafkaClient
 	geminiService domain.GeminiService
+	dbRepo        *postgres.DBRepo
 	cancel        context.CancelFunc
 	wg            sync.WaitGroup
 }
 
-func NewTaskProcessor(numWorkers int, geminiService domain.GeminiService, kafkaClient *kafkaclient.KafkaClient) *TaskProcessor {
+func NewTaskProcessor(
+	numWorkers int,
+	geminiService domain.GeminiService,
+	kafkaClient *kafkaclient.KafkaClient,
+	dbRepo *postgres.DBRepo,
+) *TaskProcessor {
 	taskChan := make(chan kafka.Message, numWorkers)
 
 	return &TaskProcessor{
@@ -168,8 +175,12 @@ func (p *TaskProcessor) processTask(ctx context.Context, task domain.Task, msg k
 }
 
 func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task) error {
-	_, err := p.geminiService.AnalyzeReport(ctx, task.Ticker, task.ReportURL, task.Year, domain.ReportPeriod(task.Period))
-	return err
+	result, err := p.geminiService.AnalyzeReport(ctx, task.Ticker, task.ReportURL, task.Year, domain.ReportPeriod(task.Period))
+	if err != nil {
+		return err
+	}
+	slog.Info("Processing Result", slog.Any("Result", result))
+	return p.dbRepo.SaveAnalysis(result, task.Ticker, task.Year, domain.PeriodToMonths[task.Period])
 }
 
 func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task) error {

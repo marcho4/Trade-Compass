@@ -14,12 +14,13 @@ import (
 )
 
 type Client struct {
-	client *genai.Client
-	model  string
+	client     *genai.Client
+	proModel   string
+	cheapModel string
 }
 
 func (c *Client) GenerateText(ctx context.Context, prompt string) (string, error) {
-	result, err := c.client.Models.GenerateContent(ctx, c.model, genai.Text(prompt), nil)
+	result, err := c.client.Models.GenerateContent(ctx, c.proModel, genai.Text(prompt), nil)
 	if err != nil {
 		return "", fmt.Errorf("gemini API call failed: %w", err)
 	}
@@ -41,7 +42,7 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 	if proxyURL != "" {
 		parsedURL, err := url.Parse(proxyURL)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse proxy URL %q: %w", proxyURL, err)
+			return nil, fmt.Errorf("failed to parse proxy URL: %w", err)
 		}
 
 		cfg.HTTPClient = &http.Client{
@@ -49,7 +50,6 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 				Proxy: http.ProxyURL(parsedURL),
 			},
 		}
-		log.Printf("Gemini client using proxy: %s", proxyURL)
 	}
 
 	client, err := genai.NewClient(context.Background(), cfg)
@@ -58,8 +58,9 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 	}
 
 	return &Client{
-		client: client,
-		model:  "gemini-3-flash-preview",
+		client:     client,
+		proModel:   "gemini-3-pro-preview",
+		cheapModel: "gemini-3-flash-preview",
 	}, nil
 }
 
@@ -147,7 +148,7 @@ func (c *Client) ExtractFromPDF(ctx context.Context, pdfBytes []byte, ticker str
 		},
 	}
 
-	result, err := c.client.Models.GenerateContent(ctx, c.model, contents, &genai.GenerateContentConfig{
+	result, err := c.client.Models.GenerateContent(ctx, c.proModel, contents, &genai.GenerateContentConfig{
 		Temperature:     genai.Ptr(float32(0.1)),
 		TopP:            genai.Ptr(float32(0.95)),
 		MaxOutputTokens: 4096,
@@ -199,7 +200,7 @@ func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemProm
 		},
 	}
 
-	result, err := c.client.Models.GenerateContent(ctx, c.model, contents, config)
+	result, err := c.client.Models.GenerateContent(ctx, c.proModel, contents, config)
 	if err != nil {
 		return "", fmt.Errorf("gemini API call failed: %w", err)
 	}

@@ -64,7 +64,7 @@ func (h *PriceHandler) HandleGetLatestPrice(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	price, err := h.priceProvider.GetStockPrice(ticker, 1, domain.Period(60))
+	price, err := h.priceProvider.GetStockPrice(ticker, 5, domain.Period(60))
 	if err != nil {
 		RespondWithError(w, r, http.StatusInternalServerError, "failed to get latest price", err)
 		return

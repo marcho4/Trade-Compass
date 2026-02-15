@@ -60,7 +60,7 @@ func main() {
 	extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
 	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient)
 	extractorHandler := handlers.NewExtractorHandler(extractorService)
-	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient)
+	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, db)
 	taskProcessor.Start(context.Background())
 
 	r := chi.NewRouter()
