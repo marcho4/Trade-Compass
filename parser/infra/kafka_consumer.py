@@ -10,6 +10,7 @@ from infra.e_disclosure import EDisclosureClient
 from infra.database import get_db_session
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
+from infra.kafka_producer import AnalyzeTaskProducer
 from infra.config import config
 
 logger = logging.getLogger(__name__)
@@ -86,5 +87,17 @@ class TickerParseConsumer:
                         skip_indexing=True,
                     )
                 logger.info("Parsing result for %s: %s", ticker, result)
+
+                latest_report = repo.get_latest_report(ticker)
+                if latest_report:
+                    producer = AnalyzeTaskProducer()
+                    producer.send_analyze_task(
+                        ticker=latest_report.ticker,
+                        year=latest_report.year,
+                        period=latest_report.period,
+                        report_url=latest_report.s3_path,
+                    )
+                else:
+                    logger.warning("No reports found for %s after parsing, skipping analyze task", ticker)
         except Exception as e:
             logger.error("Failed to process ticker %s: %s", ticker, e)

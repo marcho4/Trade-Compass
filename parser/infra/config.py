@@ -45,6 +45,7 @@ class ParserConfig:
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_parse_ticker_topic: str = "parser.parse_ticker"
     kafka_consumer_group: str = "parser-group"
+    kafka_ai_analyze_topic: str = "ai-analyze-tasks"
 
     # PDF Processing
     chunk_size: int = 1000
@@ -73,6 +74,7 @@ class ParserConfig:
             kafka_bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", cls.kafka_bootstrap_servers),
             kafka_parse_ticker_topic=os.getenv("KAFKA_PARSE_TICKER_TOPIC", cls.kafka_parse_ticker_topic),
             kafka_consumer_group=os.getenv("KAFKA_CONSUMER_GROUP", cls.kafka_consumer_group),
+            kafka_ai_analyze_topic=os.getenv("KAFKA_AI_ANALYZE_TOPIC", cls.kafka_ai_analyze_topic),
             chunk_size=int(os.getenv("CHUNK_SIZE", str(cls.chunk_size))),
             chunk_overlap=int(os.getenv("CHUNK_OVERLAP", str(cls.chunk_overlap))),
         )

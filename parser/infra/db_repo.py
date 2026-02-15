@@ -65,3 +65,11 @@ class ReportsRepository:
 
     def report_exists(self, ticker: str, year: int, period: str) -> bool:
         return self.get_report_by_params(ticker, year, period) is not None
+
+    def get_latest_report(self, ticker: str) -> Optional[ReportORM]:
+        return (
+            self.session.query(ReportORM)
+            .filter(ReportORM.ticker == ticker)
+            .order_by(ReportORM.year.desc(), ReportORM.period.desc())
+            .first()
+        )
