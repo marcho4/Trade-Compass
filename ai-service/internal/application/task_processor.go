@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -29,19 +30,15 @@ func NewTaskProcessor(numWorkers int, kafkaClient *kafkaclient.KafkaClient) *Tas
 func (p *TaskProcessor) Start(ctx context.Context) {
 	ctx, p.cancel = context.WithCancel(ctx)
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		defer close(p.taskChan)
 		p.consumeWithRetry(ctx)
-	}()
+	})
 
 	for range p.numWorkers {
-		p.wg.Add(1)
-		go func() {
-			defer p.wg.Done()
+		p.wg.Go(func() {
 			p.worker(ctx)
-		}()
+		})
 	}
 }
 
@@ -56,9 +53,9 @@ func (p *TaskProcessor) Stop(ctx context.Context) {
 
 	select {
 	case <-done:
-		log.Println("Task processor stopped")
+		slog.Info("Task processor stopped")
 	case <-ctx.Done():
-		log.Println("Task processor stop timed out, forcing shutdown")
+		slog.Info("Task processor stop timed out, forcing shutdown")
 	}
 }
 
@@ -108,7 +105,7 @@ func (p *TaskProcessor) worker(ctx context.Context) {
 func (p *TaskProcessor) processTask(ctx context.Context, task domain.AnalyzeTask, msg kafka.Message) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	log.Printf("Processing task: %+v\n", task)
+	slog.Info("Processing task", slog.Any("task", task))
 	if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
 		log.Printf("Failed to commit message: %v", err)
 	}

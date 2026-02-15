@@ -2,6 +2,7 @@ package main
 
 import (
 	"ai-service/internal/application"
+	"ai-service/internal/handlers"
 	"ai-service/internal/infrastructure/config"
 	"ai-service/internal/infrastructure/financialdata"
 	"ai-service/internal/infrastructure/gemini"
@@ -56,7 +57,7 @@ func main() {
 	fdClient := financialdata.NewClient(cfg.FinancialDataURL, cfg.FinancialDataAPIKey)
 
 	extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
-	extractorHandler := application.NewExtractorHandler(extractorService)
+	extractorHandler := handlers.NewExtractorHandler(extractorService)
 	taskProcessor := application.NewTaskProcessor(10, kafkaClient)
 	taskProcessor.Start(context.Background())
 
