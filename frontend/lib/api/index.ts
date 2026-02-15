@@ -6,4 +6,7 @@ export { parserApi } from './parser-api';
 export type { UserResponse, LoginRequest, RegisterRequest } from './auth-api';
 export type { Sector, Company, Candle } from './financial-data-api';
 
+export { aiApi } from './ai-api';
+export type { AnalysisReport } from './ai-api';
+
 export { default } from './http-client';

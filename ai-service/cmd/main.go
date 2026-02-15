@@ -83,6 +83,7 @@ func main() {
 		r.Use(authmw.APIKeyAuth(cfg.APIKey))
 		r.Get("/extract", extractorHandler.HandleExtract)
 		r.Get("/analysis", analysisHandler.HandleGetAnalysis)
+		r.Get("/analyses", analysisHandler.HandleGetAnalysesByTicker)
 	})
 
 	addr := ":" + cfg.Port

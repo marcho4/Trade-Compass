@@ -54,3 +54,33 @@ func (d *DBRepo) GetAnalysis(ctx context.Context, ticker string, year, period in
 	}
 	return analysis, nil
 }
+
+type AnalysisReport struct {
+	ID        int64  `json:"id"`
+	Ticker    string `json:"ticker"`
+	Year      int    `json:"year"`
+	Period    int    `json:"period"`
+	Analysis  string `json:"analysis"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+func (d *DBRepo) GetAnalysesByTicker(ctx context.Context, ticker string) ([]AnalysisReport, error) {
+	query := `SELECT id, ticker, year, period, analysis, created_at, updated_at
+		FROM analysis_reports WHERE ticker = $1 ORDER BY year DESC, period DESC`
+	rows, err := d.conn.Query(ctx, query, ticker)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reports []AnalysisReport
+	for rows.Next() {
+		var r AnalysisReport
+		if err := rows.Scan(&r.ID, &r.Ticker, &r.Year, &r.Period, &r.Analysis, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		reports = append(reports, r)
+	}
+	return reports, nil
+}

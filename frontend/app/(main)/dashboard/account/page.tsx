@@ -1,48 +1,19 @@
 "use client"
 
-import { useState } from "react"
-import {
-  ProfileCard,
-  SubscriptionCard,
-  UsageLimitsCard,
-  AccountSettings,
-} from "@/components/user"
-import { mockUser, mockSubscription, mockUsageLimits } from "@/lib/mock-data"
+// import { useState } from "react"
+// import {
+//   ProfileCard,
+//   SubscriptionCard,
+//   UsageLimitsCard,
+//   AccountSettings,
+// } from "@/components/user"
+// import { mockUser, mockSubscription, mockUsageLimits } from "@/lib/mock-data"
 
 export default function AccountPage() {
-  const [user] = useState(mockUser)
-  const [subscription] = useState(mockSubscription)
-  const [limits] = useState(mockUsageLimits)
-
-  const handleEditProfile = () => {
-    console.log("Edit profile")
-    // TODO: Открыть модальное окно редактирования профиля
-  }
-
-  const handleUpgradeSubscription = () => {
-    console.log("Upgrade subscription")
-    // TODO: Перенаправить на страницу выбора плана
-  }
-
-  const handleCancelSubscription = () => {
-    console.log("Cancel subscription")
-    // TODO: Показать подтверждение отмены подписки
-  }
-
-  const handleSaveSettings = (settings: {
-    emailNotifications: boolean
-    portfolioAlerts: boolean
-    marketNews: boolean
-    weeklyReport: boolean
-  }) => {
-    console.log("Save settings:", settings)
-    // TODO: Сохранить настройки через API
-  }
-
-  const handleDeleteAccount = () => {
-    console.log("Delete account")
-    // TODO: Показать подтверждение удаления аккаунта
-  }
+  // TODO: Загружать данные пользователя, подписки и лимитов из API
+  // const [user] = useState(mockUser)
+  // const [subscription] = useState(mockSubscription)
+  // const [limits] = useState(mockUsageLimits)
 
   return (
     <div className="space-y-6">
@@ -54,27 +25,11 @@ export default function AccountPage() {
         </p>
       </div>
 
-      {/* Профиль - полная ширина */}
-      <div>
-        <ProfileCard user={user} onEdit={handleEditProfile} />
-      </div>
-
-      {/* Подписка и лимиты - две колонки на больших экранах */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <SubscriptionCard
-          subscription={subscription}
-          onUpgrade={handleUpgradeSubscription}
-          onCancel={handleCancelSubscription}
-        />
-        <UsageLimitsCard limits={limits} />
-      </div>
-
-      {/* Настройки - полная ширина */}
-      <div>
-        <AccountSettings
-          onSave={handleSaveSettings}
-          onDeleteAccount={handleDeleteAccount}
-        />
+      {/* TODO: Вернуть компоненты когда будет API */}
+      <div className="rounded-lg border bg-card p-12 text-center">
+        <p className="text-muted-foreground">
+          Раздел аккаунта будет доступен после подключения API
+        </p>
       </div>
     </div>
   )

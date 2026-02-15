@@ -19,6 +19,23 @@ func NewAnalysisHandler(db *postgres.DBRepo) *AnalysisHandler {
 	return &AnalysisHandler{db: db}
 }
 
+func (h *AnalysisHandler) HandleGetAnalysesByTicker(w http.ResponseWriter, r *http.Request) {
+	ticker := r.URL.Query().Get("ticker")
+	if ticker == "" {
+		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
+		return
+	}
+
+	reports, err := h.db.GetAnalysesByTicker(r.Context(), ticker)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "failed to get analyses")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"data": reports})
+}
+
 func (h *AnalysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Request) {
 	ticker := r.URL.Query().Get("ticker")
 	if ticker == "" {
