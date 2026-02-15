@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"log/slog"
 	"sync"
 	"time"
@@ -15,16 +14,23 @@ import (
 )
 
 type TaskProcessor struct {
-	taskChan    chan kafka.Message
-	numWorkers  int
-	kafkaClient *kafkaclient.KafkaClient
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
+	taskChan      chan kafka.Message
+	numWorkers    int
+	kafkaClient   *kafkaclient.KafkaClient
+	geminiService domain.GeminiService
+	cancel        context.CancelFunc
+	wg            sync.WaitGroup
 }
 
-func NewTaskProcessor(numWorkers int, kafkaClient *kafkaclient.KafkaClient) *TaskProcessor {
+func NewTaskProcessor(numWorkers int, geminiService domain.GeminiService, kafkaClient *kafkaclient.KafkaClient) *TaskProcessor {
 	taskChan := make(chan kafka.Message, numWorkers)
-	return &TaskProcessor{taskChan: taskChan, numWorkers: numWorkers, kafkaClient: kafkaClient}
+
+	return &TaskProcessor{
+		taskChan:      taskChan,
+		numWorkers:    numWorkers,
+		kafkaClient:   kafkaClient,
+		geminiService: geminiService,
+	}
 }
 
 func (p *TaskProcessor) Start(ctx context.Context) {
@@ -69,7 +75,7 @@ func (p *TaskProcessor) consumeWithRetry(ctx context.Context) {
 			return
 		}
 
-		log.Printf("Kafka consumer error: %v, retrying in %v", err, backoff)
+		slog.Info("Kafka consumer error. Retrying...", slog.Any("error", err), slog.Any("backoff", backoff))
 
 		select {
 		case <-time.After(backoff):
@@ -87,11 +93,12 @@ func (p *TaskProcessor) worker(ctx context.Context) {
 			if !ok {
 				return
 			}
-			var task domain.AnalyzeTask
+			var task domain.Task
+
 			if err := json.Unmarshal(msg.Value, &task); err != nil {
-				log.Printf("Failed to unmarshal task: %v", err)
+				slog.Error("Failed to unmarshal task", slog.Any("error", err))
 				if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
-					log.Printf("Failed to commit bad message: %v", err)
+					slog.Error("Failed to commit bad message", slog.Any("error", err))
 				}
 				continue
 			}
@@ -102,11 +109,70 @@ func (p *TaskProcessor) worker(ctx context.Context) {
 	}
 }
 
-func (p *TaskProcessor) processTask(ctx context.Context, task domain.AnalyzeTask, msg kafka.Message) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
+func (p *TaskProcessor) processTask(ctx context.Context, task domain.Task, msg kafka.Message) {
+	const maxRetries = 3
+
 	slog.Info("Processing task", slog.Any("task", task))
-	if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
-		log.Printf("Failed to commit message: %v", err)
+
+	var err error
+	backoff := 5 * time.Second
+
+	for attempt := range maxRetries {
+		taskCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+
+		switch task.Type {
+		case domain.Analyze:
+			err = p.processAnalyzeTask(taskCtx, task)
+		case domain.Extract:
+			err = p.processExtractTask(taskCtx, task)
+		default:
+			slog.Warn("Unknown task type", slog.String("type", string(task.Type)))
+			cancel()
+			if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
+				slog.Error("Failed to commit message", slog.Any("error", err))
+			}
+			return
+		}
+		cancel()
+
+		if err == nil {
+			break
+		}
+
+		slog.Error("Failed to process task",
+			slog.Int("attempt", attempt+1),
+			slog.Any("error", err),
+		)
+
+		if attempt+1 < maxRetries {
+			select {
+			case <-time.After(backoff):
+				backoff *= 2
+			case <-ctx.Done():
+				return
+			}
+		}
 	}
+
+	if err != nil {
+		slog.Error("Task permanently failed, skipping",
+			slog.String("type", string(task.Type)),
+			slog.String("ticker", task.Ticker),
+			slog.Any("error", err),
+		)
+	}
+
+	if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
+		slog.Error("Failed to commit message", slog.Any("error", err))
+	}
+}
+
+func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task) error {
+	_, err := p.geminiService.AnalyzeReport(ctx, task.Ticker, task.ReportURL, task.Year, domain.ReportPeriod(task.Period))
+	return err
+}
+
+func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task) error {
+	_, err := p.geminiService.ExtractDataFromReport(ctx, task.Ticker, task.ReportURL, task.Year, domain.ReportPeriod(task.Period))
+	return err
 }

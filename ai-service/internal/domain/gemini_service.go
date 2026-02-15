@@ -16,5 +16,5 @@ type GeminiService interface {
 	GetCompanyHistory(ticker string) (string, error)
 
 	// Получить сырые данные из отчета
-	ExtractDataFromReport(reportUrl string) (string, error)
+	ExtractDataFromReport(ctx context.Context, ticker, reportUrl string, year int, period ReportPeriod) (string, error)
 }

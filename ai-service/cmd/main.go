@@ -48,6 +48,7 @@ func main() {
 	db, err := postgres.NewDBRepo(ctx, cfg.PostgresURL)
 	if err != nil {
 		slog.Error("Failed to create DB Repo", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer db.Close()
 
@@ -57,8 +58,9 @@ func main() {
 	fdClient := financialdata.NewClient(cfg.FinancialDataURL, cfg.FinancialDataAPIKey)
 
 	extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
+	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient)
 	extractorHandler := handlers.NewExtractorHandler(extractorService)
-	taskProcessor := application.NewTaskProcessor(10, kafkaClient)
+	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient)
 	taskProcessor.Start(context.Background())
 
 	r := chi.NewRouter()

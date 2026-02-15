@@ -83,6 +83,6 @@ func (g *GeminiService) GetCompanyHistory(ticker string) (string, error) {
 	return "", nil
 }
 
-func (g *GeminiService) ExtractDataFromReport(reportUrl string) (string, error) {
+func (g *GeminiService) ExtractDataFromReport(ctx context.Context, ticker, reportUrl string, year int, period domain.ReportPeriod) (string, error) {
 	return "", nil
 }
