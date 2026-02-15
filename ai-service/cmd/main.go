@@ -3,6 +3,7 @@ package main
 import (
 	"ai-service/internal/application"
 	"ai-service/internal/handlers"
+	"ai-service/internal/infrastructure"
 	"ai-service/internal/infrastructure/config"
 	"ai-service/internal/infrastructure/financialdata"
 	"ai-service/internal/infrastructure/gemini"
@@ -28,6 +29,11 @@ func main() {
 	err := cfg.Validate()
 	if err != nil {
 		slog.Error("Config is not valid", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	if err := infrastructure.RunMigrations(); err != nil {
+		slog.Error("Failed to run migrations", slog.Any("error", err))
 		os.Exit(1)
 	}
 
@@ -60,6 +66,7 @@ func main() {
 	extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
 	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient)
 	extractorHandler := handlers.NewExtractorHandler(extractorService)
+	analysisHandler := handlers.NewAnalysisHandler(db)
 	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, db)
 	taskProcessor.Start(context.Background())
 
@@ -75,6 +82,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(authmw.APIKeyAuth(cfg.APIKey))
 		r.Get("/extract", extractorHandler.HandleExtract)
+		r.Get("/analysis", analysisHandler.HandleGetAnalysis)
 	})
 
 	addr := ":" + cfg.Port
