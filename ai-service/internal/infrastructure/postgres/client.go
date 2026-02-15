@@ -35,14 +35,37 @@ func (d *DBRepo) Close() {
 }
 
 func (d *DBRepo) SaveAnalysis(result, ticker string, year, period int) error {
+	slog.Info("[SaveAnalysis] executing upsert",
+		slog.String("ticker", ticker),
+		slog.Int("year", year),
+		slog.Int("period", period),
+		slog.Int("result_length", len(result)),
+	)
+
 	query := `
 		INSERT INTO analysis_reports (ticker, year, period, analysis)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (ticker, year, period)
 		DO UPDATE SET analysis = EXCLUDED.analysis
 	`
-	_, err := d.conn.Exec(context.Background(), query, ticker, year, period, result)
-	return err
+	res, err := d.conn.Exec(context.Background(), query, ticker, year, period, result)
+	if err != nil {
+		slog.Error("[SaveAnalysis] exec failed",
+			slog.String("ticker", ticker),
+			slog.Int("year", year),
+			slog.Int("period", period),
+			slog.Any("error", err),
+		)
+		return err
+	}
+
+	slog.Info("[SaveAnalysis] success",
+		slog.String("ticker", ticker),
+		slog.Int("year", year),
+		slog.Int("period", period),
+		slog.Int64("rows_affected", res.RowsAffected()),
+	)
+	return nil
 }
 
 func (d *DBRepo) GetAnalysis(ctx context.Context, ticker string, year, period int) (string, error) {

@@ -37,6 +37,7 @@ func NewTaskProcessor(
 		numWorkers:    numWorkers,
 		kafkaClient:   kafkaClient,
 		geminiService: geminiService,
+		dbRepo:        dbRepo,
 	}
 }
 
@@ -102,13 +103,22 @@ func (p *TaskProcessor) worker(ctx context.Context) {
 			}
 			var task domain.Task
 
+			slog.Info("Worker received message", slog.String("raw", string(msg.Value)))
+
 			if err := json.Unmarshal(msg.Value, &task); err != nil {
-				slog.Error("Failed to unmarshal task", slog.Any("error", err))
+				slog.Error("Failed to unmarshal task", slog.String("raw", string(msg.Value)), slog.Any("error", err))
 				if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
 					slog.Error("Failed to commit bad message", slog.Any("error", err))
 				}
 				continue
 			}
+			slog.Info("Task unmarshalled",
+				slog.String("type", string(task.Type)),
+				slog.String("ticker", task.Ticker),
+				slog.Int("year", task.Year),
+				slog.String("period", task.Period),
+				slog.String("report_url", task.ReportURL),
+			)
 			p.processTask(ctx, task, msg)
 		case <-ctx.Done():
 			return
@@ -170,17 +180,57 @@ func (p *TaskProcessor) processTask(ctx context.Context, task domain.Task, msg k
 	}
 
 	if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
-		slog.Error("Failed to commit message", slog.Any("error", err))
+		slog.Error("Failed to commit message", slog.String("ticker", task.Ticker), slog.Any("error", err))
+	} else {
+		slog.Info("Kafka message committed", slog.String("ticker", task.Ticker))
 	}
 }
 
 func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task) error {
+	slog.Info("Starting analyze task",
+		slog.String("ticker", task.Ticker),
+		slog.Int("year", task.Year),
+		slog.String("period", task.Period),
+		slog.String("report_url", task.ReportURL),
+	)
+
 	result, err := p.geminiService.AnalyzeReport(ctx, task.Ticker, task.ReportURL, task.Year, domain.ReportPeriod(task.Period))
 	if err != nil {
+		slog.Error("AnalyzeReport failed",
+			slog.String("ticker", task.Ticker),
+			slog.Any("error", err),
+		)
 		return err
 	}
-	slog.Info("Processing Result", slog.Any("Result", result))
-	return p.dbRepo.SaveAnalysis(result, task.Ticker, task.Year, domain.PeriodToMonths[task.Period])
+
+	slog.Info("AnalyzeReport succeeded",
+		slog.String("ticker", task.Ticker),
+		slog.Int("result_length", len(result)),
+	)
+
+	periodMonths := domain.PeriodToMonths[task.Period]
+	slog.Info("Saving analysis to DB",
+		slog.String("ticker", task.Ticker),
+		slog.Int("year", task.Year),
+		slog.Int("period_months", periodMonths),
+	)
+
+	if err := p.dbRepo.SaveAnalysis(result, task.Ticker, task.Year, periodMonths); err != nil {
+		slog.Error("SaveAnalysis failed",
+			slog.String("ticker", task.Ticker),
+			slog.Int("year", task.Year),
+			slog.Int("period_months", periodMonths),
+			slog.Any("error", err),
+		)
+		return err
+	}
+
+	slog.Info("Analysis saved successfully",
+		slog.String("ticker", task.Ticker),
+		slog.Int("year", task.Year),
+		slog.Int("period_months", periodMonths),
+	)
+	return nil
 }
 
 func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task) error {
