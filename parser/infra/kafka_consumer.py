@@ -12,6 +12,7 @@ from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
 from infra.kafka_producer import AnalyzeTaskProducer
 from infra.config import config
+from parser.companies import get_inn_by_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,9 @@ class TickerParseConsumer:
                 vectorization_service = VectorizationService()
                 processor = ReportProcessor(s3_client, repo, vectorization_service)
                 with EDisclosureClient() as client:
+                    if get_inn_by_ticker(ticker):
+                        name = ticker
+
                     result = processor.process_company_by_query(
                         client,
                         query=name,
