@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -135,22 +136,14 @@ func (p *TaskProcessor) processTask(ctx context.Context, task domain.Task, msg k
 	backoff := 5 * time.Second
 
 	for attempt := range maxRetries {
-		taskCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
-
-		switch task.Type {
-		case domain.Analyze:
-			err = p.processAnalyzeTask(taskCtx, task)
-		case domain.Extract:
-			err = p.processExtractTask(taskCtx, task)
-		default:
+		err = p.dispatchTask(ctx, task)
+		if errors.Is(err, errUnknownTaskType) {
 			slog.Warn("Unknown task type", slog.String("type", string(task.Type)))
-			cancel()
 			if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
 				slog.Error("Failed to commit message", slog.Any("error", err))
 			}
 			return
 		}
-		cancel()
 
 		if err == nil {
 			break
@@ -208,14 +201,17 @@ func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task
 		slog.Int("result_length", len(result)),
 	)
 
-	periodMonths := domain.PeriodToMonths[task.Period]
+	periodMonths, ok := domain.PeriodToMonths[task.Period]
+	if !ok {
+		return fmt.Errorf("unknown period: %s", task.Period)
+	}
 	slog.Info("Saving analysis to DB",
 		slog.String("ticker", task.Ticker),
 		slog.Int("year", task.Year),
 		slog.Int("period_months", periodMonths),
 	)
 
-	if err := p.dbRepo.SaveAnalysis(result, task.Ticker, task.Year, periodMonths); err != nil {
+	if err := p.dbRepo.SaveAnalysis(ctx, result, task.Ticker, task.Year, periodMonths); err != nil {
 		slog.Error("SaveAnalysis failed",
 			slog.String("ticker", task.Ticker),
 			slog.Int("year", task.Year),
@@ -230,10 +226,66 @@ func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task
 		slog.Int("year", task.Year),
 		slog.Int("period_months", periodMonths),
 	)
+
+	extractResultTask := domain.Task{
+		Ticker:    task.Ticker,
+		Year:      task.Year,
+		Period:    task.Period,
+		ReportURL: task.ReportURL,
+		Type:      domain.ExtractResult,
+	}
+
+	payload, err := json.Marshal(extractResultTask)
+	if err != nil {
+		return fmt.Errorf("failed to marshal extract-result task: %w", err)
+	}
+
+	if err := p.kafkaClient.PublishMessage(ctx, payload); err != nil {
+		return fmt.Errorf("failed to publish extract-result task: %w", err)
+	}
+
+	slog.Info("Published extract-result task",
+		slog.String("ticker", task.Ticker),
+		slog.Int("year", task.Year),
+		slog.String("period", task.Period),
+	)
 	return nil
 }
 
+var errUnknownTaskType = fmt.Errorf("unknown task type")
+
+func (p *TaskProcessor) dispatchTask(ctx context.Context, task domain.Task) error {
+	taskCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	switch task.Type {
+	case domain.Analyze:
+		return p.processAnalyzeTask(taskCtx, task)
+	case domain.Extract:
+		return p.processExtractTask(taskCtx, task)
+	case domain.ExtractResult:
+		return p.processExtractResultTask(taskCtx, task)
+	default:
+		return errUnknownTaskType
+	}
+}
+
 func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task) error {
-	_, err := p.geminiService.ExtractDataFromReport(ctx, task.Ticker, task.ReportURL, task.Year, domain.ReportPeriod(task.Period))
-	return err
+	// _, err := p.geminiService.ExtractResultFromReport(ctx, task.Ticker, task.Year, domain.ReportPeriod(task.Period))
+	// return err
+	return nil
+}
+
+func (p *TaskProcessor) processExtractResultTask(ctx context.Context, task domain.Task) error {
+	result, err := p.geminiService.ExtractResultFromReport(ctx, task.Ticker, task.Year, domain.ReportPeriod(task.Period))
+	if err != nil {
+		return err
+	}
+	slog.Info("Successfully extracted results from report analysis")
+
+	periodMonths, ok := domain.PeriodToMonths[task.Period]
+	if !ok {
+		return fmt.Errorf("unknown period: %s", task.Period)
+	}
+	return p.dbRepo.SaveReportResults(ctx, result, task.Ticker, task.Year, periodMonths)
 }

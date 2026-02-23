@@ -18,6 +18,10 @@ type AnalysisContext struct {
 	MarketCap float64
 }
 
+func BuildExtractPrompt(reportText string) string {
+	return docs.ExtractPrompt() + "\n\n" + reportText
+}
+
 func BuildAnalysisPrompt(ctx AnalysisContext) string {
 	var b strings.Builder
 
@@ -32,7 +36,8 @@ func BuildAnalysisPrompt(ctx AnalysisContext) string {
 }
 
 func writeRole(b *strings.Builder, ctx AnalysisContext) {
-	fmt.Fprintf(b, `Ты — старший инвестиционный аналитик с 15-летним опытом работы на российском фондовом рынке (MOEX).
+	fmt.Fprintf(b,
+		`Ты — старший инвестиционный аналитик с 15-летним опытом работы на российском фондовом рынке (MOEX).
 Твоя задача — провести комплексный фундаментальный анализ компании %s на основе предоставленных данных
 и сформировать структурированный аналитический отчёт по методологии Morningstar, адаптированной для российского рынка.
 

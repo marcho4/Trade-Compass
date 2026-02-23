@@ -11,6 +11,7 @@ type Task struct {
 type TaskType string
 
 const (
-	Analyze TaskType = "analyze"
-	Extract TaskType = "extract"
+	Analyze       TaskType = "analyze"
+	Extract       TaskType = "extract"
+	ExtractResult TaskType = "extract-result"
 )

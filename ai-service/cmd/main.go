@@ -9,7 +9,6 @@ import (
 	"ai-service/internal/infrastructure/gemini"
 	kafkaclient "ai-service/internal/infrastructure/kafka"
 	authmw "ai-service/internal/infrastructure/middleware"
-	"ai-service/internal/infrastructure/parser"
 	"ai-service/internal/infrastructure/postgres"
 	"ai-service/internal/infrastructure/s3"
 	"context"
@@ -25,6 +24,11 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
+
 	cfg := config.Load()
 	err := cfg.Validate()
 	if err != nil {
@@ -60,12 +64,14 @@ func main() {
 
 	kafkaClient := kafkaclient.NewKafkaClient(cfg.KafkaURL, cfg.KafkaTopic)
 
-	parserClient := parser.NewClient(cfg.ParserURL)
+	// parserClient := parser.NewClient(cfg.ParserURL)
 	fdClient := financialdata.NewClient(cfg.FinancialDataURL, cfg.FinancialDataAPIKey)
 
-	extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
-	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient)
-	extractorHandler := handlers.NewExtractorHandler(extractorService)
+	// parserClient := parser.NewClient(cfg.ParserURL)
+
+	// extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
+	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient, db)
+	// extractorHandler := handlers.NewExtractorHandler(extractorService)
 	analysisHandler := handlers.NewAnalysisHandler(db)
 	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, db)
 	taskProcessor.Start(context.Background())
@@ -81,10 +87,11 @@ func main() {
 
 	r.Get("/analysis", analysisHandler.HandleGetAnalysis)
 	r.Get("/analyses", analysisHandler.HandleGetAnalysesByTicker)
+	r.Get("/report-results", analysisHandler.HandleGetReportResults)
 
 	r.Group(func(r chi.Router) {
 		r.Use(authmw.APIKeyAuth(cfg.APIKey))
-		r.Get("/extract", extractorHandler.HandleExtract)
+		// r.Get("/extract", extractorHandler.HandleExtract)
 	})
 
 	addr := ":" + cfg.Port

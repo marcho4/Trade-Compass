@@ -5,7 +5,7 @@ import (
 	"ai-service/internal/infrastructure/postgres"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -29,7 +29,7 @@ func (h *AnalysisHandler) HandleGetAnalysesByTicker(w http.ResponseWriter, r *ht
 
 	periods, err := h.db.GetAvailablePeriods(r.Context(), ticker)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("failed to get available periods %v", err))
+		respondWithError(w, http.StatusInternalServerError, "failed to get available periods")
 		return
 	}
 
@@ -81,4 +81,51 @@ func (h *AnalysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"data": analysis})
+}
+
+func (h *AnalysisHandler) HandleGetReportResults(w http.ResponseWriter, r *http.Request) {
+	ticker := r.URL.Query().Get("ticker")
+	if ticker == "" {
+		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
+		return
+	}
+
+	period := r.URL.Query().Get("period")
+	if period == "" {
+		respondWithError(w, http.StatusBadRequest, "period query parameter is required (3, 6, 9, 12)")
+		return
+	}
+
+	if _, ok := domain.MonthsToPeriod[period]; !ok {
+		respondWithError(w, http.StatusBadRequest, "invalid period (allowed: 3, 6, 9, 12)")
+		return
+	}
+
+	yearStr := r.URL.Query().Get("year")
+	if yearStr == "" {
+		respondWithError(w, http.StatusBadRequest, "year query parameter is required")
+		return
+	}
+
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid year parameter")
+		return
+	}
+
+	periodInt, _ := strconv.Atoi(period)
+
+	results, err := h.db.GetReportResults(r.Context(), ticker, year, periodInt)
+	if err != nil {
+		slog.Error("Error", slog.Any("err", err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "report results not found")
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "failed to get report results")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"data": results})
 }

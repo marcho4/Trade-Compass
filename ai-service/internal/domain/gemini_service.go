@@ -7,14 +7,13 @@ type GeminiService interface {
 	AnalyzeReport(ctx context.Context, ticker, reportUrl string, year int, period ReportPeriod) (string, error)
 
 	// Функция, для работы с чатом
-	GetChatResponse(prompt string, chatContext ChatContext) (string, error)
+	GetChatResponse(ctx context.Context, prompt string, chatContext ChatContext) (string, error)
 
 	// Функция для анализа сектора
-	AnalyzeSector(sectorId int) (string, error)
+	AnalyzeSector(ctx context.Context, sectorId int) (string, error)
 
 	// Получить выжимку из старых отчетов для анализа нового
-	GetCompanyHistory(ticker string) (string, error)
+	GetCompanyHistory(ctx context.Context, ticker string) (string, error)
 
-	// Получить сырые данные из отчета
-	ExtractDataFromReport(ctx context.Context, ticker, reportUrl string, year int, period ReportPeriod) (string, error)
+	ExtractResultFromReport(ctx context.Context, ticker string, year int, period ReportPeriod) (*ReportResults, error)
 }

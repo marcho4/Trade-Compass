@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"ai-service/internal/domain"
 	"context"
 	"log/slog"
 
@@ -34,8 +35,8 @@ func (d *DBRepo) Close() {
 	}
 }
 
-func (d *DBRepo) SaveAnalysis(result, ticker string, year, period int) error {
-	slog.Info("[SaveAnalysis] executing upsert",
+func (d *DBRepo) SaveAnalysis(ctx context.Context, result, ticker string, year, period int) error {
+	slog.Info("Executing upsert",
 		slog.String("ticker", ticker),
 		slog.Int("year", year),
 		slog.Int("period", period),
@@ -48,7 +49,7 @@ func (d *DBRepo) SaveAnalysis(result, ticker string, year, period int) error {
 		ON CONFLICT (ticker, year, period)
 		DO UPDATE SET analysis = EXCLUDED.analysis
 	`
-	res, err := d.conn.Exec(context.Background(), query, ticker, year, period, result)
+	_, err := d.conn.Exec(ctx, query, ticker, year, period, result)
 	if err != nil {
 		slog.Error("[SaveAnalysis] exec failed",
 			slog.String("ticker", ticker),
@@ -59,12 +60,7 @@ func (d *DBRepo) SaveAnalysis(result, ticker string, year, period int) error {
 		return err
 	}
 
-	slog.Info("[SaveAnalysis] success",
-		slog.String("ticker", ticker),
-		slog.Int("year", year),
-		slog.Int("period", period),
-		slog.Int64("rows_affected", res.RowsAffected()),
-	)
+	slog.Info("Successfully saved analysis")
 	return nil
 }
 
@@ -101,4 +97,55 @@ func (d *DBRepo) GetAvailablePeriods(ctx context.Context, ticker string) ([]Avai
 		periods = append(periods, p)
 	}
 	return periods, nil
+}
+
+func (d *DBRepo) SaveReportResults(ctx context.Context, result *domain.ReportResults, ticker string, year, period int) error {
+	query := `
+		INSERT INTO report_results (ticker, year, period, health, growth, moat, dividends, value, total)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (ticker, year, period)
+		DO UPDATE SET
+			health = EXCLUDED.health,
+			growth = EXCLUDED.growth,
+			moat = EXCLUDED.moat,
+			dividends = EXCLUDED.dividends,
+			value = EXCLUDED.value,
+			total = EXCLUDED.total
+	`
+	_, err := d.conn.Exec(ctx, query,
+		ticker, year, period,
+		result.Health, result.Growth, result.Moat, result.Dividends, result.Value, result.Total,
+	)
+	if err != nil {
+		slog.Error("SaveReportResults exec failed",
+			slog.String("ticker", ticker),
+			slog.Int("year", year),
+			slog.Int("period", period),
+			slog.Any("error", err),
+		)
+		return err
+	}
+
+	slog.Info("SaveReportResults success",
+		slog.String("ticker", ticker),
+		slog.Int("year", year),
+		slog.Int("period", period),
+	)
+	return nil
+}
+
+func (d *DBRepo) GetReportResults(ctx context.Context, ticker string, year, period int) (*domain.ReportResults, error) {
+	query := `
+		SELECT health, growth, moat, dividends, value, total
+		FROM report_results
+		WHERE ticker = $1 AND year = $2 AND period = $3
+	`
+	var r domain.ReportResults
+	err := d.conn.QueryRow(ctx, query, ticker, year, period).Scan(
+		&r.Health, &r.Growth, &r.Moat, &r.Dividends, &r.Value, &r.Total,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }

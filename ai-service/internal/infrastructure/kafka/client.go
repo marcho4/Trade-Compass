@@ -9,23 +9,39 @@ import (
 
 type KafkaClient struct {
 	reader *kafka.Reader
+	writer *kafka.Writer
 }
 
-func NewKafkaClient(kafkaUrl, topic string) *KafkaClient {
+func NewKafkaClient(kafkaUrl, consumeTopic string) *KafkaClient {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  []string{kafkaUrl},
 		GroupID:  "ai-service-group",
-		Topic:    topic,
+		Topic:    consumeTopic,
 		MinBytes: 10e3,
 		MaxBytes: 10e6,
 	})
-	return &KafkaClient{reader: reader}
+	writer := &kafka.Writer{
+		Addr:     kafka.TCP(kafkaUrl),
+		Topic:    consumeTopic,
+		Balancer: &kafka.LeastBytes{},
+	}
+	return &KafkaClient{reader: reader, writer: writer}
 }
 
 func (c *KafkaClient) Close() error {
-	err := c.reader.Close()
-	if err != nil {
+	if err := c.reader.Close(); err != nil {
 		return fmt.Errorf("failed to close reader: %w", err)
+	}
+	if err := c.writer.Close(); err != nil {
+		return fmt.Errorf("failed to close writer: %w", err)
+	}
+	return nil
+}
+
+func (c *KafkaClient) PublishMessage(ctx context.Context, value []byte) error {
+	err := c.writer.WriteMessages(ctx, kafka.Message{Value: value})
+	if err != nil {
+		return fmt.Errorf("failed to write message: %w", err)
 	}
 	return nil
 }

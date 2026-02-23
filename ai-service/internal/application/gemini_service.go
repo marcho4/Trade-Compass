@@ -4,8 +4,10 @@ import (
 	"ai-service/internal/domain"
 	"ai-service/internal/infrastructure/financialdata"
 	"ai-service/internal/infrastructure/gemini"
+	"ai-service/internal/infrastructure/postgres"
 	"ai-service/internal/infrastructure/s3"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 )
@@ -14,17 +16,20 @@ type GeminiService struct {
 	geminiClient  *gemini.Client
 	s3Client      *s3.Client
 	finDataClient *financialdata.Client
+	db            *postgres.DBRepo
 }
 
 func NewGeminiService(
 	client *gemini.Client,
 	s3Client *s3.Client,
 	finDataClient *financialdata.Client,
+	db *postgres.DBRepo,
 ) *GeminiService {
 	return &GeminiService{
 		geminiClient:  client,
 		finDataClient: finDataClient,
 		s3Client:      s3Client,
+		db:            db,
 	}
 }
 
@@ -84,18 +89,37 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 	return response, nil
 }
 
-func (g *GeminiService) GetChatResponse(prompt string, chatContext domain.ChatContext) (string, error) {
+func (g *GeminiService) GetChatResponse(ctx context.Context, prompt string, chatContext domain.ChatContext) (string, error) {
 	return "", nil
 }
 
-func (g *GeminiService) AnalyzeSector(sectorId int) (string, error) {
+func (g *GeminiService) AnalyzeSector(ctx context.Context, sectorId int) (string, error) {
 	return "", nil
 }
 
-func (g *GeminiService) GetCompanyHistory(ticker string) (string, error) {
+func (g *GeminiService) GetCompanyHistory(ctx context.Context, ticker string) (string, error) {
 	return "", nil
 }
 
-func (g *GeminiService) ExtractDataFromReport(ctx context.Context, ticker, reportUrl string, year int, period domain.ReportPeriod) (string, error) {
-	return "", nil
+func (g *GeminiService) ExtractResultFromReport(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.ReportResults, error) {
+	reportText, err := g.db.GetAnalysis(ctx, ticker, year, domain.PeriodToMonths[string(period)])
+	if err != nil {
+		return nil, err
+	}
+	slog.Info("Extracted report from database")
+
+	prompt := BuildExtractPrompt(reportText)
+	slog.Info("Generating Report results...")
+
+	text, err := g.geminiClient.GenerateText(ctx, prompt, domain.Flash)
+	if err != nil {
+		return nil, err
+	}
+
+	var res domain.ReportResults
+	if err := json.Unmarshal([]byte(text), &res); err != nil {
+		slog.Error("Unable to parse text", slog.String("ai response", text))
+		return nil, err
+	}
+	return &res, nil
 }
