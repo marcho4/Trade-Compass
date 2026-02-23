@@ -7,6 +7,15 @@ export interface AvailablePeriod {
   period: number;
 }
 
+export interface ReportResults {
+  health: number;
+  growth: number;
+  moat: number;
+  dividends: number;
+  value: number;
+  total: number;
+}
+
 export const aiApi = {
   async extractData(
     ticker: string,
@@ -79,5 +88,29 @@ export const aiApi = {
 
     const json = await response.json();
     return json.data;
+  },
+
+  async getReportResults(
+    ticker: string,
+    signal?: AbortSignal
+  ): Promise<ReportResults | null> {
+    const params = new URLSearchParams({ ticker });
+
+    const response = await fetch(`${AI_BASE_URL}/report-results/latest?${params}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const json = await response.json();
+    return json.data || null;
   },
 };

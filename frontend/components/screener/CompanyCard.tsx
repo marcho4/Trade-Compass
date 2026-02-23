@@ -17,11 +17,12 @@ import { formatLargeNumber } from "@/lib/utils"
 import { usePriceData } from "@/hooks/use-price-data"
 
 interface CompanyRating {
-  profitability: number // Рентабельность (ROE, ROA)
-  growth: number // Рост (revenue_growth, profit_growth)
-  valuation: number // Оценка (P/E, P/B, P/S)
-  financial_health: number // Финансовое здоровье (debt_to_equity, current_ratio)
-  efficiency: number // Эффективность (ROCE, margin)
+  health: number
+  growth: number
+  moat: number
+  dividends: number
+  value: number
+  total: number
 }
 
 interface CompanyCardProps {
@@ -77,49 +78,33 @@ export const CompanyCard = ({
   const displayPriceChangePercent = priceLoading ? priceChangePercent : actualPriceChangePercent
   const isPositiveChange = displayPriceChange >= 0
 
-  // Подготовка данных для радар чарта
+  const toPercent = (v: number) => Math.round((v / 6) * 100)
+
   const radarData = [
-    {
-      metric: "Прибыль",
-      value: rating.profitability,
-      fullMark: 100,
-    },
-    {
-      metric: "Рост",
-      value: rating.growth,
-      fullMark: 100,
-    },
-    {
-      metric: "Оценка",
-      value: rating.valuation,
-      fullMark: 100,
-    },
-    {
-      metric: "Здоровье",
-      value: rating.financial_health,
-      fullMark: 100,
-    },
-    {
-      metric: "Эффект.",
-      value: rating.efficiency,
-      fullMark: 100,
-    },
+    { metric: "Здоровье", value: toPercent(rating.health), fullMark: 100 },
+    { metric: "Рост", value: toPercent(rating.growth), fullMark: 100 },
+    { metric: "Ров", value: toPercent(rating.moat), fullMark: 100 },
+    { metric: "Дивиденды", value: toPercent(rating.dividends), fullMark: 100 },
+    { metric: "Оценка", value: toPercent(rating.value), fullMark: 100 },
   ]
 
-  // Средний рейтинг
   const averageRating = Math.round(
-    (rating.profitability +
-      rating.growth +
-      rating.valuation +
-      rating.financial_health +
-      rating.efficiency) /
+    (toPercent(rating.health) +
+      toPercent(rating.growth) +
+      toPercent(rating.moat) +
+      toPercent(rating.dividends) +
+      toPercent(rating.value)) /
       5
   )
 
-  const getRatingBadgeVariant = (rating: number) => {
-    if (rating >= 80) return "default"
-    if (rating >= 60) return "secondary"
-    return "destructive"
+  const totalRating = rating.total
+
+  const getRatingColor = (total: number) => {
+    if (total >= 5) return "bg-green-500 text-white"
+    if (total === 4) return "bg-green-400 text-white"
+    if (total === 3) return "bg-yellow-400 text-black"
+    if (total === 2) return "bg-orange-400 text-white"
+    return "bg-red-500 text-white"
   }
 
   // Функция для вычисления цвета заливки графика на основе рейтинга
@@ -190,12 +175,11 @@ export const CompanyCard = ({
                 {name}
               </p>
             </div>
-            <Badge
-              variant={getRatingBadgeVariant(averageRating)}
-              className="ml-2 h-10 w-10 flex items-center justify-center rounded-full text-base font-bold"
+            <div
+              className={`ml-2 h-10 w-10 flex items-center justify-center rounded-full text-base font-bold ${getRatingColor(totalRating)}`}
             >
-              {averageRating}
-            </Badge>
+              {totalRating}
+            </div>
           </div>
         </CardHeader>
         <CardContent>

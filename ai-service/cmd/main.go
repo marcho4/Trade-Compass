@@ -88,6 +88,7 @@ func main() {
 	r.Get("/analysis", analysisHandler.HandleGetAnalysis)
 	r.Get("/analyses", analysisHandler.HandleGetAnalysesByTicker)
 	r.Get("/report-results", analysisHandler.HandleGetReportResults)
+	r.Get("/report-results/latest", analysisHandler.HandleGetLatestReportResults)
 
 	r.Group(func(r chi.Router) {
 		r.Use(authmw.APIKeyAuth(cfg.APIKey))

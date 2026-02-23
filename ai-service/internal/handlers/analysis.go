@@ -129,3 +129,25 @@ func (h *AnalysisHandler) HandleGetReportResults(w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"data": results})
 }
+
+func (h *AnalysisHandler) HandleGetLatestReportResults(w http.ResponseWriter, r *http.Request) {
+	ticker := r.URL.Query().Get("ticker")
+	if ticker == "" {
+		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
+		return
+	}
+
+	results, err := h.db.GetLatestReportResults(r.Context(), ticker)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "report results not found")
+			return
+		}
+		slog.Error("GetLatestReportResults failed", slog.String("ticker", ticker), slog.Any("error", err))
+		respondWithError(w, http.StatusInternalServerError, "failed to get report results")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"data": results})
+}

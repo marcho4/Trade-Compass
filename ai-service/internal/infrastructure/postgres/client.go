@@ -149,3 +149,21 @@ func (d *DBRepo) GetReportResults(ctx context.Context, ticker string, year, peri
 	}
 	return &r, nil
 }
+
+func (d *DBRepo) GetLatestReportResults(ctx context.Context, ticker string) (*domain.ReportResults, error) {
+	query := `
+		SELECT health, growth, moat, dividends, value, total
+		FROM report_results
+		WHERE ticker = $1
+		ORDER BY year DESC, period DESC
+		LIMIT 1
+	`
+	var r domain.ReportResults
+	err := d.conn.QueryRow(ctx, query, ticker).Scan(
+		&r.Health, &r.Growth, &r.Moat, &r.Dividends, &r.Value, &r.Total,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}

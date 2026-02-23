@@ -6,6 +6,7 @@ import { CompanyCard, ScreenerFilters } from "@/components/screener"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { financialDataApi, Sector, Company } from "@/lib/api"
+import { aiApi } from "@/lib/api/ai-api"
 
 interface FilterValues {
   search: string
@@ -27,11 +28,12 @@ interface CompanyWithDetails extends Company {
   priceChange: number
   priceChangePercent: number
   rating: {
-    profitability: number
+    health: number
     growth: number
-    valuation: number
-    financial_health: number
-    efficiency: number
+    moat: number
+    dividends: number
+    value: number
+    total: number
   }
   marketCap?: number
   pe?: number
@@ -69,8 +71,27 @@ export default function ScreenerPage() {
         
         setSectors(sectorsData)
         
+        const reportResultsMap = new Map<string, { health: number; growth: number; moat: number; dividends: number; value: number; total: number }>()
+        const reportPromises = companiesData.map(async (company) => {
+          const result = await aiApi.getReportResults(company.ticker)
+          if (result) {
+            reportResultsMap.set(company.ticker, result)
+          }
+        })
+        await Promise.allSettled(reportPromises)
+
+        const randomRating = () => ({
+          health: Math.floor(Math.random() * 6) + 1,
+          growth: Math.floor(Math.random() * 6) + 1,
+          moat: Math.floor(Math.random() * 6) + 1,
+          dividends: Math.floor(Math.random() * 6) + 1,
+          value: Math.floor(Math.random() * 6) + 1,
+          total: Math.floor(Math.random() * 5) + 1,
+        })
+
         const companiesWithDetails: CompanyWithDetails[] = companiesData.map((company) => {
           const sector = sectorsData.find((s) => s.id === company.sectorId)
+          const rating = reportResultsMap.get(company.ticker) || randomRating()
           return {
             ...company,
             name: company.name || company.ticker,
@@ -78,19 +99,13 @@ export default function ScreenerPage() {
             price: Math.random() * 1000 + 100,
             priceChange: (Math.random() - 0.5) * 20,
             priceChangePercent: (Math.random() - 0.5) * 5,
-            rating: {
-              profitability: Math.floor(Math.random() * 100),
-              growth: Math.floor(Math.random() * 100),
-              valuation: Math.floor(Math.random() * 100),
-              financial_health: Math.floor(Math.random() * 100),
-              efficiency: Math.floor(Math.random() * 100),
-            },
+            rating,
             marketCap: Math.random() * 5000000000000 + 100000000000,
             pe: Math.random() * 20 + 2,
             dividendYield: Math.random() * 15,
           }
         })
-        
+
         setCompanies(companiesWithDetails)
       } catch (error) {
         console.error("Failed to load data:", error)
@@ -172,16 +187,8 @@ export default function ScreenerPage() {
       return false
     }
 
-    // Фильтр по рейтингу
     if (filters.ratingMin) {
-      const averageRating =
-        (company.rating.profitability +
-          company.rating.growth +
-          company.rating.valuation +
-          company.rating.financial_health +
-          company.rating.efficiency) /
-        5
-      if (averageRating < parseFloat(filters.ratingMin)) {
+      if (company.rating.total < parseFloat(filters.ratingMin)) {
         return false
       }
     }

@@ -81,8 +81,9 @@ class TickerParseConsumer:
                 vectorization_service = VectorizationService()
                 processor = ReportProcessor(s3_client, repo, vectorization_service)
                 with EDisclosureClient() as client:
-                    if get_inn_by_ticker(ticker):
-                        name = ticker
+                    inn = get_inn_by_ticker(ticker)
+                    if inn:
+                        name = inn
 
                     result = processor.process_company_by_query(
                         client,

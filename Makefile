@@ -13,7 +13,7 @@ auth:
 	docker compose build auth-service && docker down auth-service && docker compose up -d
 
 frontend:
-	docker compose build frontend && docker compose down frontend && docker compose up -d
+	docker compose build frontend --no-cache && docker compose down && docker compose up -d
 
 ai:
 	docker compose build ai-service && docker down ai-service && docker compose up -d
