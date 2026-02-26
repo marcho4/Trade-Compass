@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -217,8 +218,22 @@ export const CompanyAnalyses = ({ ticker }: CompanyAnalysesProps) => {
                           ) : analysisError && !cachedText ? (
                             <p className="text-sm text-muted-foreground">{analysisError}</p>
                           ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed">
-                              <ReactMarkdown>{cachedText}</ReactMarkdown>
+                            <div className="prose prose-sm dark:prose-invert max-w-none
+                              prose-headings:mt-6 prose-headings:mb-3
+                              prose-h1:text-xl prose-h1:font-bold prose-h1:border-b prose-h1:pb-2
+                              prose-h2:text-lg prose-h2:font-semibold prose-h2:border-b prose-h2:border-border prose-h2:pb-1.5
+                              prose-h3:text-base prose-h3:font-medium
+                              prose-p:my-2 prose-p:leading-relaxed
+                              prose-table:my-4 prose-table:text-sm
+                              prose-th:bg-muted prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-medium
+                              prose-td:px-3 prose-td:py-2 prose-td:border-border
+                              prose-hr:my-6 prose-hr:border-border
+                              prose-ul:my-2 prose-ol:my-2
+                              prose-li:my-0.5
+                              prose-blockquote:text-xs prose-blockquote:text-muted-foreground prose-blockquote:border-border
+                              prose-strong:text-foreground
+                            ">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{cachedText ?? ""}</ReactMarkdown>
                             </div>
                           )}
                         </div>

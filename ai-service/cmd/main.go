@@ -77,7 +77,7 @@ func main() {
 	taskProcessor.Start(context.Background())
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	r.Use(authmw.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

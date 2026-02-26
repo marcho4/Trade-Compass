@@ -101,10 +101,10 @@ export const CompanyCard = ({
 
   const getRatingColor = (total: number) => {
     if (total >= 5) return "bg-green-500 text-white"
-    if (total === 4) return "bg-green-400 text-white"
-    if (total === 3) return "bg-yellow-400 text-black"
-    if (total === 2) return "bg-orange-400 text-white"
-    return "bg-red-500 text-white"
+    if (total === 4) return "bg-green-300 text-white"
+    if (total === 3) return "bg-yellow-300 text-black"
+    if (total === 2) return "bg-orange-300 text-white"
+    return "bg-red-300 text-white"
   }
 
   // Функция для вычисления цвета заливки графика на основе рейтинга
@@ -270,7 +270,7 @@ export const CompanyCard = ({
                     </span>
                   </div>
                 )}
-                {pe && (
+                {/* {pe && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">P/E:</span>
                     <span className="font-medium">{pe.toFixed(2)}</span>
@@ -283,7 +283,7 @@ export const CompanyCard = ({
                       {dividendYield.toFixed(2)}%
                     </span>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           </div>
