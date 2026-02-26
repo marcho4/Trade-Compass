@@ -16,7 +16,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 3
       start_period: 10s
@@ -38,7 +38,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 3
       start_period: 10s
@@ -60,7 +60,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 3
       start_period: 10s
@@ -88,7 +88,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 3
       start_period: 10s
@@ -107,7 +107,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
 
@@ -125,7 +125,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
 
@@ -143,7 +143,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
 
@@ -167,7 +167,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
 
@@ -202,7 +202,7 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
-      interval: 10s
+      interval: 60s
       timeout: 10s
       retries: 5
       start_period: 30s
@@ -236,7 +236,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:6333/dashboard"]
-      interval: 10s
+      interval: 60s
       timeout: 5s
       retries: 5
 
@@ -283,9 +283,63 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 3
+
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: loki
+    expose:
+      - "3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - main
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 60s
+      timeout: 5s
+      retries: 5
+
+  promtail:
+    image: grafana/promtail:3.4.2
+    container_name: promtail
+    volumes:
+      - ./monitoring/promtail/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - main
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: grafana
+    expose:
+      - "3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: https://trade-compass.ru/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - main
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
 
 networks:
   main:
@@ -299,3 +353,5 @@ volumes:
   zookeeper_data:
   zookeeper_log:
   kafka_data:
+  loki_data:
+  grafana_data:

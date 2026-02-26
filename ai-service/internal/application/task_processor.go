@@ -255,7 +255,7 @@ func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task
 var errUnknownTaskType = fmt.Errorf("unknown task type")
 
 func (p *TaskProcessor) dispatchTask(ctx context.Context, task domain.Task) error {
-	taskCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	taskCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
 	switch task.Type {
