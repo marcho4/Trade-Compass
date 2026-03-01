@@ -5,6 +5,7 @@ import (
 	docs "ai-service/internal/infrastructure/docs"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -38,7 +39,7 @@ func BuildAnalysisPrompt(ctx AnalysisContext) string {
 	writeMarketData(&b, ctx.CBRate, ctx.MarketCap)
 	writePriceHistory(&b, ctx.Candles)
 	writeNews(&b, ctx.News)
-
+	slog.Debug("final prompt", slog.String("Prompt", b.String()))
 	return b.String()
 }
 
@@ -142,6 +143,8 @@ func writePriceHistory(b *strings.Builder, candles []domain.Candle) {
 		return
 	}
 
+	b.WriteString("Для анализа используй цены только отсюда.")
+	b.WriteString("При расчете оценки акции бери цену за дату генерации отчета, или за последний самый близкий к дате отчета день из таблицы")
 	b.WriteString("История цен за последние 12 месяцев (дневные свечи):\n")
 	b.WriteString("Дата       | Открытие | Закрытие | Макс   | Мин    | Объём\n")
 	b.WriteString("-----------|----------|----------|--------|--------|----------\n")
