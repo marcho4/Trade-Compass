@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+
+	"google.golang.org/genai"
 )
 
 type GeminiService struct {
@@ -121,5 +123,44 @@ func (g *GeminiService) ExtractResultFromReport(ctx context.Context, ticker stri
 		slog.Error("Unable to parse text", slog.String("ai response", text))
 		return nil, err
 	}
+	return &res, nil
+}
+
+func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*domain.NewsResponse, error) {
+	prompt := BuildNewsAgentPrompt(ticker)
+
+	newsItemSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"news":        {Type: genai.TypeString},
+			"date":        {Type: genai.TypeString},
+			"source":      {Type: genai.TypeString},
+			"severity":    {Type: genai.TypeString, Enum: []string{"high", "medium", "low"}},
+			"impact_type": {Type: genai.TypeString, Enum: []string{"positive", "negative", "neutral"}},
+		},
+		Required: []string{"news", "date", "source", "severity", "impact_type"},
+	}
+
+	text, err := g.geminiClient.GenerateText(ctx, prompt, domain.Flash,
+		gemini.WithGoogleSearch(),
+		gemini.WithResponseSchema(&genai.Schema{
+			Type: genai.TypeObject,
+			Properties: map[string]*genai.Schema{
+				"latest_news":    {Type: genai.TypeArray, Items: newsItemSchema},
+				"important_news": {Type: genai.TypeArray, Items: newsItemSchema},
+			},
+			Required: []string{"latest_news", "important_news"},
+		}),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("collect news: %w", err)
+	}
+
+	var res domain.NewsResponse
+	if err := json.Unmarshal([]byte(text), &res); err != nil {
+		slog.Error("failed to parse news response", slog.String("ai_response", text))
+		return nil, fmt.Errorf("parse news response: %w", err)
+	}
+
 	return &res, nil
 }

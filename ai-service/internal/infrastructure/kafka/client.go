@@ -20,20 +20,22 @@ func NewKafkaClient(kafkaUrl, consumeTopic string) *KafkaClient {
 		MinBytes: 10e3,
 		MaxBytes: 10e6,
 	})
+
 	writer := &kafka.Writer{
 		Addr:     kafka.TCP(kafkaUrl),
 		Topic:    consumeTopic,
 		Balancer: &kafka.LeastBytes{},
 	}
+
 	return &KafkaClient{reader: reader, writer: writer}
 }
 
 func (c *KafkaClient) Close() error {
 	if err := c.reader.Close(); err != nil {
-		return fmt.Errorf("failed to close reader: %w", err)
+		return fmt.Errorf("close reader: %w", err)
 	}
 	if err := c.writer.Close(); err != nil {
-		return fmt.Errorf("failed to close writer: %w", err)
+		return fmt.Errorf("close writer: %w", err)
 	}
 	return nil
 }
@@ -41,7 +43,7 @@ func (c *KafkaClient) Close() error {
 func (c *KafkaClient) PublishMessage(ctx context.Context, value []byte) error {
 	err := c.writer.WriteMessages(ctx, kafka.Message{Value: value})
 	if err != nil {
-		return fmt.Errorf("failed to write message: %w", err)
+		return fmt.Errorf("write message: %w", err)
 	}
 	return nil
 }
@@ -50,7 +52,7 @@ func (c *KafkaClient) StartConsuming(ctx context.Context, messages chan<- kafka.
 	for {
 		msg, err := c.reader.FetchMessage(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to read message: %w", err)
+			return fmt.Errorf("read message: %w", err)
 		}
 		select {
 		case messages <- msg:

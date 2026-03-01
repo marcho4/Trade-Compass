@@ -16,7 +16,7 @@ frontend:
 	docker compose build frontend --no-cache && docker compose down && docker compose up -d
 
 ai:
-	docker compose build ai-service && docker down ai-service && docker compose up -d
+	docker compose build ai-service && docker compose down  && docker compose up -d
 
 restart:
 	docker compose down && docker compose up -d

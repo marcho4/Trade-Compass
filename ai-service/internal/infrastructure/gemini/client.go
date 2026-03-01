@@ -24,7 +24,7 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 	if proxyURL != "" {
 		parsedURL, err := url.Parse(proxyURL)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse proxy URL: %w", err)
+			return nil, fmt.Errorf("parse proxy URL: %w", err)
 		}
 
 		cfg.HTTPClient = &http.Client{
@@ -36,7 +36,7 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 
 	client, err := genai.NewClient(context.Background(), cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gemini client: %w", err)
+		return nil, fmt.Errorf("create gemini client: %w", err)
 	}
 
 	return &Client{
@@ -70,16 +70,43 @@ func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemProm
 	return strings.TrimSpace(result.Text()), nil
 }
 
-func (c *Client) GenerateText(ctx context.Context, prompt string, model domain.AIModel) (string, error) {
+type GenerateOption func(*genai.GenerateContentConfig)
+
+func WithGoogleSearch() GenerateOption {
+	return func(cfg *genai.GenerateContentConfig) {
+		cfg.Tools = append(cfg.Tools, &genai.Tool{
+			GoogleSearch: &genai.GoogleSearch{},
+		})
+	}
+}
+
+func WithResponseSchema(schema *genai.Schema) GenerateOption {
+	return func(cfg *genai.GenerateContentConfig) {
+		cfg.ResponseMIMEType = "application/json"
+		cfg.ResponseSchema = schema
+	}
+}
+
+func (c *Client) GenerateText(ctx context.Context, prompt string, model domain.AIModel, opts ...GenerateOption) (string, error) {
 	contents := []*genai.Content{
 		{
 			Role:  "user",
 			Parts: []*genai.Part{genai.NewPartFromText(prompt)},
 		},
 	}
-	result, err := c.client.Models.GenerateContent(ctx, string(model), contents, nil)
+
+	var config *genai.GenerateContentConfig
+	if len(opts) > 0 {
+		config = &genai.GenerateContentConfig{}
+		for _, opt := range opts {
+			opt(config)
+		}
+	}
+
+	result, err := c.client.Models.GenerateContent(ctx, string(model), contents, config)
 	if err != nil {
 		return "", fmt.Errorf("gemini API call failed: %w", err)
 	}
+
 	return strings.TrimSpace(result.Text()), nil
 }

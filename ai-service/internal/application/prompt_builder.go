@@ -18,6 +18,10 @@ type AnalysisContext struct {
 	MarketCap float64
 }
 
+func BuildNewsAgentPrompt(ticker string) string {
+	return docs.NewsCollectorAgent() + "\n\n" + "## Тикер для анализа\n" + ticker
+}
+
 func BuildExtractPrompt(reportText string) string {
 	return docs.ExtractPrompt() + "\n\n" + reportText
 }
