@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"google.golang.org/genai"
 )
@@ -43,26 +44,25 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 		slog.String("report_url", reportUrl),
 	)
 
-	slog.Info("[AnalyzeReport] fetching daily prices", slog.String("ticker", ticker))
 	candles, err := g.finDataClient.GetDailyPrices(ctx, ticker)
 	if err != nil {
 		return "", fmt.Errorf("failed to get price history: %w", err)
 	}
-	slog.Info("[AnalyzeReport] daily prices fetched", slog.String("ticker", ticker), slog.Int("candles_count", len(candles)))
 
-	slog.Info("[AnalyzeReport] fetching CB rates")
 	cbRate, err := g.finDataClient.GetCBRates(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get CB rate: %w", err)
 	}
-	slog.Info("[AnalyzeReport] CB rate fetched", slog.Float64("rate", cbRate.Rate))
 
-	slog.Info("[AnalyzeReport] fetching market cap", slog.String("ticker", ticker))
 	marketCap, err := g.finDataClient.GetMarketCap(ctx, ticker)
 	if err != nil {
 		return "", fmt.Errorf("failed to get market cap: %w", err)
 	}
-	slog.Info("[AnalyzeReport] market cap fetched", slog.Float64("market_cap", marketCap))
+
+	news, err := g.CollectNews(ctx, ticker)
+	if err != nil {
+		return "", fmt.Errorf("news: %w", err)
+	}
 
 	prompt := BuildAnalysisPrompt(AnalysisContext{
 		Ticker:    ticker,
@@ -71,8 +71,8 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 		Candles:   candles,
 		CBRate:    cbRate,
 		MarketCap: marketCap,
+		News:      news,
 	})
-	slog.Info("[AnalyzeReport] prompt built", slog.Int("prompt_length", len(prompt)))
 
 	slog.Info("[AnalyzeReport] downloading PDF", slog.String("report_url", reportUrl))
 	pdfBytes, err := g.s3Client.DownloadPDF(ctx, reportUrl)
@@ -81,12 +81,17 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 	}
 	slog.Info("[AnalyzeReport] PDF downloaded", slog.Int("pdf_size_bytes", len(pdfBytes)))
 
-	slog.Info("[AnalyzeReport] calling Gemini API")
+	slog.Info("[AnalyzeReport] calling Gemini API..", slog.String("ticker", ticker))
+	start := time.Now()
 	response, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate analysis: %w", err)
 	}
-	slog.Info("[AnalyzeReport] Gemini response received", slog.Int("response_length", len(response)))
+	slog.Info("[AnalyzeReport] Gemini response received",
+		slog.Int("response_length", len(response)),
+		slog.String("duration", time.Since(start).String()),
+		slog.String("ticker", ticker),
+	)
 
 	return response, nil
 }

@@ -184,7 +184,6 @@ func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task
 		slog.String("ticker", task.Ticker),
 		slog.Int("year", task.Year),
 		slog.String("period", task.Period),
-		slog.String("report_url", task.ReportURL),
 	)
 
 	result, err := p.geminiService.AnalyzeReport(ctx, task.Ticker, task.ReportURL, task.Year, domain.ReportPeriod(task.Period))

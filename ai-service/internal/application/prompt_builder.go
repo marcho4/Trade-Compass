@@ -3,6 +3,7 @@ package application
 import (
 	"ai-service/internal/domain"
 	docs "ai-service/internal/infrastructure/docs"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ type AnalysisContext struct {
 	Candles   []domain.Candle
 	CBRate    *domain.CBRate
 	MarketCap float64
+	News      *domain.NewsResponse
 }
 
 func BuildNewsAgentPrompt(ticker string) string {
@@ -35,6 +37,7 @@ func BuildAnalysisPrompt(ctx AnalysisContext) string {
 	// writeFinancialReport(&b, ctx.RawData)
 	writeMarketData(&b, ctx.CBRate, ctx.MarketCap)
 	writePriceHistory(&b, ctx.Candles)
+	writeNews(&b, ctx.News)
 
 	return b.String()
 }
@@ -167,4 +170,11 @@ func writeMacroContext(b *strings.Builder) {
 	b.WriteString("<macro_context>\n")
 	b.WriteString(docs.RussianHistory())
 	b.WriteString("\n</macro_context>\n\n")
+}
+
+func writeNews(b *strings.Builder, news *domain.NewsResponse) {
+	b.WriteString("<news>\n")
+	json, _ := json.Marshal(news)
+	b.WriteString(string(json))
+	b.WriteString("\n</news>\n\n")
 }
