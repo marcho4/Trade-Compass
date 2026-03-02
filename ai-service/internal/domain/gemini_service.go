@@ -1,6 +1,8 @@
 package domain
 
-import "context"
+import (
+	"context"
+)
 
 type GeminiService interface {
 	AnalyzeReport(ctx context.Context, ticker, reportUrl string, year int, period ReportPeriod) (string, error)
@@ -9,4 +11,5 @@ type GeminiService interface {
 	GetCompanyHistory(ctx context.Context, ticker string) (string, error)
 	ExtractResultFromReport(ctx context.Context, ticker string, year int, period ReportPeriod) (*ReportResults, error)
 	CollectNews(ctx context.Context, ticker string) (*NewsResponse, error)
+	ExtractRawData(ctx context.Context, ticker, reportUrl string, year int, period ReportPeriod) (*RawData, error)
 }

@@ -2,7 +2,9 @@ package application
 
 import (
 	"encoding/json"
+	"errors"
 	"financial_data/internal/domain"
+	"financial_data/internal/infrastructure"
 	"net/http"
 	"strconv"
 
@@ -60,6 +62,11 @@ func (h *RawDataHandler) HandleGetByPeriod(w http.ResponseWriter, r *http.Reques
 
 	rawData, err := h.repo.GetByTickerAndPeriod(r.Context(), ticker, year, period)
 	if err != nil {
+		var dbErr *infrastructure.DbError
+		if errors.As(err, &dbErr) && dbErr.Message == "metrics not found" {
+			RespondWithError(w, r, 404, "metrics not found", err)
+			return
+		}
 		RespondWithError(w, r, 500, "failed to load metrics", err)
 		return
 	}

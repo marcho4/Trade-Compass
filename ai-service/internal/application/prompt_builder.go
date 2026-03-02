@@ -11,14 +11,14 @@ import (
 )
 
 type AnalysisContext struct {
-	Ticker    string
-	Year      int
-	Period    domain.ReportPeriod
-	RawData   *domain.RawData
-	Candles   []domain.Candle
-	CBRate    *domain.CBRate
-	MarketCap float64
-	News      *domain.NewsResponse
+	Ticker         string
+	Year           int
+	Period         domain.ReportPeriod
+	RawDataHistory []domain.RawData
+	Candles        []domain.Candle
+	CBRate         *domain.CBRate
+	MarketCap      float64
+	News           *domain.NewsResponse
 }
 
 func BuildNewsAgentPrompt(ticker string) string {
@@ -35,7 +35,7 @@ func BuildAnalysisPrompt(ctx AnalysisContext) string {
 	writeRole(&b, ctx)
 	writeAnalysisMethodology(&b)
 	writeMacroContext(&b)
-	// writeFinancialReport(&b, ctx.RawData)
+	writeFinancialHistory(&b, ctx.RawDataHistory)
 	writeMarketData(&b, ctx.CBRate, ctx.MarketCap)
 	writePriceHistory(&b, ctx.Candles)
 	writeNews(&b, ctx.News)
@@ -59,60 +59,112 @@ func writeRole(b *strings.Builder, ctx AnalysisContext) {
 `, ctx.Ticker, time.Now().Format("02.01.2006"))
 }
 
-func writeFinancialReport(b *strings.Builder, rd *domain.RawData) {
-	if rd == nil {
-		b.WriteString("<financial_report>\nДанные финансовой отчётности не предоставлены.\n</financial_report>\n\n")
+func writeFinancialHistory(b *strings.Builder, history []domain.RawData) {
+	b.WriteString("<financial_data>\n")
+
+	if len(history) == 0 {
+		b.WriteString("Исторические финансовые данные не предоставлены.\n")
+		b.WriteString("</financial_data>\n\n")
 		return
 	}
 
-	b.WriteString("<financial_report>\n")
-	fmt.Fprintf(b, "Тикер: %s\n", rd.Ticker)
-	fmt.Fprintf(b, "Период: %d / %s\n\n", rd.Year, rd.Period)
+	b.WriteString("Ниже представлены данные финансовой отчётности компании за несколько периодов.\n")
+	b.WriteString("Используй их для анализа динамики и трендов.\n\n")
 
-	b.WriteString("=== ОТЧЁТ О ПРИБЫЛЯХ И УБЫТКАХ (тыс. руб.) ===\n")
-	writeMetric(b, "Выручка", rd.Revenue)
-	writeMetric(b, "Себестоимость продаж", rd.CostOfRevenue)
-	writeMetric(b, "Валовая прибыль", rd.GrossProfit)
-	writeMetric(b, "Операционные расходы", rd.OperatingExpenses)
-	writeMetric(b, "EBIT (операционная прибыль)", rd.EBIT)
-	writeMetric(b, "EBITDA", rd.EBITDA)
-	writeMetric(b, "Проценты к уплате", rd.InterestExpense)
-	writeMetric(b, "Налог на прибыль", rd.TaxExpense)
-	writeMetric(b, "Чистая прибыль", rd.NetProfit)
+	for i, rd := range history {
+		if i > 0 {
+			b.WriteString("---\n\n")
+		}
 
-	b.WriteString("\n=== БАЛАНС (тыс. руб.) ===\n")
-	writeMetric(b, "Итого активы", rd.TotalAssets)
-	writeMetric(b, "Оборотные активы", rd.CurrentAssets)
-	writeMetric(b, "Денежные средства", rd.CashAndEquivalents)
-	writeMetric(b, "Запасы", rd.Inventories)
-	writeMetric(b, "Дебиторская задолженность", rd.Receivables)
-	writeMetric(b, "Итого обязательства", rd.TotalLiabilities)
-	writeMetric(b, "Краткосрочные обязательства", rd.CurrentLiabilities)
-	writeMetric(b, "Общий долг", rd.Debt)
-	writeMetric(b, "Долгосрочный долг", rd.LongTermDebt)
-	writeMetric(b, "Краткосрочный долг", rd.ShortTermDebt)
-	writeMetric(b, "Собственный капитал", rd.Equity)
-	writeMetric(b, "Нераспределённая прибыль", rd.RetainedEarnings)
+		units := "тыс. руб."
+		switch rd.ReportUnits {
+		case "millions":
+			units = "млн руб."
+		case "units":
+			units = "руб."
+		}
 
-	b.WriteString("\n=== ДЕНЕЖНЫЕ ПОТОКИ (тыс. руб.) ===\n")
-	writeMetric(b, "Операционный денежный поток (OCF)", rd.OperatingCashFlow)
-	writeMetric(b, "Инвестиционный денежный поток", rd.InvestingCashFlow)
-	writeMetric(b, "Финансовый денежный поток", rd.FinancingCashFlow)
-	writeMetric(b, "Капитальные затраты (CAPEX)", rd.CAPEX)
-	writeMetric(b, "Свободный денежный поток (FCF)", rd.FreeCashFlow)
+		fmt.Fprintf(b, "## Период: %d / %s (%s)\n\n", rd.Year, rd.Period, units)
 
-	b.WriteString("\n=== ПРОИЗВОДНЫЕ ПОКАЗАТЕЛИ (тыс. руб.) ===\n")
-	writeMetric(b, "Оборотный капитал", rd.WorkingCapital)
-	writeMetric(b, "Задействованный капитал", rd.CapitalEmployed)
-	writeMetric(b, "Чистый долг", rd.NetDebt)
-	writeMetric(b, "Стоимость предприятия (EV)", rd.EnterpriseValue)
+		b.WriteString("Отчёт о прибылях и убытках:\n")
+		writeMetric(b, "Выручка", rd.Revenue)
+		writeMetric(b, "Себестоимость", rd.CostOfRevenue)
+		writeMetric(b, "Валовая прибыль", rd.GrossProfit)
+		writeMetric(b, "Операционные расходы (SG&A)", rd.OperatingExpenses)
+		writeMetric(b, "Прочие доходы", rd.OtherIncome)
+		writeMetric(b, "Прочие расходы", rd.OtherExpenses)
+		writeMetric(b, "EBIT", rd.EBIT)
+		writeMetric(b, "EBITDA", rd.EBITDA)
+		writeMetric(b, "Амортизация (D&A)", rd.Depreciation)
+		writeMetric(b, "Процентные доходы", rd.InterestIncome)
+		writeMetric(b, "Процентные расходы", rd.InterestExpense)
+		writeMetric(b, "Прибыль до налогов", rd.ProfitBeforeTax)
+		writeMetric(b, "Налог на прибыль", rd.TaxExpense)
+		writeMetric(b, "Чистая прибыль", rd.NetProfit)
+		writeMetric(b, "ЧП акционеров материнской", rd.NetProfitParent)
+		writeFloatMetric(b, "Базовая EPS (руб.)", rd.BasicEPS)
 
-	b.WriteString("</financial_report>\n\n")
+		b.WriteString("\nБаланс:\n")
+		writeMetric(b, "Итого активы", rd.TotalAssets)
+		writeMetric(b, "Оборотные активы", rd.CurrentAssets)
+		writeMetric(b, "Денежные средства", rd.CashAndEquivalents)
+		writeMetric(b, "Запасы", rd.Inventories)
+		writeMetric(b, "Дебиторская задолженность", rd.Receivables)
+		writeMetric(b, "Основные средства", rd.FixedAssets)
+		writeMetric(b, "Активы ППА (IFRS 16)", rd.RightOfUseAssets)
+		writeMetric(b, "НМА", rd.IntangibleAssets)
+		writeMetric(b, "Гудвилл", rd.Goodwill)
+		writeMetric(b, "Внеоборотные активы", rd.TotalNonCurrentAssets)
+		writeMetric(b, "Итого обязательства", rd.TotalLiabilities)
+		writeMetric(b, "Краткосрочные обязательства", rd.CurrentLiabilities)
+		writeMetric(b, "Общий долг", rd.Debt)
+		writeMetric(b, "Долгосрочный долг", rd.LongTermDebt)
+		writeMetric(b, "Краткосрочный долг", rd.ShortTermDebt)
+		writeMetric(b, "Долгосрочные обязательства по аренде", rd.LtLeaseLiabilities)
+		writeMetric(b, "Краткосрочные обязательства по аренде", rd.StLeaseLiabilities)
+		writeMetric(b, "Торговая кредиторка", rd.TradePayables)
+		writeMetric(b, "Собственный капитал", rd.Equity)
+		writeMetric(b, "Капитал акционеров материнской", rd.EquityParent)
+		writeMetric(b, "Казначейские акции", rd.TreasuryShares)
+		writeMetric(b, "Нераспределённая прибыль", rd.RetainedEarnings)
+
+		b.WriteString("\nДенежные потоки:\n")
+		writeMetric(b, "OCF", rd.OperatingCashFlow)
+		writeMetric(b, "Инвестиционный CF", rd.InvestingCashFlow)
+		writeMetric(b, "Финансовый CF", rd.FinancingCashFlow)
+		writeMetric(b, "CAPEX", rd.CAPEX)
+		writeMetric(b, "FCF", rd.FreeCashFlow)
+		writeMetric(b, "Дивиденды выплаченные", rd.DividendsPaid)
+		writeMetric(b, "Погашение аренды", rd.LeasePayments)
+		writeMetric(b, "Покупки бизнесов нетто", rd.AcquisitionsNet)
+		writeMetric(b, "Проценты уплаченные", rd.InterestPaid)
+		writeMetric(b, "Привлечение кредитов", rd.DebtProceeds)
+		writeMetric(b, "Погашение кредитов", rd.DebtRepayments)
+
+		b.WriteString("\nПроизводные показатели:\n")
+		writeMetric(b, "Акции в обращении", rd.SharesOutstanding)
+		writeMetric(b, "Рыночная капитализация", rd.MarketCap)
+		writeMetric(b, "EV", rd.EnterpriseValue)
+		writeMetric(b, "Оборотный капитал", rd.WorkingCapital)
+		writeMetric(b, "Задействованный капитал", rd.CapitalEmployed)
+		writeMetric(b, "Чистый долг", rd.NetDebt)
+		writeMetric(b, "Проценты по аренде", rd.InterestOnLeases)
+		writeMetric(b, "Проценты по кредитам", rd.InterestOnLoans)
+		b.WriteString("\n")
+	}
+
+	b.WriteString("</financial_data>\n\n")
 }
 
 func writeMetric(b *strings.Builder, name string, val *int64) {
 	if val != nil {
 		fmt.Fprintf(b, "%s: %d\n", name, *val)
+	}
+}
+
+func writeFloatMetric(b *strings.Builder, name string, val *float64) {
+	if val != nil {
+		fmt.Fprintf(b, "%s: %.2f\n", name, *val)
 	}
 }
 

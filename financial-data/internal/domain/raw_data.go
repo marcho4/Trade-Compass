@@ -36,51 +36,79 @@ func (s MetricsStatus) IsValid() bool {
 }
 
 type RawData struct {
-	Ticker string        `json:"ticker"`
-	Year   int           `json:"year"`
-	Period ReportPeriod  `json:"period"`
-	Status MetricsStatus `json:"status"`
+	Ticker      string        `json:"ticker"`
+	Year        int           `json:"year"`
+	Period      ReportPeriod  `json:"period"`
+	Status      MetricsStatus `json:"status"`
+	ReportUnits *string       `json:"reportUnits,omitempty"`
 
-	// P&L (Profit & Loss Statement / Отчёт о прибылях и убытках)
-	Revenue           *int64 `json:"revenue,omitempty"`            // Выручка
-	CostOfRevenue     *int64 `json:"costOfRevenue,omitempty"`      // Себестоимость
-	GrossProfit       *int64 `json:"grossProfit,omitempty"`        // Валовая прибыль
-	OperatingExpenses *int64 `json:"operatingExpenses,omitempty"`  // Операционные расходы
-	EBIT              *int64 `json:"ebit,omitempty"`               // Прибыль до вычета процентов и налогов
-	EBITDA            *int64 `json:"ebitda,omitempty"`             // EBITDA
-	InterestExpense   *int64 `json:"interestExpense,omitempty"`    // Проценты к уплате
-	TaxExpense        *int64 `json:"taxExpense,omitempty"`         // Налоги
-	NetProfit         *int64 `json:"netProfit,omitempty"`          // Чистая прибыль
+	// ── Income Statement ──────────────────────────────────────────
+	Revenue           *int64   `json:"revenue,omitempty"`
+	CostOfRevenue     *int64   `json:"costOfRevenue,omitempty"`
+	GrossProfit       *int64   `json:"grossProfit,omitempty"`
+	OperatingExpenses *int64   `json:"operatingExpenses,omitempty"`
+	OtherIncome       *int64   `json:"otherIncome,omitempty"`
+	OtherExpenses     *int64   `json:"otherExpenses,omitempty"`
+	EBIT              *int64   `json:"ebit,omitempty"`
+	EBITDA            *int64   `json:"ebitda,omitempty"`
+	Depreciation      *int64   `json:"depreciation,omitempty"`
+	InterestIncome    *int64   `json:"interestIncome,omitempty"`
+	InterestExpense   *int64   `json:"interestExpense,omitempty"`
+	ProfitBeforeTax   *int64   `json:"profitBeforeTax,omitempty"`
+	TaxExpense        *int64   `json:"taxExpense,omitempty"`
+	NetProfit         *int64   `json:"netProfit,omitempty"`
+	NetProfitParent   *int64   `json:"netProfitParent,omitempty"`
+	BasicEPS          *float64 `json:"basicEps,omitempty"`
 
-	// Balance Sheet (Баланс)
-	TotalAssets        *int64 `json:"totalAssets,omitempty"`        // Всего активов
-	CurrentAssets      *int64 `json:"currentAssets,omitempty"`      // Оборотные активы
-	CashAndEquivalents *int64 `json:"cashAndEquivalents,omitempty"` // Денежные средства и эквиваленты
-	Inventories        *int64 `json:"inventories,omitempty"`        // Запасы
-	Receivables        *int64 `json:"receivables,omitempty"`        // Дебиторская задолженность
+	// ── Balance Sheet ─────────────────────────────────────────────
+	TotalAssets           *int64 `json:"totalAssets,omitempty"`
+	CurrentAssets         *int64 `json:"currentAssets,omitempty"`
+	CashAndEquivalents    *int64 `json:"cashAndEquivalents,omitempty"`
+	Inventories           *int64 `json:"inventories,omitempty"`
+	Receivables           *int64 `json:"receivables,omitempty"`
+	FixedAssets           *int64 `json:"fixedAssets,omitempty"`
+	RightOfUseAssets      *int64 `json:"rightOfUseAssets,omitempty"`
+	IntangibleAssets      *int64 `json:"intangibleAssets,omitempty"`
+	Goodwill              *int64 `json:"goodwill,omitempty"`
+	TotalNonCurrentAssets *int64 `json:"totalNonCurrentAssets,omitempty"`
 
-	TotalLiabilities     *int64 `json:"totalLiabilities,omitempty"`     // Всего обязательств
-	CurrentLiabilities   *int64 `json:"currentLiabilities,omitempty"`   // Краткосрочные обязательства
-	Debt                 *int64 `json:"debt,omitempty"`                 // Долг (краткосрочный + долгосрочный)
-	LongTermDebt         *int64 `json:"longTermDebt,omitempty"`         // Долгосрочный долг
-	ShortTermDebt        *int64 `json:"shortTermDebt,omitempty"`        // Краткосрочный долг
-	Equity               *int64 `json:"equity,omitempty"`               // Собственный капитал
-	RetainedEarnings     *int64 `json:"retainedEarnings,omitempty"`     // Нераспределённая прибыль
+	TotalLiabilities   *int64 `json:"totalLiabilities,omitempty"`
+	CurrentLiabilities *int64 `json:"currentLiabilities,omitempty"`
+	Debt               *int64 `json:"debt,omitempty"`
+	LongTermDebt       *int64 `json:"longTermDebt,omitempty"`
+	ShortTermDebt      *int64 `json:"shortTermDebt,omitempty"`
+	LtLeaseLiabilities *int64 `json:"ltLeaseLiabilities,omitempty"`
+	StLeaseLiabilities *int64 `json:"stLeaseLiabilities,omitempty"`
+	TradePayables      *int64 `json:"tradePayables,omitempty"`
+	Equity             *int64 `json:"equity,omitempty"`
+	EquityParent       *int64 `json:"equityParent,omitempty"`
+	TreasuryShares     *int64 `json:"treasuryShares,omitempty"`
+	RetainedEarnings   *int64 `json:"retainedEarnings,omitempty"`
 
-	// Cash Flow Statement (Отчёт о движении денежных средств)
-	OperatingCashFlow *int64 `json:"operatingCashFlow,omitempty"` // Операционный денежный поток
-	InvestingCashFlow *int64 `json:"investingCashFlow,omitempty"` // Инвестиционный денежный поток
-	FinancingCashFlow *int64 `json:"financingCashFlow,omitempty"` // Финансовый денежный поток
-	CAPEX             *int64 `json:"capex,omitempty"`             // Капитальные затраты
-	FreeCashFlow      *int64 `json:"freeCashFlow,omitempty"`      // Свободный денежный поток (OCF - CapEx)
+	// ── Cash Flow ─────────────────────────────────────────────────
+	OperatingCashFlow *int64 `json:"operatingCashFlow,omitempty"`
+	InvestingCashFlow *int64 `json:"investingCashFlow,omitempty"`
+	FinancingCashFlow *int64 `json:"financingCashFlow,omitempty"`
+	CAPEX             *int64 `json:"capex,omitempty"`
+	FreeCashFlow      *int64 `json:"freeCashFlow,omitempty"`
+	DividendsPaid     *int64 `json:"dividendsPaid,omitempty"`
+	LeasePayments     *int64 `json:"leasePayments,omitempty"`
+	AcquisitionsNet   *int64 `json:"acquisitionsNet,omitempty"`
+	InterestPaid      *int64 `json:"interestPaid,omitempty"`
+	DebtProceeds      *int64 `json:"debtProceeds,omitempty"`
+	DebtRepayments    *int64 `json:"debtRepayments,omitempty"`
 
-	// Market Data (для мультипликаторов)
-	SharesOutstanding *int64 `json:"sharesOutstanding,omitempty"` // Количество акций в обращении
-	MarketCap         *int64 `json:"marketCap,omitempty"`         // Рыночная капитализация на дату отчёта
+	// ── Per Share & Market ────────────────────────────────────────
+	SharesOutstanding *int64 `json:"sharesOutstanding,omitempty"`
+	MarketCap         *int64 `json:"marketCap,omitempty"`
+	EnterpriseValue   *int64 `json:"enterpriseValue,omitempty"`
 
-	// Calculated fields (Дополнительные расчётные поля)
-	WorkingCapital  *int64 `json:"workingCapital,omitempty"`  // Оборотный капитал (current_assets - current_liabilities)
-	CapitalEmployed *int64 `json:"capitalEmployed,omitempty"` // Задействованный капитал (total_assets - current_liabilities)
-	EnterpriseValue *int64 `json:"enterpriseValue,omitempty"` // EV = market_cap + debt - cash
-	NetDebt         *int64 `json:"netDebt,omitempty"`         // Чистый долг (debt - cash)
+	// ── Derived Metrics ───────────────────────────────────────────
+	WorkingCapital  *int64 `json:"workingCapital,omitempty"`
+	CapitalEmployed *int64 `json:"capitalEmployed,omitempty"`
+	NetDebt         *int64 `json:"netDebt,omitempty"`
+
+	// ── Notes Breakdown ───────────────────────────────────────────
+	InterestOnLeases *int64 `json:"interestOnLeases,omitempty"`
+	InterestOnLoans  *int64 `json:"interestOnLoans,omitempty"`
 }

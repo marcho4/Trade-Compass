@@ -2,6 +2,7 @@ package application
 
 import (
 	"ai-service/internal/domain"
+	docs "ai-service/internal/infrastructure/docs"
 	"ai-service/internal/infrastructure/financialdata"
 	"ai-service/internal/infrastructure/gemini"
 	"ai-service/internal/infrastructure/postgres"
@@ -64,14 +65,23 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 		return "", fmt.Errorf("news: %w", err)
 	}
 
+	rawDataHistory, err := g.finDataClient.GetRawDataHistory(ctx, ticker)
+	if err != nil {
+		slog.Warn("[AnalyzeReport] failed to get raw data history, continuing without it",
+			slog.String("ticker", ticker),
+			slog.Any("error", err),
+		)
+	}
+
 	prompt := BuildAnalysisPrompt(AnalysisContext{
-		Ticker:    ticker,
-		Year:      year,
-		Period:    period,
-		Candles:   candles,
-		CBRate:    cbRate,
-		MarketCap: marketCap,
-		News:      news,
+		Ticker:         ticker,
+		Year:           year,
+		Period:         period,
+		RawDataHistory: rawDataHistory,
+		Candles:        candles,
+		CBRate:         cbRate,
+		MarketCap:      marketCap,
+		News:           news,
 	})
 
 	slog.Info("[AnalyzeReport] downloading PDF", slog.String("report_url", reportUrl))
@@ -83,7 +93,7 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 
 	slog.Info("[AnalyzeReport] calling Gemini API..", slog.String("ticker", ticker))
 	start := time.Now()
-	response, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt)
+	response, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, domain.Pro)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate analysis: %w", err)
 	}
@@ -146,6 +156,7 @@ func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*domain
 		Required: []string{"news", "date", "source", "severity", "impact_type"},
 	}
 
+	slog.Info("Calling Gemini to get news", slog.Any("ticker", ticker))
 	text, err := g.geminiClient.GenerateText(ctx, prompt, domain.Flash,
 		gemini.WithGoogleSearch(),
 		gemini.WithResponseSchema(&genai.Schema{
@@ -168,4 +179,28 @@ func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*domain
 	}
 
 	return &res, nil
+}
+
+func (g *GeminiService) ExtractRawData(ctx context.Context, ticker, reportUrl string, year int, period domain.ReportPeriod) (*domain.RawData, error) {
+	prompt := docs.RawDataAgentPrompt() + "\n<ticker>" + ticker + "</ticker>"
+
+	slog.Info("[Extract Raw Data] downloading PDF", slog.String("report_url", reportUrl))
+	pdfBytes, err := g.s3Client.DownloadPDF(ctx, reportUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download PDF: %w", err)
+	}
+	slog.Info("[Extract Raw Data] PDF downloaded", slog.Int("pdf_size_bytes", len(pdfBytes)))
+
+	text, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, domain.Flash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract from PDF: %w", err)
+	}
+
+	var rawData domain.RawData
+	err = json.Unmarshal([]byte(text), &rawData)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal raw data: %w", err)
+	}
+
+	return &rawData, nil
 }

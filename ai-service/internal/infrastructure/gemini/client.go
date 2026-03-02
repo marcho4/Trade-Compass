@@ -44,7 +44,7 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string) (string, error) {
+func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string, model domain.AIModel) (string, error) {
 	contents := []*genai.Content{
 		{
 			Role: "user",
@@ -62,7 +62,7 @@ func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemProm
 		},
 	}
 
-	result, err := c.client.Models.GenerateContent(ctx, string(domain.Pro), contents, config)
+	result, err := c.client.Models.GenerateContent(ctx, string(model), contents, config)
 	if err != nil {
 		return "", fmt.Errorf("gemini API call failed: %w", err)
 	}

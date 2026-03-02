@@ -173,6 +173,62 @@ func (c *Client) GetMarketCap(ctx context.Context, ticker string) (float64, erro
 	return result.Data, nil
 }
 
+func (c *Client) GetRawData(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.RawData, error) {
+	url := fmt.Sprintf("%s/raw-data/%s?year=%d&period=%s", c.baseURL, ticker, year, period)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call financial-data API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("financial-data API returned status %d", resp.StatusCode)
+	}
+
+	var rawData domain.RawData
+	if err := json.NewDecoder(resp.Body).Decode(&rawData); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &rawData, nil
+}
+
+func (c *Client) GetRawDataHistory(ctx context.Context, ticker string) ([]domain.RawData, error) {
+	url := fmt.Sprintf("%s/raw-data/%s/history", c.baseURL, ticker)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call financial-data API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("financial-data API returned status %d", resp.StatusCode)
+	}
+
+	var history []domain.RawData
+	if err := json.NewDecoder(resp.Body).Decode(&history); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return history, nil
+}
+
 func (c *Client) UpdateDraft(ctx context.Context, rawData *domain.RawData) error {
 	body, err := json.Marshal(rawData)
 	if err != nil {

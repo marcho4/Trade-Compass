@@ -32,7 +32,7 @@ class AnalyzeTaskProducer:
             "year": year,
             "period": ai_period,
             "report_url": report_url,
-            "type": "analyze",
+            "type": "extract",
         }
 
         try:

@@ -64,16 +64,11 @@ func main() {
 
 	kafkaClient := kafkaclient.NewKafkaClient(cfg.KafkaURL, cfg.KafkaTopic)
 
-	// parserClient := parser.NewClient(cfg.ParserURL)
 	fdClient := financialdata.NewClient(cfg.FinancialDataURL, cfg.FinancialDataAPIKey)
 
-	// parserClient := parser.NewClient(cfg.ParserURL)
-
-	// extractorService := application.NewExtractorService(geminiClient, s3Client, parserClient, fdClient)
 	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient, db)
-	// extractorHandler := handlers.NewExtractorHandler(extractorService)
 	analysisHandler := handlers.NewAnalysisHandler(db)
-	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, db)
+	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, fdClient, db)
 	taskProcessor.Start(context.Background())
 
 	r := chi.NewRouter()
@@ -115,20 +110,29 @@ func main() {
 	select {
 	case err := <-serverErrors:
 		slog.Error("Failed to start server", slog.Any("error", err))
+		shutdownFn(taskProcessor, kafkaClient, srv)
 	case sig := <-shutdown:
 		slog.Info("Received signal, shutting down gracefully...", slog.Any("signal", sig))
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		taskProcessor.Stop(ctx)
-		if err := kafkaClient.Close(); err != nil {
-			slog.Error("Failed to close Kafka client", slog.Any("error", err))
-		}
-
-		if err := srv.Shutdown(ctx); err != nil {
-			slog.Error("Failed to shutdown server", slog.Any("error", err))
-			os.Exit(1)
-		}
-		slog.Info("Server stopped gracefully")
+		shutdownFn(taskProcessor, kafkaClient, srv)
 	}
+}
+
+func shutdownFn(
+	taskProcessor *application.TaskProcessor,
+	kafkaClient *kafkaclient.KafkaClient,
+	srv *http.Server,
+) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	taskProcessor.Stop(ctx)
+	if err := kafkaClient.Close(); err != nil {
+		slog.Error("Failed to close Kafka client", slog.Any("error", err))
+	}
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("Failed to shutdown server", slog.Any("error", err))
+		os.Exit(1)
+	}
+	slog.Info("Server stopped gracefully")
 }

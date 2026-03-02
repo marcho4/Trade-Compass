@@ -19,29 +19,45 @@ func NewRawDataRepository(pool *pgxpool.Pool) *RawDataRepository {
 }
 
 const rawDataSelectColumns = `
-	ticker, year, period, status,
+	ticker, year, period, status, report_units,
 	revenue, cost_of_revenue, gross_profit, operating_expenses,
-	ebit, ebitda, interest_expense, tax_expense, net_profit,
+	other_income, other_expenses,
+	ebit, ebitda, depreciation,
+	interest_income, interest_expense,
+	profit_before_tax, tax_expense, net_profit, net_profit_parent, basic_eps,
 	total_assets, current_assets, cash_and_equivalents, inventories, receivables,
+	fixed_assets, right_of_use_assets, intangible_assets, goodwill, total_non_current_assets,
 	total_liabilities, current_liabilities, debt, long_term_debt, short_term_debt,
-	equity, retained_earnings,
-	operating_cash_flow, investing_cash_flow, financing_cash_flow, capex, free_cash_flow,
-	shares_outstanding, market_cap,
-	working_capital, capital_employed, enterprise_value, net_debt
+	lt_lease_liabilities, st_lease_liabilities, trade_payables,
+	equity, equity_parent, treasury_shares, retained_earnings,
+	operating_cash_flow, investing_cash_flow, financing_cash_flow,
+	capex, free_cash_flow, dividends_paid, lease_payments,
+	acquisitions_net, interest_paid, debt_proceeds, debt_repayments,
+	shares_outstanding, market_cap, enterprise_value,
+	working_capital, capital_employed, net_debt,
+	interest_on_leases, interest_on_loans
 `
 
 func scanRawData(row pgx.Row) (*domain.RawData, error) {
 	rd := &domain.RawData{}
 	err := row.Scan(
-		&rd.Ticker, &rd.Year, &rd.Period, &rd.Status,
+		&rd.Ticker, &rd.Year, &rd.Period, &rd.Status, &rd.ReportUnits,
 		&rd.Revenue, &rd.CostOfRevenue, &rd.GrossProfit, &rd.OperatingExpenses,
-		&rd.EBIT, &rd.EBITDA, &rd.InterestExpense, &rd.TaxExpense, &rd.NetProfit,
+		&rd.OtherIncome, &rd.OtherExpenses,
+		&rd.EBIT, &rd.EBITDA, &rd.Depreciation,
+		&rd.InterestIncome, &rd.InterestExpense,
+		&rd.ProfitBeforeTax, &rd.TaxExpense, &rd.NetProfit, &rd.NetProfitParent, &rd.BasicEPS,
 		&rd.TotalAssets, &rd.CurrentAssets, &rd.CashAndEquivalents, &rd.Inventories, &rd.Receivables,
+		&rd.FixedAssets, &rd.RightOfUseAssets, &rd.IntangibleAssets, &rd.Goodwill, &rd.TotalNonCurrentAssets,
 		&rd.TotalLiabilities, &rd.CurrentLiabilities, &rd.Debt, &rd.LongTermDebt, &rd.ShortTermDebt,
-		&rd.Equity, &rd.RetainedEarnings,
-		&rd.OperatingCashFlow, &rd.InvestingCashFlow, &rd.FinancingCashFlow, &rd.CAPEX, &rd.FreeCashFlow,
-		&rd.SharesOutstanding, &rd.MarketCap,
-		&rd.WorkingCapital, &rd.CapitalEmployed, &rd.EnterpriseValue, &rd.NetDebt,
+		&rd.LtLeaseLiabilities, &rd.StLeaseLiabilities, &rd.TradePayables,
+		&rd.Equity, &rd.EquityParent, &rd.TreasuryShares, &rd.RetainedEarnings,
+		&rd.OperatingCashFlow, &rd.InvestingCashFlow, &rd.FinancingCashFlow,
+		&rd.CAPEX, &rd.FreeCashFlow, &rd.DividendsPaid, &rd.LeasePayments,
+		&rd.AcquisitionsNet, &rd.InterestPaid, &rd.DebtProceeds, &rd.DebtRepayments,
+		&rd.SharesOutstanding, &rd.MarketCap, &rd.EnterpriseValue,
+		&rd.WorkingCapital, &rd.CapitalEmployed, &rd.NetDebt,
+		&rd.InterestOnLeases, &rd.InterestOnLoans,
 	)
 	return rd, err
 }
@@ -51,15 +67,23 @@ func scanRawDataRows(rows pgx.Rows) ([]domain.RawData, error) {
 	for rows.Next() {
 		var rd domain.RawData
 		err := rows.Scan(
-			&rd.Ticker, &rd.Year, &rd.Period, &rd.Status,
+			&rd.Ticker, &rd.Year, &rd.Period, &rd.Status, &rd.ReportUnits,
 			&rd.Revenue, &rd.CostOfRevenue, &rd.GrossProfit, &rd.OperatingExpenses,
-			&rd.EBIT, &rd.EBITDA, &rd.InterestExpense, &rd.TaxExpense, &rd.NetProfit,
+			&rd.OtherIncome, &rd.OtherExpenses,
+			&rd.EBIT, &rd.EBITDA, &rd.Depreciation,
+			&rd.InterestIncome, &rd.InterestExpense,
+			&rd.ProfitBeforeTax, &rd.TaxExpense, &rd.NetProfit, &rd.NetProfitParent, &rd.BasicEPS,
 			&rd.TotalAssets, &rd.CurrentAssets, &rd.CashAndEquivalents, &rd.Inventories, &rd.Receivables,
+			&rd.FixedAssets, &rd.RightOfUseAssets, &rd.IntangibleAssets, &rd.Goodwill, &rd.TotalNonCurrentAssets,
 			&rd.TotalLiabilities, &rd.CurrentLiabilities, &rd.Debt, &rd.LongTermDebt, &rd.ShortTermDebt,
-			&rd.Equity, &rd.RetainedEarnings,
-			&rd.OperatingCashFlow, &rd.InvestingCashFlow, &rd.FinancingCashFlow, &rd.CAPEX, &rd.FreeCashFlow,
-			&rd.SharesOutstanding, &rd.MarketCap,
-			&rd.WorkingCapital, &rd.CapitalEmployed, &rd.EnterpriseValue, &rd.NetDebt,
+			&rd.LtLeaseLiabilities, &rd.StLeaseLiabilities, &rd.TradePayables,
+			&rd.Equity, &rd.EquityParent, &rd.TreasuryShares, &rd.RetainedEarnings,
+			&rd.OperatingCashFlow, &rd.InvestingCashFlow, &rd.FinancingCashFlow,
+			&rd.CAPEX, &rd.FreeCashFlow, &rd.DividendsPaid, &rd.LeasePayments,
+			&rd.AcquisitionsNet, &rd.InterestPaid, &rd.DebtProceeds, &rd.DebtRepayments,
+			&rd.SharesOutstanding, &rd.MarketCap, &rd.EnterpriseValue,
+			&rd.WorkingCapital, &rd.CapitalEmployed, &rd.NetDebt,
+			&rd.InterestOnLeases, &rd.InterestOnLoans,
 		)
 		if err != nil {
 			return nil, NewDbError(fmt.Sprintf("failed to scan metrics: %v", err), 0)
@@ -88,7 +112,7 @@ func (r *RawDataRepository) GetByTickerAndPeriod(ctx context.Context, ticker str
 	rd, err := scanRawData(r.pool.QueryRow(ctx, query, ticker, year, period))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, NewDbError(fmt.Sprintf("metrics not found for ticker %s, year %d, period %s", ticker, year, period), 0)
+			return nil, NewDbError("metrics not found", 0)
 		}
 		return nil, NewDbError(fmt.Sprintf("failed to get metrics: %v", err), 0)
 	}
@@ -199,38 +223,62 @@ func (r *RawDataRepository) Create(ctx context.Context, rawData *domain.RawData)
 
 	query := `
 		INSERT INTO metrics (
-			ticker, year, period, status,
+			ticker, year, period, status, report_units,
 			revenue, cost_of_revenue, gross_profit, operating_expenses,
-			ebit, ebitda, interest_expense, tax_expense, net_profit,
+			other_income, other_expenses,
+			ebit, ebitda, depreciation,
+			interest_income, interest_expense,
+			profit_before_tax, tax_expense, net_profit, net_profit_parent, basic_eps,
 			total_assets, current_assets, cash_and_equivalents, inventories, receivables,
+			fixed_assets, right_of_use_assets, intangible_assets, goodwill, total_non_current_assets,
 			total_liabilities, current_liabilities, debt, long_term_debt, short_term_debt,
-			equity, retained_earnings,
-			operating_cash_flow, investing_cash_flow, financing_cash_flow, capex, free_cash_flow,
-			shares_outstanding, market_cap,
-			working_capital, capital_employed, enterprise_value, net_debt
+			lt_lease_liabilities, st_lease_liabilities, trade_payables,
+			equity, equity_parent, treasury_shares, retained_earnings,
+			operating_cash_flow, investing_cash_flow, financing_cash_flow,
+			capex, free_cash_flow, dividends_paid, lease_payments,
+			acquisitions_net, interest_paid, debt_proceeds, debt_repayments,
+			shares_outstanding, market_cap, enterprise_value,
+			working_capital, capital_employed, net_debt,
+			interest_on_leases, interest_on_loans
 		) VALUES (
-			$1, $2, $3, $4,
-			$5, $6, $7, $8,
-			$9, $10, $11, $12, $13,
-			$14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23,
-			$24, $25,
-			$26, $27, $28, $29, $30,
-			$31, $32,
-			$33, $34, $35, $36
+			$1, $2, $3, $4, $5,
+			$6, $7, $8, $9,
+			$10, $11,
+			$12, $13, $14,
+			$15, $16,
+			$17, $18, $19, $20, $21,
+			$22, $23, $24, $25, $26,
+			$27, $28, $29, $30, $31,
+			$32, $33, $34, $35, $36,
+			$37, $38, $39,
+			$40, $41, $42, $43,
+			$44, $45, $46,
+			$47, $48, $49, $50,
+			$51, $52, $53, $54,
+			$55, $56, $57,
+			$58, $59, $60,
+			$61, $62
 		)
 	`
 
 	_, err := r.pool.Exec(ctx, query,
-		rawData.Ticker, rawData.Year, rawData.Period, status,
+		rawData.Ticker, rawData.Year, rawData.Period, status, rawData.ReportUnits,
 		rawData.Revenue, rawData.CostOfRevenue, rawData.GrossProfit, rawData.OperatingExpenses,
-		rawData.EBIT, rawData.EBITDA, rawData.InterestExpense, rawData.TaxExpense, rawData.NetProfit,
+		rawData.OtherIncome, rawData.OtherExpenses,
+		rawData.EBIT, rawData.EBITDA, rawData.Depreciation,
+		rawData.InterestIncome, rawData.InterestExpense,
+		rawData.ProfitBeforeTax, rawData.TaxExpense, rawData.NetProfit, rawData.NetProfitParent, rawData.BasicEPS,
 		rawData.TotalAssets, rawData.CurrentAssets, rawData.CashAndEquivalents, rawData.Inventories, rawData.Receivables,
+		rawData.FixedAssets, rawData.RightOfUseAssets, rawData.IntangibleAssets, rawData.Goodwill, rawData.TotalNonCurrentAssets,
 		rawData.TotalLiabilities, rawData.CurrentLiabilities, rawData.Debt, rawData.LongTermDebt, rawData.ShortTermDebt,
-		rawData.Equity, rawData.RetainedEarnings,
-		rawData.OperatingCashFlow, rawData.InvestingCashFlow, rawData.FinancingCashFlow, rawData.CAPEX, rawData.FreeCashFlow,
-		rawData.SharesOutstanding, rawData.MarketCap,
-		rawData.WorkingCapital, rawData.CapitalEmployed, rawData.EnterpriseValue, rawData.NetDebt,
+		rawData.LtLeaseLiabilities, rawData.StLeaseLiabilities, rawData.TradePayables,
+		rawData.Equity, rawData.EquityParent, rawData.TreasuryShares, rawData.RetainedEarnings,
+		rawData.OperatingCashFlow, rawData.InvestingCashFlow, rawData.FinancingCashFlow,
+		rawData.CAPEX, rawData.FreeCashFlow, rawData.DividendsPaid, rawData.LeasePayments,
+		rawData.AcquisitionsNet, rawData.InterestPaid, rawData.DebtProceeds, rawData.DebtRepayments,
+		rawData.SharesOutstanding, rawData.MarketCap, rawData.EnterpriseValue,
+		rawData.WorkingCapital, rawData.CapitalEmployed, rawData.NetDebt,
+		rawData.InterestOnLeases, rawData.InterestOnLoans,
 	)
 
 	if err != nil {
@@ -261,29 +309,45 @@ func (r *RawDataRepository) Update(ctx context.Context, rawData *domain.RawData)
 
 	query := `
 		UPDATE metrics SET
-			status = $4,
-			revenue = $5, cost_of_revenue = $6, gross_profit = $7, operating_expenses = $8,
-			ebit = $9, ebitda = $10, interest_expense = $11, tax_expense = $12, net_profit = $13,
-			total_assets = $14, current_assets = $15, cash_and_equivalents = $16, inventories = $17, receivables = $18,
-			total_liabilities = $19, current_liabilities = $20, debt = $21, long_term_debt = $22, short_term_debt = $23,
-			equity = $24, retained_earnings = $25,
-			operating_cash_flow = $26, investing_cash_flow = $27, financing_cash_flow = $28, capex = $29, free_cash_flow = $30,
-			shares_outstanding = $31, market_cap = $32,
-			working_capital = $33, capital_employed = $34, enterprise_value = $35, net_debt = $36,
+			status = $4, report_units = $5,
+			revenue = $6, cost_of_revenue = $7, gross_profit = $8, operating_expenses = $9,
+			other_income = $10, other_expenses = $11,
+			ebit = $12, ebitda = $13, depreciation = $14,
+			interest_income = $15, interest_expense = $16,
+			profit_before_tax = $17, tax_expense = $18, net_profit = $19, net_profit_parent = $20, basic_eps = $21,
+			total_assets = $22, current_assets = $23, cash_and_equivalents = $24, inventories = $25, receivables = $26,
+			fixed_assets = $27, right_of_use_assets = $28, intangible_assets = $29, goodwill = $30, total_non_current_assets = $31,
+			total_liabilities = $32, current_liabilities = $33, debt = $34, long_term_debt = $35, short_term_debt = $36,
+			lt_lease_liabilities = $37, st_lease_liabilities = $38, trade_payables = $39,
+			equity = $40, equity_parent = $41, treasury_shares = $42, retained_earnings = $43,
+			operating_cash_flow = $44, investing_cash_flow = $45, financing_cash_flow = $46,
+			capex = $47, free_cash_flow = $48, dividends_paid = $49, lease_payments = $50,
+			acquisitions_net = $51, interest_paid = $52, debt_proceeds = $53, debt_repayments = $54,
+			shares_outstanding = $55, market_cap = $56, enterprise_value = $57,
+			working_capital = $58, capital_employed = $59, net_debt = $60,
+			interest_on_leases = $61, interest_on_loans = $62,
 			updated_at = NOW()
 		WHERE ticker = $1 AND year = $2 AND period = $3
 	`
 
 	result, err := r.pool.Exec(ctx, query,
-		rawData.Ticker, rawData.Year, rawData.Period, status,
+		rawData.Ticker, rawData.Year, rawData.Period, status, rawData.ReportUnits,
 		rawData.Revenue, rawData.CostOfRevenue, rawData.GrossProfit, rawData.OperatingExpenses,
-		rawData.EBIT, rawData.EBITDA, rawData.InterestExpense, rawData.TaxExpense, rawData.NetProfit,
+		rawData.OtherIncome, rawData.OtherExpenses,
+		rawData.EBIT, rawData.EBITDA, rawData.Depreciation,
+		rawData.InterestIncome, rawData.InterestExpense,
+		rawData.ProfitBeforeTax, rawData.TaxExpense, rawData.NetProfit, rawData.NetProfitParent, rawData.BasicEPS,
 		rawData.TotalAssets, rawData.CurrentAssets, rawData.CashAndEquivalents, rawData.Inventories, rawData.Receivables,
+		rawData.FixedAssets, rawData.RightOfUseAssets, rawData.IntangibleAssets, rawData.Goodwill, rawData.TotalNonCurrentAssets,
 		rawData.TotalLiabilities, rawData.CurrentLiabilities, rawData.Debt, rawData.LongTermDebt, rawData.ShortTermDebt,
-		rawData.Equity, rawData.RetainedEarnings,
-		rawData.OperatingCashFlow, rawData.InvestingCashFlow, rawData.FinancingCashFlow, rawData.CAPEX, rawData.FreeCashFlow,
-		rawData.SharesOutstanding, rawData.MarketCap,
-		rawData.WorkingCapital, rawData.CapitalEmployed, rawData.EnterpriseValue, rawData.NetDebt,
+		rawData.LtLeaseLiabilities, rawData.StLeaseLiabilities, rawData.TradePayables,
+		rawData.Equity, rawData.EquityParent, rawData.TreasuryShares, rawData.RetainedEarnings,
+		rawData.OperatingCashFlow, rawData.InvestingCashFlow, rawData.FinancingCashFlow,
+		rawData.CAPEX, rawData.FreeCashFlow, rawData.DividendsPaid, rawData.LeasePayments,
+		rawData.AcquisitionsNet, rawData.InterestPaid, rawData.DebtProceeds, rawData.DebtRepayments,
+		rawData.SharesOutstanding, rawData.MarketCap, rawData.EnterpriseValue,
+		rawData.WorkingCapital, rawData.CapitalEmployed, rawData.NetDebt,
+		rawData.InterestOnLeases, rawData.InterestOnLoans,
 	)
 
 	if err != nil {

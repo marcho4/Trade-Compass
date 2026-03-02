@@ -2,6 +2,7 @@ package application
 
 import (
 	"ai-service/internal/domain"
+	"ai-service/internal/infrastructure/financialdata"
 	kafkaclient "ai-service/internal/infrastructure/kafka"
 	"ai-service/internal/infrastructure/postgres"
 	"context"
@@ -19,6 +20,7 @@ type TaskProcessor struct {
 	taskChan      chan kafka.Message
 	numWorkers    int
 	kafkaClient   *kafkaclient.KafkaClient
+	fdClient      *financialdata.Client
 	geminiService domain.GeminiService
 	dbRepo        *postgres.DBRepo
 	cancel        context.CancelFunc
@@ -29,6 +31,7 @@ func NewTaskProcessor(
 	numWorkers int,
 	geminiService domain.GeminiService,
 	kafkaClient *kafkaclient.KafkaClient,
+	fdClient *financialdata.Client,
 	dbRepo *postgres.DBRepo,
 ) *TaskProcessor {
 	taskChan := make(chan kafka.Message, numWorkers)
@@ -39,6 +42,7 @@ func NewTaskProcessor(
 		kafkaClient:   kafkaClient,
 		geminiService: geminiService,
 		dbRepo:        dbRepo,
+		fdClient:      fdClient,
 	}
 }
 
@@ -103,9 +107,6 @@ func (p *TaskProcessor) worker(ctx context.Context) {
 				return
 			}
 			var task domain.Task
-
-			slog.Info("Worker received message", slog.String("raw", string(msg.Value)))
-
 			if err := json.Unmarshal(msg.Value, &task); err != nil {
 				slog.Error("Failed to unmarshal task", slog.String("raw", string(msg.Value)), slog.Any("error", err))
 				if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
@@ -113,13 +114,6 @@ func (p *TaskProcessor) worker(ctx context.Context) {
 				}
 				continue
 			}
-			slog.Info("Task unmarshalled",
-				slog.String("type", string(task.Type)),
-				slog.String("ticker", task.Ticker),
-				slog.Int("year", task.Year),
-				slog.String("period", task.Period),
-				slog.String("report_url", task.ReportURL),
-			)
 			p.processTask(ctx, task, msg)
 		case <-ctx.Done():
 			return
@@ -204,11 +198,6 @@ func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task
 	if !ok {
 		return fmt.Errorf("unknown period: %s", task.Period)
 	}
-	slog.Info("Saving analysis to DB",
-		slog.String("ticker", task.Ticker),
-		slog.Int("year", task.Year),
-		slog.Int("period_months", periodMonths),
-	)
 
 	if err := p.dbRepo.SaveAnalysis(ctx, result, task.Ticker, task.Year, periodMonths); err != nil {
 		slog.Error("SaveAnalysis failed",
@@ -270,21 +259,72 @@ func (p *TaskProcessor) dispatchTask(ctx context.Context, task domain.Task) erro
 }
 
 func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task) error {
-	// _, err := p.geminiService.ExtractResultFromReport(ctx, task.Ticker, task.Year, domain.ReportPeriod(task.Period))
-	// return err
+	period := domain.ReportPeriod(task.Period)
+
+	slog.Info("extracting raw data...",
+		slog.String("ticker", task.Ticker),
+		slog.Int("year", task.Year),
+		slog.String("period", task.Period),
+	)
+
+	result, err := p.geminiService.ExtractRawData(ctx, task.Ticker, task.ReportURL, task.Year, period)
+	if err != nil {
+		return fmt.Errorf("extract raw data: %w", err)
+	}
+
+	result.Status = "confirmed"
+
+	existing, err := p.fdClient.GetRawData(ctx, task.Ticker, task.Year, period)
+	if err != nil {
+		return fmt.Errorf("check existing raw data: %w", err)
+	}
+
+	if existing != nil {
+		slog.Info("updating existing raw data...", slog.String("ticker", task.Ticker))
+		if err := p.fdClient.UpdateDraft(ctx, result); err != nil {
+			return fmt.Errorf("update raw data: %w", err)
+		}
+	} else {
+		slog.Info("saving new raw data...", slog.String("ticker", task.Ticker))
+		if err := p.fdClient.SaveDraft(ctx, result); err != nil {
+			return fmt.Errorf("save raw data: %w", err)
+		}
+	}
+
+	slog.Info("raw data saved successfully", slog.String("ticker", task.Ticker))
+
+	extractResultTask := domain.Task{
+		Ticker:    task.Ticker,
+		Year:      task.Year,
+		Period:    task.Period,
+		ReportURL: task.ReportURL,
+		Type:      domain.Analyze,
+	}
+
+	payload, err := json.Marshal(extractResultTask)
+	if err != nil {
+		return fmt.Errorf("failed to marshal extract-result task: %w", err)
+	}
+
+	if err := p.kafkaClient.PublishMessage(ctx, payload); err != nil {
+		return fmt.Errorf("failed to publish extract-result task: %w", err)
+	}
+
 	return nil
 }
 
 func (p *TaskProcessor) processExtractResultTask(ctx context.Context, task domain.Task) error {
 	result, err := p.geminiService.ExtractResultFromReport(ctx, task.Ticker, task.Year, domain.ReportPeriod(task.Period))
 	if err != nil {
-		return err
+		return fmt.Errorf("extract results from report: %w", err)
 	}
+
 	slog.Info("Successfully extracted results from report analysis")
 
 	periodMonths, ok := domain.PeriodToMonths[task.Period]
 	if !ok {
 		return fmt.Errorf("unknown period: %s", task.Period)
 	}
+
 	return p.dbRepo.SaveReportResults(ctx, result, task.Ticker, task.Year, periodMonths)
 }
