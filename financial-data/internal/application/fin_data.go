@@ -17,6 +17,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type FinData struct {
@@ -29,6 +30,8 @@ type FinData struct {
 	newsRepo         *infrastructure.NewsRepository
 	moexDataProvider *infrastructure.MoexDataProvider
 	eventPublisher   *kafka.KafkaEventPublisher
+	kafkaProducer    *kafka.Producer
+	pool             *pgxpool.Pool
 	srv              *http.Server
 }
 
@@ -43,7 +46,6 @@ func NewFinData() (*FinData, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer pool.Close()
 
 	slog.Info("database connection pool initialized")
 
@@ -60,7 +62,6 @@ func NewFinData() (*FinData, error) {
 	kafkaBrokers := []string{getEnv("KAFKA_URL", "kafka:9092")}
 	parserTopic := getEnv("KAFKA_PARSER_TOPIC", "parser.parse_ticker")
 	kafkaProducer := kafka.NewProducer(kafkaBrokers, parserTopic)
-	defer kafkaProducer.Close()
 	eventPublisher := kafka.NewKafkaEventPublisher(kafkaProducer)
 
 	slog.Info("Kafka producer initialized", "topic", parserTopic)
@@ -75,6 +76,8 @@ func NewFinData() (*FinData, error) {
 		newsRepo:         newsRepo,
 		moexDataProvider: moexDataProvider,
 		eventPublisher:   eventPublisher,
+		kafkaProducer:    kafkaProducer,
+		pool:             pool,
 	}, nil
 }
 
@@ -140,6 +143,8 @@ func (f *FinData) runRouter() error {
 
 	select {
 	case err := <-serverErrors:
+		f.kafkaProducer.Close()
+		f.pool.Close()
 		return err
 	case sig := <-shutdown:
 		slog.Info("Shutdown signal received", "signal", sig)
@@ -152,6 +157,8 @@ func (f *FinData) runRouter() error {
 			return err
 		}
 
+		f.kafkaProducer.Close()
+		f.pool.Close()
 		slog.Info("Server stopped gracefully")
 	}
 
