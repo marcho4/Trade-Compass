@@ -20,7 +20,7 @@ func NewNewsRepository(pool *pgxpool.Pool) *NewsRepository {
 
 func (r *NewsRepository) GetByID(ctx context.Context, id int) (*domain.News, error) {
 	if id < 1 {
-		return nil, NewDbError(fmt.Sprintf("invalid news ID: %d", id), 0)
+		return nil, fmt.Errorf("invalid news ID: %d: %w", id, domain.ErrInvalidInput)
 	}
 
 	query := `
@@ -37,9 +37,9 @@ func (r *NewsRepository) GetByID(ctx context.Context, id int) (*domain.News, err
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, NewDbError(fmt.Sprintf("news not found for ID %d", id), 0)
+			return nil, fmt.Errorf("news not found for ID %d: %w", id, domain.ErrNotFound)
 		}
-		return nil, NewDbError(fmt.Sprintf("failed to get news: %v", err), 0)
+		return nil, fmt.Errorf("failed to get news: %w", err)
 	}
 
 	return news, nil
@@ -47,7 +47,7 @@ func (r *NewsRepository) GetByID(ctx context.Context, id int) (*domain.News, err
 
 func (r *NewsRepository) GetByTicker(ctx context.Context, ticker string) ([]domain.News, error) {
 	if ticker == "" {
-		return nil, NewDbError("ticker is empty", 0)
+		return nil, fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)
 	}
 
 	query := `
@@ -59,7 +59,7 @@ func (r *NewsRepository) GetByTicker(ctx context.Context, ticker string) ([]doma
 
 	rows, err := r.pool.Query(ctx, query, ticker)
 	if err != nil {
-		return nil, NewDbError(fmt.Sprintf("failed to query news by ticker: %v", err), 0)
+		return nil, fmt.Errorf("failed to query news by ticker: %w", err)
 	}
 	defer rows.Close()
 
@@ -71,13 +71,13 @@ func (r *NewsRepository) GetByTicker(ctx context.Context, ticker string) ([]doma
 			&news.Title, &news.Content, &news.Source, &news.URL,
 		)
 		if err != nil {
-			return nil, NewDbError(fmt.Sprintf("failed to scan news: %v", err), 0)
+			return nil, fmt.Errorf("failed to scan news: %w", err)
 		}
 		newsList = append(newsList, news)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, NewDbError(fmt.Sprintf("error iterating news: %v", err), 0)
+		return nil, fmt.Errorf("error iterating news: %w", err)
 	}
 
 	return newsList, nil
@@ -93,7 +93,7 @@ func (r *NewsRepository) GetBySector(ctx context.Context, sectorID int) ([]domai
 
 	rows, err := r.pool.Query(ctx, query, sectorID)
 	if err != nil {
-		return nil, NewDbError(fmt.Sprintf("failed to query news by sector: %v", err), 0)
+		return nil, fmt.Errorf("failed to query news by sector: %w", err)
 	}
 	defer rows.Close()
 
@@ -105,13 +105,13 @@ func (r *NewsRepository) GetBySector(ctx context.Context, sectorID int) ([]domai
 			&news.Title, &news.Content, &news.Source, &news.URL,
 		)
 		if err != nil {
-			return nil, NewDbError(fmt.Sprintf("failed to scan news: %v", err), 0)
+			return nil, fmt.Errorf("failed to scan news: %w", err)
 		}
 		newsList = append(newsList, news)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, NewDbError(fmt.Sprintf("error iterating news: %v", err), 0)
+		return nil, fmt.Errorf("error iterating news: %w", err)
 	}
 
 	return newsList, nil
@@ -119,10 +119,10 @@ func (r *NewsRepository) GetBySector(ctx context.Context, sectorID int) ([]domai
 
 func (r *NewsRepository) Create(ctx context.Context, news *domain.News) error {
 	if news == nil {
-		return NewDbError("news is nil", 0)
+		return fmt.Errorf("news is nil: %w", domain.ErrInvalidInput)
 	}
 	if news.Title == "" {
-		return NewDbError("news title is empty", 0)
+		return fmt.Errorf("news title is empty: %w", domain.ErrInvalidInput)
 	}
 
 	query := `
@@ -137,7 +137,7 @@ func (r *NewsRepository) Create(ctx context.Context, news *domain.News) error {
 	).Scan(&news.ID)
 
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to create news: %v", err), 0)
+		return fmt.Errorf("failed to create news: %w", err)
 	}
 
 	return nil
@@ -145,10 +145,10 @@ func (r *NewsRepository) Create(ctx context.Context, news *domain.News) error {
 
 func (r *NewsRepository) Update(ctx context.Context, id int, news *domain.News) error {
 	if id < 1 {
-		return NewDbError(fmt.Sprintf("invalid news ID: %d", id), 0)
+		return fmt.Errorf("invalid news ID: %d: %w", id, domain.ErrInvalidInput)
 	}
 	if news == nil {
-		return NewDbError("news is nil", 0)
+		return fmt.Errorf("news is nil: %w", domain.ErrInvalidInput)
 	}
 
 	query := `
@@ -164,11 +164,11 @@ func (r *NewsRepository) Update(ctx context.Context, id int, news *domain.News) 
 	)
 
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to update news: %v", err), 0)
+		return fmt.Errorf("failed to update news: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
-		return NewDbError(fmt.Sprintf("news not found for ID %d", id), 0)
+		return fmt.Errorf("news not found for ID %d: %w", id, domain.ErrNotFound)
 	}
 
 	return nil
@@ -176,18 +176,18 @@ func (r *NewsRepository) Update(ctx context.Context, id int, news *domain.News) 
 
 func (r *NewsRepository) Delete(ctx context.Context, id int) error {
 	if id < 1 {
-		return NewDbError(fmt.Sprintf("invalid news ID: %d", id), 0)
+		return fmt.Errorf("invalid news ID: %d: %w", id, domain.ErrInvalidInput)
 	}
 
 	query := `DELETE FROM news WHERE id = $1`
 
 	result, err := r.pool.Exec(ctx, query, id)
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to delete news: %v", err), 0)
+		return fmt.Errorf("failed to delete news: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
-		return NewDbError(fmt.Sprintf("news not found for ID %d", id), 0)
+		return fmt.Errorf("news not found for ID %d: %w", id, domain.ErrNotFound)
 	}
 
 	return nil

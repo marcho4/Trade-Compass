@@ -5,7 +5,6 @@ import (
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
-	"financial_data/internal/infrastructure"
 	"net/http"
 	"strconv"
 
@@ -13,14 +12,14 @@ import (
 )
 
 type NewsHandler struct {
-	repo *infrastructure.NewsRepository
+	repo NewsRepository
 }
 
-func NewNewsHandler(repo *infrastructure.NewsRepository) *NewsHandler {
+func NewNewsHandler(repo NewsRepository) *NewsHandler {
 	return &NewsHandler{repo: repo}
 }
 
-func RegisterNewsRoutes(r chi.Router, repo *infrastructure.NewsRepository, m *middleware.MiddlewareConfig) {
+func RegisterNewsRoutes(r chi.Router, repo NewsRepository, m *middleware.MiddlewareConfig) {
 	handler := NewNewsHandler(repo)
 
 	r.Get("/news", handler.HandleGetNews)
@@ -102,11 +101,6 @@ func (h *NewsHandler) HandleGetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *NewsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := application.ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	var news domain.News
 	if err := json.NewDecoder(r.Body).Decode(&news); err != nil {
 		response.RespondWithError(w, r, 400, "invalid request body", err)
@@ -130,11 +124,6 @@ func (h *NewsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *NewsHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := application.ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	idStr := chi.URLParam(r, "id")
 	if idStr == "" {
 		response.RespondWithError(w, r, 400, "id is required", nil)
@@ -170,11 +159,6 @@ func (h *NewsHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *NewsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := application.ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	idStr := chi.URLParam(r, "id")
 	if idStr == "" {
 		response.RespondWithError(w, r, 400, "id is required", nil)

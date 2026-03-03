@@ -6,7 +6,6 @@ import (
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
-	"financial_data/internal/infrastructure"
 	"net/http"
 	"strconv"
 
@@ -14,14 +13,14 @@ import (
 )
 
 type RawDataHandler struct {
-	repo *infrastructure.RawDataRepository
+	repo RawDataRepository
 }
 
-func NewRawDataHandler(repo *infrastructure.RawDataRepository) *RawDataHandler {
+func NewRawDataHandler(repo RawDataRepository) *RawDataHandler {
 	return &RawDataHandler{repo: repo}
 }
 
-func RegisterRawDataRoutes(r chi.Router, repo *infrastructure.RawDataRepository, m *middleware.MiddlewareConfig) {
+func RegisterRawDataRoutes(r chi.Router, repo RawDataRepository, m *middleware.MiddlewareConfig) {
 	handler := NewRawDataHandler(repo)
 
 	r.Get("/raw-data/{ticker}", handler.HandleGetByPeriod)
@@ -69,8 +68,7 @@ func (h *RawDataHandler) HandleGetByPeriod(w http.ResponseWriter, r *http.Reques
 
 	rawData, err := h.repo.GetByTickerAndPeriod(r.Context(), ticker, year, period)
 	if err != nil {
-		var dbErr *infrastructure.DbError
-		if errors.As(err, &dbErr) && dbErr.Message == "metrics not found" {
+		if errors.Is(err, domain.ErrNotFound) {
 			response.RespondWithError(w, r, 404, "metrics not found", err)
 			return
 		}

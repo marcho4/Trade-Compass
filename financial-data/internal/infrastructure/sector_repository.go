@@ -20,7 +20,7 @@ func NewSectorRepository(pool *pgxpool.Pool) *SectorRepository {
 
 func (r *SectorRepository) GetByID(ctx context.Context, id int) (*domain.SectorModel, error) {
 	if id < 1 || id > 19 {
-		return nil, NewDbError(fmt.Sprintf("invalid sector ID: %d (allowed 1-19)", id), 0)
+		return nil, fmt.Errorf("invalid sector ID: %d (allowed 1-19): %w", id, domain.ErrInvalidInput)
 	}
 
 	query := `SELECT id, name FROM sectors WHERE id = $1`
@@ -30,9 +30,9 @@ func (r *SectorRepository) GetByID(ctx context.Context, id int) (*domain.SectorM
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, NewDbError(fmt.Sprintf("sector not found for ID %d", id), 0)
+			return nil, fmt.Errorf("sector not found for ID %d: %w", id, domain.ErrNotFound)
 		}
-		return nil, NewDbError(fmt.Sprintf("failed to get sector: %v", err), 0)
+		return nil, fmt.Errorf("failed to get sector: %w", err)
 	}
 
 	return sector, nil
@@ -43,7 +43,7 @@ func (r *SectorRepository) GetAll(ctx context.Context) ([]domain.SectorModel, er
 
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
-		return nil, NewDbError(fmt.Sprintf("failed to query sectors: %v", err), 0)
+		return nil, fmt.Errorf("failed to query sectors: %w", err)
 	}
 	defer rows.Close()
 
@@ -52,13 +52,13 @@ func (r *SectorRepository) GetAll(ctx context.Context) ([]domain.SectorModel, er
 		var sector domain.SectorModel
 		err := rows.Scan(&sector.ID, &sector.Name)
 		if err != nil {
-			return nil, NewDbError(fmt.Sprintf("failed to scan sector: %v", err), 0)
+			return nil, fmt.Errorf("failed to scan sector: %w", err)
 		}
 		sectors = append(sectors, sector)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, NewDbError(fmt.Sprintf("error iterating sectors: %v", err), 0)
+		return nil, fmt.Errorf("error iterating sectors: %w", err)
 	}
 
 	return sectors, nil
@@ -66,17 +66,17 @@ func (r *SectorRepository) GetAll(ctx context.Context) ([]domain.SectorModel, er
 
 func (r *SectorRepository) Create(ctx context.Context, sector *domain.SectorModel) error {
 	if sector == nil {
-		return NewDbError("sector is nil", 0)
+		return fmt.Errorf("sector is nil: %w", domain.ErrInvalidInput)
 	}
 	if sector.Name == "" {
-		return NewDbError("sector name is empty", 0)
+		return fmt.Errorf("sector name is empty: %w", domain.ErrInvalidInput)
 	}
 
 	query := `INSERT INTO sectors (name) VALUES ($1) RETURNING id`
 
 	err := r.pool.QueryRow(ctx, query, sector.Name).Scan(&sector.ID)
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to create sector: %v", err), 0)
+		return fmt.Errorf("failed to create sector: %w", err)
 	}
 
 	return nil
@@ -84,24 +84,24 @@ func (r *SectorRepository) Create(ctx context.Context, sector *domain.SectorMode
 
 func (r *SectorRepository) Update(ctx context.Context, id int, sector *domain.SectorModel) error {
 	if id < 1 {
-		return NewDbError(fmt.Sprintf("invalid sector ID: %d", id), 0)
+		return fmt.Errorf("invalid sector ID: %d: %w", id, domain.ErrInvalidInput)
 	}
 	if sector == nil {
-		return NewDbError("sector is nil", 0)
+		return fmt.Errorf("sector is nil: %w", domain.ErrInvalidInput)
 	}
 	if sector.Name == "" {
-		return NewDbError("sector name is empty", 0)
+		return fmt.Errorf("sector name is empty: %w", domain.ErrInvalidInput)
 	}
 
 	query := `UPDATE sectors SET name = $2 WHERE id = $1`
 
 	result, err := r.pool.Exec(ctx, query, id, sector.Name)
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to update sector: %v", err), 0)
+		return fmt.Errorf("failed to update sector: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
-		return NewDbError(fmt.Sprintf("sector not found for ID %d", id), 0)
+		return fmt.Errorf("sector not found for ID %d: %w", id, domain.ErrNotFound)
 	}
 
 	return nil
@@ -109,18 +109,18 @@ func (r *SectorRepository) Update(ctx context.Context, id int, sector *domain.Se
 
 func (r *SectorRepository) Delete(ctx context.Context, id int) error {
 	if id < 1 {
-		return NewDbError(fmt.Sprintf("invalid sector ID: %d", id), 0)
+		return fmt.Errorf("invalid sector ID: %d: %w", id, domain.ErrInvalidInput)
 	}
 
 	query := `DELETE FROM sectors WHERE id = $1`
 
 	result, err := r.pool.Exec(ctx, query, id)
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to delete sector: %v", err), 0)
+		return fmt.Errorf("failed to delete sector: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
-		return NewDbError(fmt.Sprintf("sector not found for ID %d", id), 0)
+		return fmt.Errorf("sector not found for ID %d: %w", id, domain.ErrNotFound)
 	}
 
 	return nil

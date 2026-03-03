@@ -5,7 +5,6 @@ import (
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
-	"financial_data/internal/infrastructure"
 	"net/http"
 	"strconv"
 
@@ -13,14 +12,14 @@ import (
 )
 
 type SectorHandler struct {
-	repo *infrastructure.SectorRepository
+	repo SectorRepository
 }
 
-func NewSectorHandler(repo *infrastructure.SectorRepository) *SectorHandler {
+func NewSectorHandler(repo SectorRepository) *SectorHandler {
 	return &SectorHandler{repo: repo}
 }
 
-func RegisterSectorRoutes(r chi.Router, repo *infrastructure.SectorRepository, m *middleware.MiddlewareConfig) {
+func RegisterSectorRoutes(r chi.Router, repo SectorRepository, m *middleware.MiddlewareConfig) {
 	handler := NewSectorHandler(repo)
 
 	r.Get("/sectors", handler.HandleGetAll)

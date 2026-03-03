@@ -5,7 +5,6 @@ import (
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
-	"financial_data/internal/infrastructure"
 	"net/http"
 	"strconv"
 
@@ -13,14 +12,14 @@ import (
 )
 
 type RatiosHandler struct {
-	repo *infrastructure.RatiosRepository
+	repo RatiosRepository
 }
 
-func NewRatiosHandler(repo *infrastructure.RatiosRepository) *RatiosHandler {
+func NewRatiosHandler(repo RatiosRepository) *RatiosHandler {
 	return &RatiosHandler{repo: repo}
 }
 
-func RegisterRatiosRoutes(r chi.Router, repo *infrastructure.RatiosRepository, m *middleware.MiddlewareConfig) {
+func RegisterRatiosRoutes(r chi.Router, repo RatiosRepository, m *middleware.MiddlewareConfig) {
 	handler := NewRatiosHandler(repo)
 
 	r.Get("/ratios/sector/{sector_id}", handler.HandleGetRatiosBySector)
@@ -80,11 +79,6 @@ func (h *RatiosHandler) HandleGetRatiosBySector(w http.ResponseWriter, r *http.R
 }
 
 func (h *RatiosHandler) HandleCreateRatios(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := application.ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)
@@ -116,11 +110,6 @@ func (h *RatiosHandler) HandleCreateRatios(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *RatiosHandler) HandleUpdateRatios(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := application.ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)
@@ -142,11 +131,6 @@ func (h *RatiosHandler) HandleUpdateRatios(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *RatiosHandler) HandleDeleteRatios(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := application.ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)

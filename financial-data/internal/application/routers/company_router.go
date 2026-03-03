@@ -6,7 +6,6 @@ import (
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
-	"financial_data/internal/infrastructure"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -49,9 +48,8 @@ func (h *CompanyHandler) HandleGetByTicker(w http.ResponseWriter, r *http.Reques
 
 	company, err := h.repo.GetByTicker(r.Context(), ticker)
 	if err != nil {
-		var dbErr *infrastructure.DbError
-		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
-			response.RespondWithError(w, r, 404, dbErr.Message, err)
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "company not found", err)
 			return
 		}
 		response.RespondWithError(w, r, 500, "failed to load company", err)
@@ -100,11 +98,6 @@ func (h *CompanyHandler) HandleGetBySector(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *CompanyHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	var company domain.Company
 	if err := json.NewDecoder(r.Body).Decode(&company); err != nil {
 		response.RespondWithError(w, r, 400, "invalid request body", err)
@@ -140,11 +133,6 @@ func (h *CompanyHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CompanyHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := validateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)
@@ -164,9 +152,8 @@ func (h *CompanyHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Update(r.Context(), ticker, &company); err != nil {
-		var dbErr *infrastructure.DbError
-		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
-			response.RespondWithError(w, r, 404, dbErr.Message, err)
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "company not found", err)
 			return
 		}
 		response.RespondWithError(w, r, 500, "failed to update company", err)
@@ -177,11 +164,6 @@ func (h *CompanyHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CompanyHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := validateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)
@@ -189,9 +171,8 @@ func (h *CompanyHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Delete(r.Context(), ticker); err != nil {
-		var dbErr *infrastructure.DbError
-		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
-			response.RespondWithError(w, r, 404, dbErr.Message, err)
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "company not found", err)
 			return
 		}
 		response.RespondWithError(w, r, 500, "failed to delete company", err)

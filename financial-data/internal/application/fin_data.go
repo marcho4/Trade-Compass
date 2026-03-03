@@ -3,8 +3,8 @@ package application
 import (
 	"context"
 	"errors"
-	myMiddleware "financial_data/internal/application/middleware"
 	"financial_data/internal/application/routers"
+	"financial_data/internal/domain"
 	"financial_data/internal/infrastructure"
 	"financial_data/internal/infrastructure/kafka"
 	"fmt"
@@ -15,24 +15,26 @@ import (
 	"syscall"
 	"time"
 
+	myMiddleware "financial_data/internal/application/middleware"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type FinData struct {
-	ratiosRepo       *infrastructure.RatiosRepository
-	rawDataRepo      *infrastructure.RawDataRepository
-	companyRepo      *infrastructure.CompanyRepository
-	sectorRepo       *infrastructure.SectorRepository
-	dividendsRepo    *infrastructure.DividendsRepository
-	cbRateRepo       *infrastructure.CBRateRepository
-	newsRepo         *infrastructure.NewsRepository
-	moexDataProvider *infrastructure.MoexDataProvider
-	eventPublisher   *kafka.KafkaEventPublisher
-	kafkaProducer    *kafka.Producer
-	pool             *pgxpool.Pool
-	srv              *http.Server
+	ratiosRepo     routers.RatiosRepository
+	rawDataRepo    routers.RawDataRepository
+	companyRepo    routers.CompanyRepository
+	sectorRepo     routers.SectorRepository
+	dividendsRepo  routers.DividendsRepository
+	cbRateRepo     routers.MacroDataRepository
+	newsRepo       routers.NewsRepository
+	marketService  domain.MarketService
+	eventPublisher routers.EventPublisher
+	kafkaProducer  *kafka.Producer
+	pool           *pgxpool.Pool
+	srv            *http.Server
 }
 
 func NewFinData() (*FinData, error) {
@@ -67,17 +69,17 @@ func NewFinData() (*FinData, error) {
 	slog.Info("Kafka producer initialized", "topic", parserTopic)
 
 	return &FinData{
-		ratiosRepo:       ratiosRepo,
-		rawDataRepo:      rawDataRepo,
-		companyRepo:      companyRepo,
-		sectorRepo:       sectorRepo,
-		dividendsRepo:    dividendsRepo,
-		cbRateRepo:       cbRateRepo,
-		newsRepo:         newsRepo,
-		moexDataProvider: moexDataProvider,
-		eventPublisher:   eventPublisher,
-		kafkaProducer:    kafkaProducer,
-		pool:             pool,
+		ratiosRepo:     ratiosRepo,
+		rawDataRepo:    rawDataRepo,
+		companyRepo:    companyRepo,
+		sectorRepo:     sectorRepo,
+		dividendsRepo:  dividendsRepo,
+		cbRateRepo:     cbRateRepo,
+		newsRepo:       newsRepo,
+		marketService:  moexDataProvider,
+		eventPublisher: eventPublisher,
+		kafkaProducer:  kafkaProducer,
+		pool:           pool,
 	}, nil
 }
 
@@ -109,12 +111,12 @@ func (f *FinData) prepareRouter() error {
 
 	routers.RegisterRatiosRoutes(r, f.ratiosRepo, m)
 	routers.RegisterRawDataRoutes(r, f.rawDataRepo, m)
-	routers.RegisterCompanyRoutes(r, f.companyRepo, f.moexDataProvider, f.eventPublisher, m)
+	routers.RegisterCompanyRoutes(r, f.companyRepo, f.marketService, f.eventPublisher, m)
 	routers.RegisterSectorRoutes(r, f.sectorRepo, m)
 	routers.RegisterDividendsRoutes(r, f.dividendsRepo, m)
 	routers.RegisterMacroRoutes(r, f.cbRateRepo, m)
 	routers.RegisterNewsRoutes(r, f.newsRepo, m)
-	routers.RegisterPriceRoutes(r, f.moexDataProvider, m)
+	routers.RegisterPriceRoutes(r, f.marketService, m)
 
 	srv := &http.Server{
 		Addr:         ":8082",

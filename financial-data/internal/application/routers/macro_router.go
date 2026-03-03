@@ -6,7 +6,6 @@ import (
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
-	"financial_data/internal/infrastructure"
 	"net/http"
 	"time"
 
@@ -39,9 +38,8 @@ func RegisterMacroRoutes(r chi.Router, repo MacroDataRepository, m *middleware.M
 func (h *MacroHandler) HandleGetCurrent(w http.ResponseWriter, r *http.Request) {
 	rate, err := h.repo.GetCurrent(r.Context())
 	if err != nil {
-		var dbErr *infrastructure.DbError
-		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
-			response.RespondWithError(w, r, 404, dbErr.Message, err)
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "no CB rates found", err)
 			return
 		}
 		response.RespondWithError(w, r, 500, "failed to load current CB rate", err)
@@ -74,9 +72,8 @@ func (h *MacroHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request) 
 
 	rates, err := h.repo.GetHistory(r.Context(), from, to)
 	if err != nil {
-		var dbErr *infrastructure.DbError
-		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
-			response.RespondWithError(w, r, 404, dbErr.Message, err)
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "no CB rates found for the specified period", err)
 			return
 		}
 		response.RespondWithError(w, r, 500, "failed to load CB rates history", err)
@@ -87,11 +84,6 @@ func (h *MacroHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *MacroHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	var request struct {
 		Date string  `json:"date"`
 		Rate float64 `json:"rate"`
@@ -122,11 +114,6 @@ func (h *MacroHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MacroHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	dateStr := r.URL.Query().Get("date")
 	if dateStr == "" {
 		response.RespondWithError(w, r, 400, "date query parameter is required (format: YYYY-MM-DD)", nil)
@@ -149,9 +136,8 @@ func (h *MacroHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Update(r.Context(), date, request.Rate); err != nil {
-		var dbErr *infrastructure.DbError
-		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
-			response.RespondWithError(w, r, 404, dbErr.Message, err)
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "CB rate not found", err)
 			return
 		}
 		response.RespondWithError(w, r, 500, "failed to update CB rate", err)
@@ -162,11 +148,6 @@ func (h *MacroHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MacroHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
-	// if ok, err := ValidateApiKey(r); !ok {
-	// 	response.RespondWithError(w, r, 401, "unauthorized", err)
-	// 	return
-	// }
-
 	dateStr := r.URL.Query().Get("date")
 	if dateStr == "" {
 		response.RespondWithError(w, r, 400, "date query parameter is required (format: YYYY-MM-DD)", nil)
@@ -180,9 +161,8 @@ func (h *MacroHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Delete(r.Context(), date); err != nil {
-		var dbErr *infrastructure.DbError
-		if errors.As(err, &dbErr) && dbErr.RowsAffected == 0 {
-			response.RespondWithError(w, r, 404, dbErr.Message, err)
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "CB rate not found", err)
 			return
 		}
 		response.RespondWithError(w, r, 500, "failed to delete CB rate", err)

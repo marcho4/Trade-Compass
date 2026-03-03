@@ -18,42 +18,45 @@ func NewRatiosRepository(pool *pgxpool.Pool) *RatiosRepository {
 	return &RatiosRepository{pool: pool}
 }
 
+const ratiosSelectColumns = `
+	price_to_earnings, price_to_book, price_to_cash_flow, ev_to_ebitda, ev_to_sales, ev_to_fcf, peg,
+	roe, roa, roic, gross_profit_margin, operating_profit_margin, net_profit_margin,
+	current_ratio, quick_ratio,
+	net_debt_to_ebitda, debt_to_equity, interest_coverage_ratio,
+	income_quality, asset_turnover, inventory_turnover, receivables_turnover,
+	eps, book_value_per_share, cash_flow_per_share, dividend_per_share, dividend_yield, payout_ratio,
+	enterprise_value, market_cap, free_cash_flow, capex, ebitda, net_debt, working_capital,
+	revenue_growth, earnings_growth, ebitda_growth, fcf_growth
+`
+
+func ratiosScanTargets(r *domain.Ratios) []any {
+	return []any{
+		&r.PriceToEarnings, &r.PriceToBook, &r.PriceToCashFlow, &r.EVToEBITDA, &r.EVToSales, &r.EVToFCF, &r.PEG,
+		&r.ROE, &r.ROA, &r.ROIC, &r.GrossProfitMargin, &r.OperatingProfitMargin, &r.NetProfitMargin,
+		&r.CurrentRatio, &r.QuickRatio,
+		&r.NetDebtToEBITDA, &r.DebtToEquity, &r.InterestCoverageRatio,
+		&r.IncomeQuality, &r.AssetTurnover, &r.InventoryTurnover, &r.ReceivablesTurnover,
+		&r.EPS, &r.BookValuePerShare, &r.CashFlowPerShare, &r.DividendPerShare, &r.DividendYield, &r.PayoutRatio,
+		&r.EnterpriseValue, &r.MarketCap, &r.FreeCashFlow, &r.CAPEX, &r.EBITDA, &r.NetDebt, &r.WorkingCapital,
+		&r.RevenueGrowth, &r.EarningsGrowth, &r.EBITDAGrowth, &r.FCFGrowth,
+	}
+}
+
 func (r *RatiosRepository) GetByTicker(ctx context.Context, ticker string) (*domain.Ratios, error) {
 	if ticker == "" {
-		return nil, NewDbError("ticker is empty", 0)
+		return nil, fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)
 	}
 
-	query := `
-		SELECT
-			price_to_earnings, price_to_book, price_to_cash_flow, ev_to_ebitda, ev_to_sales, ev_to_fcf, peg,
-			roe, roa, roic, gross_profit_margin, operating_profit_margin, net_profit_margin,
-			current_ratio, quick_ratio,
-			net_debt_to_ebitda, debt_to_equity, interest_coverage_ratio,
-			income_quality, asset_turnover, inventory_turnover, receivables_turnover,
-			eps, book_value_per_share, cash_flow_per_share, dividend_per_share, dividend_yield, payout_ratio,
-			enterprise_value, market_cap, free_cash_flow, capex, ebitda, net_debt, working_capital,
-			revenue_growth, earnings_growth, ebitda_growth, fcf_growth
-		FROM ratios
-		WHERE ticker = $1
-	`
+	query := fmt.Sprintf(`SELECT %s FROM ratios WHERE ticker = $1`, ratiosSelectColumns)
 
 	ratios := &domain.Ratios{}
-	err := r.pool.QueryRow(ctx, query, ticker).Scan(
-		&ratios.PriceToEarnings, &ratios.PriceToBook, &ratios.PriceToCashFlow, &ratios.EVToEBITDA, &ratios.EVToSales, &ratios.EVToFCF, &ratios.PEG,
-		&ratios.ROE, &ratios.ROA, &ratios.ROIC, &ratios.GrossProfitMargin, &ratios.OperatingProfitMargin, &ratios.NetProfitMargin,
-		&ratios.CurrentRatio, &ratios.QuickRatio,
-		&ratios.NetDebtToEBITDA, &ratios.DebtToEquity, &ratios.InterestCoverageRatio,
-		&ratios.IncomeQuality, &ratios.AssetTurnover, &ratios.InventoryTurnover, &ratios.ReceivablesTurnover,
-		&ratios.EPS, &ratios.BookValuePerShare, &ratios.CashFlowPerShare, &ratios.DividendPerShare, &ratios.DividendYield, &ratios.PayoutRatio,
-		&ratios.EnterpriseValue, &ratios.MarketCap, &ratios.FreeCashFlow, &ratios.CAPEX, &ratios.EBITDA, &ratios.NetDebt, &ratios.WorkingCapital,
-		&ratios.RevenueGrowth, &ratios.EarningsGrowth, &ratios.EBITDAGrowth, &ratios.FCFGrowth,
-	)
+	err := r.pool.QueryRow(ctx, query, ticker).Scan(ratiosScanTargets(ratios)...)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, NewDbError(fmt.Sprintf("ratios not found for ticker %s", ticker), 0)
+			return nil, fmt.Errorf("ratios not found for ticker %s: %w", ticker, domain.ErrNotFound)
 		}
-		return nil, NewDbError(fmt.Sprintf("failed to get ratios: %v", err), 0)
+		return nil, fmt.Errorf("failed to get ratios: %w", err)
 	}
 
 	return ratios, nil
@@ -61,10 +64,10 @@ func (r *RatiosRepository) GetByTicker(ctx context.Context, ticker string) (*dom
 
 func (r *RatiosRepository) GetBySector(ctx context.Context, sector domain.Sector) (*domain.Ratios, error) {
 	if !sector.IsValid() {
-		return nil, NewDbError(fmt.Sprintf("invalid sector: %d", sector), 0)
+		return nil, fmt.Errorf("invalid sector: %d: %w", sector, domain.ErrInvalidInput)
 	}
 
-	query := `
+	query := fmt.Sprintf(`
 		SELECT
 			AVG(price_to_earnings), AVG(price_to_book), AVG(price_to_cash_flow), AVG(ev_to_ebitda), AVG(ev_to_sales), AVG(ev_to_fcf), AVG(peg),
 			AVG(roe), AVG(roa), AVG(roic), AVG(gross_profit_margin), AVG(operating_profit_margin), AVG(net_profit_margin),
@@ -76,22 +79,13 @@ func (r *RatiosRepository) GetBySector(ctx context.Context, sector domain.Sector
 			AVG(revenue_growth), AVG(earnings_growth), AVG(ebitda_growth), AVG(fcf_growth)
 		FROM ratios
 		WHERE sector = $1
-	`
+	`)
 
 	ratios := &domain.Ratios{}
-	err := r.pool.QueryRow(ctx, query, sector).Scan(
-		&ratios.PriceToEarnings, &ratios.PriceToBook, &ratios.PriceToCashFlow, &ratios.EVToEBITDA, &ratios.EVToSales, &ratios.EVToFCF, &ratios.PEG,
-		&ratios.ROE, &ratios.ROA, &ratios.ROIC, &ratios.GrossProfitMargin, &ratios.OperatingProfitMargin, &ratios.NetProfitMargin,
-		&ratios.CurrentRatio, &ratios.QuickRatio,
-		&ratios.NetDebtToEBITDA, &ratios.DebtToEquity, &ratios.InterestCoverageRatio,
-		&ratios.IncomeQuality, &ratios.AssetTurnover, &ratios.InventoryTurnover, &ratios.ReceivablesTurnover,
-		&ratios.EPS, &ratios.BookValuePerShare, &ratios.CashFlowPerShare, &ratios.DividendPerShare, &ratios.DividendYield, &ratios.PayoutRatio,
-		&ratios.EnterpriseValue, &ratios.MarketCap, &ratios.FreeCashFlow, &ratios.CAPEX, &ratios.EBITDA, &ratios.NetDebt, &ratios.WorkingCapital,
-		&ratios.RevenueGrowth, &ratios.EarningsGrowth, &ratios.EBITDAGrowth, &ratios.FCFGrowth,
-	)
+	err := r.pool.QueryRow(ctx, query, sector).Scan(ratiosScanTargets(ratios)...)
 
 	if err != nil {
-		return nil, NewDbError(fmt.Sprintf("failed to get average ratios for sector: %v", err), 0)
+		return nil, fmt.Errorf("failed to get average ratios for sector: %w", err)
 	}
 
 	return ratios, nil
@@ -99,13 +93,13 @@ func (r *RatiosRepository) GetBySector(ctx context.Context, sector domain.Sector
 
 func (r *RatiosRepository) Create(ctx context.Context, ticker string, sector domain.Sector, ratios *domain.Ratios) error {
 	if ticker == "" {
-		return NewDbError("ticker is empty", 0)
+		return fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)
 	}
 	if !sector.IsValid() {
-		return NewDbError(fmt.Sprintf("invalid sector: %d", sector), 0)
+		return fmt.Errorf("invalid sector: %d: %w", sector, domain.ErrInvalidInput)
 	}
 	if ratios == nil {
-		return NewDbError("ratios is nil", 0)
+		return fmt.Errorf("ratios is nil: %w", domain.ErrInvalidInput)
 	}
 
 	query := `
@@ -145,7 +139,7 @@ func (r *RatiosRepository) Create(ctx context.Context, ticker string, sector dom
 	)
 
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to create ratios: %v", err), 0)
+		return fmt.Errorf("failed to create ratios: %w", err)
 	}
 
 	return nil
@@ -153,10 +147,10 @@ func (r *RatiosRepository) Create(ctx context.Context, ticker string, sector dom
 
 func (r *RatiosRepository) Update(ctx context.Context, ticker string, ratios *domain.Ratios) error {
 	if ticker == "" {
-		return NewDbError("ticker is empty", 0)
+		return fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)
 	}
 	if ratios == nil {
-		return NewDbError("ratios is nil", 0)
+		return fmt.Errorf("ratios is nil: %w", domain.ErrInvalidInput)
 	}
 
 	query := `
@@ -185,11 +179,11 @@ func (r *RatiosRepository) Update(ctx context.Context, ticker string, ratios *do
 	)
 
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to update ratios: %v", err), 0)
+		return fmt.Errorf("failed to update ratios: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
-		return NewDbError(fmt.Sprintf("ratios not found for ticker %s", ticker), 0)
+		return fmt.Errorf("ratios not found for ticker %s: %w", ticker, domain.ErrNotFound)
 	}
 
 	return nil
@@ -197,18 +191,18 @@ func (r *RatiosRepository) Update(ctx context.Context, ticker string, ratios *do
 
 func (r *RatiosRepository) Delete(ctx context.Context, ticker string) error {
 	if ticker == "" {
-		return NewDbError("ticker is empty", 0)
+		return fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)
 	}
 
 	query := `DELETE FROM ratios WHERE ticker = $1`
 
 	result, err := r.pool.Exec(ctx, query, ticker)
 	if err != nil {
-		return NewDbError(fmt.Sprintf("failed to delete ratios: %v", err), 0)
+		return fmt.Errorf("failed to delete ratios: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
-		return NewDbError(fmt.Sprintf("ratios not found for ticker %s", ticker), 0)
+		return fmt.Errorf("ratios not found for ticker %s: %w", ticker, domain.ErrNotFound)
 	}
 
 	return nil

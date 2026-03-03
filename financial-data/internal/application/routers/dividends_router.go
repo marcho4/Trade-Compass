@@ -5,7 +5,6 @@ import (
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
-	"financial_data/internal/infrastructure"
 	"net/http"
 	"strconv"
 
@@ -13,14 +12,14 @@ import (
 )
 
 type DividendsHandler struct {
-	repo *infrastructure.DividendsRepository
+	repo DividendsRepository
 }
 
-func NewDividendsHandler(repo *infrastructure.DividendsRepository) *DividendsHandler {
+func NewDividendsHandler(repo DividendsRepository) *DividendsHandler {
 	return &DividendsHandler{repo: repo}
 }
 
-func RegisterDividendsRoutes(r chi.Router, repo *infrastructure.DividendsRepository, m *middleware.MiddlewareConfig) {
+func RegisterDividendsRoutes(r chi.Router, repo DividendsRepository, m *middleware.MiddlewareConfig) {
 	handler := NewDividendsHandler(repo)
 
 	r.Get("/dividends/{ticker}", handler.HandleGetByTicker)
