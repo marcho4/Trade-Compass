@@ -1,8 +1,10 @@
-package application
+package routers
 
 import (
 	"encoding/json"
 	"errors"
+	"financial_data/internal/application/middleware"
+	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
 	"financial_data/internal/infrastructure"
 	"net/http"
@@ -12,14 +14,14 @@ import (
 )
 
 type RawDataHandler struct {
-	repo RawDataRepository
+	repo *infrastructure.RawDataRepository
 }
 
-func NewRawDataHandler(repo RawDataRepository) *RawDataHandler {
+func NewRawDataHandler(repo *infrastructure.RawDataRepository) *RawDataHandler {
 	return &RawDataHandler{repo: repo}
 }
 
-func RegisterRawDataRoutes(r chi.Router, repo RawDataRepository) {
+func RegisterRawDataRoutes(r chi.Router, repo *infrastructure.RawDataRepository, m *middleware.MiddlewareConfig) {
 	handler := NewRawDataHandler(repo)
 
 	r.Get("/raw-data/{ticker}", handler.HandleGetByPeriod)
@@ -27,16 +29,21 @@ func RegisterRawDataRoutes(r chi.Router, repo RawDataRepository) {
 	r.Get("/raw-data/{ticker}/history", handler.HandleGetHistory)
 	r.Get("/raw-data/{ticker}/drafts", handler.HandleGetDrafts)
 	r.Get("/raw-data/{ticker}/draft", handler.HandleGetDraft)
-	r.Put("/raw-data/{ticker}/confirm", handler.HandleConfirmDraft)
-	r.Post("/raw-data/{ticker}", handler.HandleCreate)
-	r.Put("/raw-data/{ticker}", handler.HandleUpdate)
-	r.Delete("/raw-data/{ticker}", handler.HandleDelete)
+
+	r.Group(func(protected chi.Router) {
+		protected.Use(m.AuthMiddleware)
+
+		protected.Put("/raw-data/{ticker}/confirm", handler.HandleConfirmDraft)
+		protected.Post("/raw-data/{ticker}", handler.HandleCreate)
+		protected.Put("/raw-data/{ticker}", handler.HandleUpdate)
+		protected.Delete("/raw-data/{ticker}", handler.HandleDelete)
+	})
 }
 
 func (h *RawDataHandler) HandleGetByPeriod(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
@@ -44,19 +51,19 @@ func (h *RawDataHandler) HandleGetByPeriod(w http.ResponseWriter, r *http.Reques
 	periodStr := r.URL.Query().Get("period")
 
 	if yearStr == "" || periodStr == "" {
-		RespondWithError(w, r, 400, "year and period query parameters are required", nil)
+		response.RespondWithError(w, r, 400, "year and period query parameters are required", nil)
 		return
 	}
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		RespondWithError(w, r, 400, "invalid year parameter", err)
+		response.RespondWithError(w, r, 400, "invalid year parameter", err)
 		return
 	}
 
 	period := domain.ReportPeriod(periodStr)
 	if !period.IsValid() {
-		RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
+		response.RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
 		return
 	}
 
@@ -64,16 +71,16 @@ func (h *RawDataHandler) HandleGetByPeriod(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		var dbErr *infrastructure.DbError
 		if errors.As(err, &dbErr) && dbErr.Message == "metrics not found" {
-			RespondWithError(w, r, 404, "metrics not found", err)
+			response.RespondWithError(w, r, 404, "metrics not found", err)
 			return
 		}
-		RespondWithError(w, r, 500, "failed to load metrics", err)
+		response.RespondWithError(w, r, 500, "failed to load metrics", err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(rawData); err != nil {
-		RespondWithError(w, r, 500, "failed to encode response", err)
+		response.RespondWithError(w, r, 500, "failed to encode response", err)
 		return
 	}
 }
@@ -81,19 +88,19 @@ func (h *RawDataHandler) HandleGetByPeriod(w http.ResponseWriter, r *http.Reques
 func (h *RawDataHandler) HandleGetLatest(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	rawData, err := h.repo.GetLatestByTicker(r.Context(), ticker)
 	if err != nil {
-		RespondWithError(w, r, 500, "failed to load latest metrics", err)
+		response.RespondWithError(w, r, 500, "failed to load latest metrics", err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(rawData); err != nil {
-		RespondWithError(w, r, 500, "failed to encode response", err)
+		response.RespondWithError(w, r, 500, "failed to encode response", err)
 		return
 	}
 }
@@ -101,19 +108,19 @@ func (h *RawDataHandler) HandleGetLatest(w http.ResponseWriter, r *http.Request)
 func (h *RawDataHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	history, err := h.repo.GetHistoryByTicker(r.Context(), ticker)
 	if err != nil {
-		RespondWithError(w, r, 500, "failed to load metrics history", err)
+		response.RespondWithError(w, r, 500, "failed to load metrics history", err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(history); err != nil {
-		RespondWithError(w, r, 500, "failed to encode response", err)
+		response.RespondWithError(w, r, 500, "failed to encode response", err)
 		return
 	}
 }
@@ -121,13 +128,13 @@ func (h *RawDataHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request
 func (h *RawDataHandler) HandleGetDrafts(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	drafts, err := h.repo.GetDraftsByTicker(r.Context(), ticker)
 	if err != nil {
-		RespondWithError(w, r, 500, "failed to load drafts", err)
+		response.RespondWithError(w, r, 500, "failed to load drafts", err)
 		return
 	}
 
@@ -137,14 +144,14 @@ func (h *RawDataHandler) HandleGetDrafts(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(drafts); err != nil {
-		RespondWithError(w, r, 500, "failed to encode response", err)
+		response.RespondWithError(w, r, 500, "failed to encode response", err)
 	}
 }
 
 func (h *RawDataHandler) HandleGetDraft(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
@@ -152,48 +159,44 @@ func (h *RawDataHandler) HandleGetDraft(w http.ResponseWriter, r *http.Request) 
 	periodStr := r.URL.Query().Get("period")
 
 	if yearStr == "" || periodStr == "" {
-		RespondWithError(w, r, 400, "year and period query parameters are required", nil)
+		response.RespondWithError(w, r, 400, "year and period query parameters are required", nil)
 		return
 	}
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		RespondWithError(w, r, 400, "invalid year parameter", err)
+		response.RespondWithError(w, r, 400, "invalid year parameter", err)
 		return
 	}
 
 	period := domain.ReportPeriod(periodStr)
 	if !period.IsValid() {
-		RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
+		response.RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
 		return
 	}
 
 	draft, err := h.repo.GetDraftByTickerAndPeriod(r.Context(), ticker, year, period)
 	if err != nil {
-		RespondWithError(w, r, 500, "failed to load draft", err)
+		response.RespondWithError(w, r, 500, "failed to load draft", err)
 		return
 	}
 
 	if draft == nil {
-		RespondWithError(w, r, 404, "draft not found", nil)
+		response.RespondWithError(w, r, 404, "draft not found", nil)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(draft); err != nil {
-		RespondWithError(w, r, 500, "failed to encode response", err)
+		response.RespondWithError(w, r, 500, "failed to encode response", err)
 	}
 }
 
 func (h *RawDataHandler) HandleConfirmDraft(w http.ResponseWriter, r *http.Request) {
-	if ok, err := validateApiKey(r); !ok {
-		RespondWithError(w, r, 401, "unauthorized", err)
-		return
-	}
 
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
@@ -201,72 +204,63 @@ func (h *RawDataHandler) HandleConfirmDraft(w http.ResponseWriter, r *http.Reque
 	periodStr := r.URL.Query().Get("period")
 
 	if yearStr == "" || periodStr == "" {
-		RespondWithError(w, r, 400, "year and period query parameters are required", nil)
+		response.RespondWithError(w, r, 400, "year and period query parameters are required", nil)
 		return
 	}
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		RespondWithError(w, r, 400, "invalid year parameter", err)
+		response.RespondWithError(w, r, 400, "invalid year parameter", err)
 		return
 	}
 
 	period := domain.ReportPeriod(periodStr)
 	if !period.IsValid() {
-		RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
+		response.RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
 		return
 	}
 
 	if err := h.repo.ConfirmDraft(r.Context(), ticker, year, period); err != nil {
-		RespondWithError(w, r, 500, "failed to confirm draft", err)
+		response.RespondWithError(w, r, 500, "failed to confirm draft", err)
 		return
 	}
 
-	RespondWithSuccess(w, 200, map[string]string{"status": "confirmed"}, "Draft confirmed successfully")
+	response.RespondWithSuccess(w, 200, map[string]string{"status": "confirmed"}, "Draft confirmed successfully")
 }
 
 func (h *RawDataHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
-	if ok, err := validateApiKey(r); !ok {
-		RespondWithError(w, r, 401, "unauthorized", err)
-		return
-	}
 
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
 	var rawData domain.RawData
 	if err := json.NewDecoder(r.Body).Decode(&rawData); err != nil {
-		RespondWithError(w, r, 400, "invalid request body", err)
+		response.RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
 	rawData.Ticker = ticker
 
 	if !rawData.Period.IsValid() {
-		RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
+		response.RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
 		return
 	}
 
 	if err := h.repo.Create(r.Context(), &rawData); err != nil {
-		RespondWithError(w, r, 500, "failed to create metrics", err)
+		response.RespondWithError(w, r, 500, "failed to create metrics", err)
 		return
 	}
 
-	RespondWithSuccess(w, 201, map[string]string{"status": "created"}, "Metrics successfully created")
+	response.RespondWithSuccess(w, 201, map[string]string{"status": "created"}, "Metrics successfully created")
 }
 
 func (h *RawDataHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
-	if ok, err := validateApiKey(r); !ok {
-		RespondWithError(w, r, 401, "unauthorized", err)
-		return
-	}
-
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
@@ -274,25 +268,25 @@ func (h *RawDataHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	periodStr := r.URL.Query().Get("period")
 
 	if yearStr == "" || periodStr == "" {
-		RespondWithError(w, r, 400, "year and period query parameters are required", nil)
+		response.RespondWithError(w, r, 400, "year and period query parameters are required", nil)
 		return
 	}
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		RespondWithError(w, r, 400, "invalid year parameter", err)
+		response.RespondWithError(w, r, 400, "invalid year parameter", err)
 		return
 	}
 
 	period := domain.ReportPeriod(periodStr)
 	if !period.IsValid() {
-		RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
+		response.RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
 		return
 	}
 
 	var rawData domain.RawData
 	if err := json.NewDecoder(r.Body).Decode(&rawData); err != nil {
-		RespondWithError(w, r, 400, "invalid request body", err)
+		response.RespondWithError(w, r, 400, "invalid request body", err)
 		return
 	}
 
@@ -301,26 +295,21 @@ func (h *RawDataHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	rawData.Period = period
 
 	if err := h.repo.Update(r.Context(), &rawData); err != nil {
-		RespondWithError(w, r, 500, "failed to update metrics", err)
+		response.RespondWithError(w, r, 500, "failed to update metrics", err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"status": "updated"}); err != nil {
-		RespondWithError(w, r, 500, "failed to encode response", err)
+		response.RespondWithError(w, r, 500, "failed to encode response", err)
 		return
 	}
 }
 
 func (h *RawDataHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
-	if ok, err := validateApiKey(r); !ok {
-		RespondWithError(w, r, 401, "unauthorized", err)
-		return
-	}
-
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
-		RespondWithError(w, r, 400, "ticker is required", nil)
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
@@ -328,26 +317,26 @@ func (h *RawDataHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	periodStr := r.URL.Query().Get("period")
 
 	if yearStr == "" || periodStr == "" {
-		RespondWithError(w, r, 400, "year and period query parameters are required", nil)
+		response.RespondWithError(w, r, 400, "year and period query parameters are required", nil)
 		return
 	}
 
 	year, err := strconv.Atoi(yearStr)
 	if err != nil {
-		RespondWithError(w, r, 400, "invalid year parameter", err)
+		response.RespondWithError(w, r, 400, "invalid year parameter", err)
 		return
 	}
 
 	period := domain.ReportPeriod(periodStr)
 	if !period.IsValid() {
-		RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
+		response.RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
 		return
 	}
 
 	if err := h.repo.Delete(r.Context(), ticker, year, period); err != nil {
-		RespondWithError(w, r, 500, "failed to delete metrics", err)
+		response.RespondWithError(w, r, 500, "failed to delete metrics", err)
 		return
 	}
 
-	RespondWithSuccess(w, 204, nil, "Metrics successfully deleted")
+	response.RespondWithSuccess(w, 204, nil, "Metrics successfully deleted")
 }

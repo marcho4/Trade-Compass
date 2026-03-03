@@ -1,0 +1,153 @@
+package routers
+
+import (
+	"encoding/json"
+	"financial_data/internal/application/middleware"
+	"financial_data/internal/application/response"
+	"financial_data/internal/domain"
+	"financial_data/internal/infrastructure"
+	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+)
+
+type DividendsHandler struct {
+	repo *infrastructure.DividendsRepository
+}
+
+func NewDividendsHandler(repo *infrastructure.DividendsRepository) *DividendsHandler {
+	return &DividendsHandler{repo: repo}
+}
+
+func RegisterDividendsRoutes(r chi.Router, repo *infrastructure.DividendsRepository, m *middleware.MiddlewareConfig) {
+	handler := NewDividendsHandler(repo)
+
+	r.Get("/dividends/{ticker}", handler.HandleGetByTicker)
+	r.Get("/dividends/{ticker}/{id}", handler.HandleGetByID)
+
+	r.Group(func(protected chi.Router) {
+		protected.Use(m.AuthMiddleware)
+
+		protected.Post("/dividends/{ticker}", handler.HandleCreate)
+		protected.Put("/dividends/{ticker}/{id}", handler.HandleUpdate)
+		protected.Delete("/dividends/{ticker}/{id}", handler.HandleDelete)
+	})
+}
+
+func (h *DividendsHandler) HandleGetByTicker(w http.ResponseWriter, r *http.Request) {
+	ticker := chi.URLParam(r, "ticker")
+	if ticker == "" {
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
+		return
+	}
+
+	dividends, err := h.repo.GetByTicker(r.Context(), ticker)
+	if err != nil {
+		response.RespondWithError(w, r, 500, "failed to load dividends", err)
+		return
+	}
+
+	response.RespondWithSuccess(w, 200, dividends, "Successfully retrieved dividends by ticker")
+}
+
+func (h *DividendsHandler) HandleGetByID(w http.ResponseWriter, r *http.Request) {
+	ticker := chi.URLParam(r, "ticker")
+	idStr := chi.URLParam(r, "id")
+
+	if ticker == "" || idStr == "" {
+		response.RespondWithError(w, r, 400, "ticker and id are required", nil)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.RespondWithError(w, r, 400, "invalid id", err)
+		return
+	}
+
+	dividend, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		response.RespondWithError(w, r, 500, "failed to load dividend", err)
+		return
+	}
+
+	response.RespondWithSuccess(w, 200, dividend, "Successfully retrieved dividend by id")
+}
+
+func (h *DividendsHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
+	ticker := chi.URLParam(r, "ticker")
+	if ticker == "" {
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
+		return
+	}
+
+	var dividend domain.Dividends
+	if err := json.NewDecoder(r.Body).Decode(&dividend); err != nil {
+		response.RespondWithError(w, r, 400, "invalid request body", err)
+		return
+	}
+
+	dividend.Ticker = ticker
+
+	if err := h.repo.Create(r.Context(), &dividend); err != nil {
+		response.RespondWithError(w, r, 500, "failed to create dividend", err)
+		return
+	}
+
+	response.RespondWithSuccess(w, 201, dividend, "Dividend successfully created")
+}
+
+func (h *DividendsHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
+	ticker := chi.URLParam(r, "ticker")
+	idStr := chi.URLParam(r, "id")
+
+	if ticker == "" || idStr == "" {
+		response.RespondWithError(w, r, 400, "ticker and id are required", nil)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.RespondWithError(w, r, 400, "invalid id", err)
+		return
+	}
+
+	var dividend domain.Dividends
+	if err := json.NewDecoder(r.Body).Decode(&dividend); err != nil {
+		response.RespondWithError(w, r, 400, "invalid request body", err)
+		return
+	}
+
+	dividend.Ticker = ticker
+
+	if err := h.repo.Update(r.Context(), id, &dividend); err != nil {
+		response.RespondWithError(w, r, 500, "failed to update dividend", err)
+		return
+	}
+
+	response.RespondWithSuccess(w, 200, map[string]string{"status": "updated"}, "Dividend successfully updated")
+}
+
+func (h *DividendsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
+	ticker := chi.URLParam(r, "ticker")
+	idStr := chi.URLParam(r, "id")
+
+	if ticker == "" || idStr == "" {
+		response.RespondWithError(w, r, 400, "ticker and id are required", nil)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.RespondWithError(w, r, 400, "invalid id", err)
+		return
+	}
+
+	if err := h.repo.Delete(r.Context(), id); err != nil {
+		response.RespondWithError(w, r, 500, "failed to delete dividend", err)
+		return
+	}
+
+	response.RespondWithSuccess(w, 204, nil, "Dividend successfully deleted")
+}
