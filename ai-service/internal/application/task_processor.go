@@ -4,6 +4,7 @@ import (
 	"ai-service/internal/domain"
 	"ai-service/internal/infrastructure/financialdata"
 	kafkaclient "ai-service/internal/infrastructure/kafka"
+	"ai-service/internal/infrastructure/parser"
 	"ai-service/internal/infrastructure/postgres"
 	"context"
 	"encoding/json"
@@ -21,6 +22,7 @@ type TaskProcessor struct {
 	numWorkers    int
 	kafkaClient   *kafkaclient.KafkaClient
 	fdClient      *financialdata.Client
+	parserClient  *parser.Client
 	geminiService domain.GeminiService
 	dbRepo        *postgres.DBRepo
 	cancel        context.CancelFunc
@@ -32,6 +34,7 @@ func NewTaskProcessor(
 	geminiService domain.GeminiService,
 	kafkaClient *kafkaclient.KafkaClient,
 	fdClient *financialdata.Client,
+	parserClient *parser.Client,
 	dbRepo *postgres.DBRepo,
 ) *TaskProcessor {
 	taskChan := make(chan kafka.Message, numWorkers)
@@ -41,6 +44,7 @@ func NewTaskProcessor(
 		numWorkers:    numWorkers,
 		kafkaClient:   kafkaClient,
 		geminiService: geminiService,
+		parserClient:  parserClient,
 		dbRepo:        dbRepo,
 		fdClient:      fdClient,
 	}
@@ -293,7 +297,30 @@ func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task
 
 	slog.Info("raw data saved successfully", slog.String("ticker", task.Ticker))
 
-	extractResultTask := domain.Task{
+	periodMonths, ok := domain.PeriodToMonths[task.Period]
+	if !ok {
+		return fmt.Errorf("unknown period: %s", task.Period)
+	}
+
+	latest, err := p.parserClient.IsLatestReport(ctx, task.Ticker, task.Year, periodMonths)
+	if err != nil {
+		slog.Warn("failed to check if report is latest, skipping analyze",
+			slog.String("ticker", task.Ticker),
+			slog.Any("error", err),
+		)
+		return nil
+	}
+
+	if !latest {
+		slog.Info("report is not the latest, skipping analyze",
+			slog.String("ticker", task.Ticker),
+			slog.Int("year", task.Year),
+			slog.String("period", task.Period),
+		)
+		return nil
+	}
+
+	analyzeTask := domain.Task{
 		Ticker:    task.Ticker,
 		Year:      task.Year,
 		Period:    task.Period,
@@ -301,14 +328,20 @@ func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task
 		Type:      domain.Analyze,
 	}
 
-	payload, err := json.Marshal(extractResultTask)
+	payload, err := json.Marshal(analyzeTask)
 	if err != nil {
-		return fmt.Errorf("failed to marshal extract-result task: %w", err)
+		return fmt.Errorf("marshal analyze task: %w", err)
 	}
 
 	if err := p.kafkaClient.PublishMessage(ctx, payload); err != nil {
-		return fmt.Errorf("failed to publish extract-result task: %w", err)
+		return fmt.Errorf("publish analyze task: %w", err)
 	}
+
+	slog.Info("report is the latest, published analyze task",
+		slog.String("ticker", task.Ticker),
+		slog.Int("year", task.Year),
+		slog.String("period", task.Period),
+	)
 
 	return nil
 }

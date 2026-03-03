@@ -21,6 +21,7 @@ class TickerParseConsumer:
     def __init__(self):
         self._thread: threading.Thread | None = None
         self._running = False
+        self.producer = AnalyzeTaskProducer()
 
     def start(self):
         self._running = True
@@ -79,7 +80,7 @@ class TickerParseConsumer:
                 repo = ReportsRepository(db)
                 s3_client = S3ReportsStorage()
                 vectorization_service = VectorizationService()
-                processor = ReportProcessor(s3_client, repo, vectorization_service)
+                processor = ReportProcessor(s3_client, repo, vectorization_service, self.producer)
                 with EDisclosureClient() as client:
                     inn = get_inn_by_ticker(ticker)
                     if inn:
@@ -92,17 +93,5 @@ class TickerParseConsumer:
                         skip_indexing=True,
                     )
                 logger.info("Parsing result for %s: %s", ticker, result)
-
-                latest_report = repo.get_latest_report(ticker)
-                if latest_report:
-                    producer = AnalyzeTaskProducer()
-                    producer.send_analyze_task(
-                        ticker=latest_report.ticker,
-                        year=latest_report.year,
-                        period=latest_report.period,
-                        report_url=latest_report.s3_path,
-                    )
-                else:
-                    logger.warning("No reports found for %s after parsing, skipping analyze task", ticker)
         except Exception as e:
             logger.error("Failed to process ticker %s: %s", ticker, e)

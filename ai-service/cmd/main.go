@@ -9,6 +9,7 @@ import (
 	"ai-service/internal/infrastructure/gemini"
 	kafkaclient "ai-service/internal/infrastructure/kafka"
 	authmw "ai-service/internal/infrastructure/middleware"
+	"ai-service/internal/infrastructure/parser"
 	"ai-service/internal/infrastructure/postgres"
 	"ai-service/internal/infrastructure/s3"
 	"context"
@@ -65,10 +66,11 @@ func main() {
 	kafkaClient := kafkaclient.NewKafkaClient(cfg.KafkaURL, cfg.KafkaTopic)
 
 	fdClient := financialdata.NewClient(cfg.FinancialDataURL, cfg.FinancialDataAPIKey)
+	parserClient := parser.NewClient(cfg.ParserURL)
 
 	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient, db)
 	analysisHandler := handlers.NewAnalysisHandler(db)
-	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, fdClient, db)
+	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, fdClient, parserClient, db)
 	taskProcessor.Start(context.Background())
 
 	r := chi.NewRouter()

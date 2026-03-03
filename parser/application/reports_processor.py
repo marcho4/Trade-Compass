@@ -5,6 +5,7 @@ from infra.e_disclosure import EDisclosureClient
 from infra.s3_storage import S3ReportsStorage
 from infra.db_repo import ReportsRepository
 from infra.models import ReportORM
+from infra.kafka_producer import AnalyzeTaskProducer
 from companies import get_ticker_by_inn
 from application.vectorization_service import VectorizationService
 from domain.processing_result import ProcessingResult, ProcessingError, SingleCompanyProcessingResult
@@ -14,10 +15,17 @@ logger = logging.getLogger(__name__)
 
 
 class ReportProcessor:
-    def __init__(self, s3_client: S3ReportsStorage, repo: ReportsRepository, vectorization_service: VectorizationService):
+    def __init__(
+        self,
+        s3_client: S3ReportsStorage,
+        repo: ReportsRepository,
+        vectorization_service: VectorizationService,
+        task_producer: AnalyzeTaskProducer | None = None,
+    ):
         self.s3_client = s3_client
         self.repo = repo
         self.vectorization_service = vectorization_service
+        self.task_producer = task_producer
 
     def process_companies(self, companies_inn: list[str], skip_indexing: bool = False) -> ProcessingResult:
         results = ProcessingResult(
@@ -115,6 +123,8 @@ class ReportProcessor:
 
         if not skip_indexing:
             self._vectorize_report(report_orm, report, ticker)
+
+        self._send_extract_task(ticker, report.year, report.period, s3_path)
         return True
 
     def _report_exists_in_s3(self, ticker: str, report: DownloadedReport) -> bool:
@@ -154,6 +164,16 @@ class ReportProcessor:
         except Exception as e:
             logger.error(f"Ошибка сохранения отчёта в БД: {e}")
             return None
+
+    def _send_extract_task(self, ticker: str, year: int, period: str, s3_path: str) -> None:
+        if not self.task_producer:
+            return
+        self.task_producer.send_analyze_task(
+            ticker=ticker,
+            year=year,
+            period=period,
+            report_url=s3_path,
+        )
 
     def _log_results(self, downloaded_count: int, saved: int) -> None:
         logger.info(f"Всего файлов обработано: {downloaded_count}")

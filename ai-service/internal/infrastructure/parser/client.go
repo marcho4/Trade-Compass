@@ -7,8 +7,13 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 )
+
+type reportsResponse struct {
+	Reports []domain.Report `json:"reports"`
+}
 
 type Client struct {
 	baseURL    string
@@ -109,4 +114,46 @@ func (c *Client) GetLatestReportYear(ctx context.Context, ticker, period string)
 	}
 
 	return latestYear, nil
+}
+
+func (c *Client) GetReports(ctx context.Context, ticker string) ([]domain.Report, error) {
+	url := fmt.Sprintf("%s/reports/%s", c.baseURL, ticker)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call parser API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("parser API returned status %d", resp.StatusCode)
+	}
+
+	var body reportsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode parser response: %w", err)
+	}
+
+	return body.Reports, nil
+}
+
+func (c *Client) IsLatestReport(ctx context.Context, ticker string, year int, periodMonths int) (bool, error) {
+	reports, err := c.GetReports(ctx, ticker)
+	if err != nil {
+		return false, err
+	}
+
+	for _, r := range reports {
+		rPeriod, _ := strconv.Atoi(r.Period)
+		if r.Year > year || (r.Year == year && rPeriod > periodMonths) {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
