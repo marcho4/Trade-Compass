@@ -114,18 +114,18 @@ export const ScreenerFilters = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Любой</SelectItem>
-                  <SelectItem value="90">90+</SelectItem>
-                  <SelectItem value="80">80+</SelectItem>
-                  <SelectItem value="70">70+</SelectItem>
-                  <SelectItem value="60">60+</SelectItem>
-                  <SelectItem value="50">50+</SelectItem>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Кнопки действий */}
             <div className="flex items-center gap-2">
-              <Button
+              {/* <Button
                 variant="outline"
                 size="default"
                 onClick={handleToggleAdvanced}
@@ -144,7 +144,7 @@ export const ScreenerFilters = ({
                 ) : (
                   <ChevronDown className="h-4 w-4" />
                 )}
-              </Button>
+              </Button> */}
 
               {activeFiltersCount > 0 && (
                 <Button

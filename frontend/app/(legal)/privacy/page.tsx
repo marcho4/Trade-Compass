@@ -9,7 +9,7 @@ export default function PrivacyPage() {
   return (
     <article className="prose prose-gray dark:prose-invert max-w-none">
       <h1>Политика конфиденциальности</h1>
-      <p className="text-muted-foreground">Последнее обновление: 5 декабря 2024 г.</p>
+      <p className="text-muted-foreground">Последнее обновление: 5 марта 2026 г.</p>
 
       <section>
         <h2>1. Общие положения</h2>
@@ -157,11 +157,8 @@ export default function PrivacyPage() {
       <section>
         <h2>11. Контактная информация</h2>
         <p>
-          По вопросам, связанным с обработкой персональных данных, вы можете обратиться:
+          По вопросам, связанным с обработкой персональных данных, вы можете обратиться через форму обратной связи на сайте.
         </p>
-        <ul>
-          <li>Email: support@tradecompass.ru</li>
-        </ul>
       </section>
     </article>
   )

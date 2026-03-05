@@ -1,3 +1,5 @@
+import { User } from "lucide-react"
+
 export const SocialProofSection = () => {
   return (
     <section className="my-20">
@@ -20,8 +22,8 @@ export const SocialProofSection = () => {
         </blockquote>
 
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-xl font-bold text-primary-foreground">
-            M
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+            <User size={28} />
           </div>
           <div>
             <p className="font-semibold">Марк</p>

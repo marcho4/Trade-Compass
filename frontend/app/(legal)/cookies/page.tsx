@@ -9,7 +9,7 @@ export default function CookiesPage() {
   return (
     <article className="prose prose-gray dark:prose-invert max-w-none">
       <h1>Политика использования файлов cookies</h1>
-      <p className="text-muted-foreground">Последнее обновление: 5 декабря 2024 г.</p>
+      <p className="text-muted-foreground">Последнее обновление: 5 марта 2026 г.</p>
 
       <section>
         <h2>1. Что такое cookies</h2>
@@ -213,11 +213,8 @@ export default function CookiesPage() {
         <h2>7. Контактная информация</h2>
         <p>
           Если у вас есть вопросы о нашей политике использования cookies,
-          свяжитесь с нами:
+          свяжитесь с нами через форму обратной связи на сайте.
         </p>
-        <ul>
-          <li>Email: support@tradecompass.ru</li>
-        </ul>
       </section>
 
       <section>
