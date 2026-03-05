@@ -370,7 +370,7 @@ func (h *Handlers) HandleYandexCallback(w http.ResponseWriter, r *http.Request) 
 
 	h.setAuthCookies(w, r, accessTokenStr, refreshTokenStr)
 
-	http.Redirect(w, r, redirectURL+"/welcome", http.StatusFound)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 func (h *Handlers) HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {

@@ -1,9 +1,20 @@
 import Link from "next/link"
+import { Bot, BarChart3, Target } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+
+type Feature = {
+  icon: LucideIcon
+  title: string
+  subtitle: string
+  description: string
+  example: string | null
+  example_url: string
+}
 
 export const DetailedFeatures = () => {
-  const features = [
+  const features: Feature[] = [
     {
-      emoji: "🤖",
+      icon: Bot,
       title: "AI-консультант, который не галлюцинирует",
       subtitle: "Спроси у AI что угодно про компанию",
       description:
@@ -12,7 +23,7 @@ export const DetailedFeatures = () => {
       example_url: "/dashboard/GAZP",
     },
     {
-      emoji: "📊",
+      icon: BarChart3,
       title: "Готовый анализ отчетов как в на Wall Street",
       subtitle: "Ключевые инсайты по компании с учетом полного контекста",
       description:
@@ -21,7 +32,7 @@ export const DetailedFeatures = () => {
       example_url: "",
     },
     {
-      emoji: "🎯",
+      icon: Target,
       title: "Сравнение компании во всём секторе друг с другом",
       subtitle: "Получайте разбор целых секторов за считанные минуты",
       description:
@@ -45,8 +56,9 @@ export const DetailedFeatures = () => {
             key={index}
             className="group relative overflow-hidden rounded-2xl border border-border bg-card p-8 transition-all hover:border-primary/50 hover:shadow-lg"
           >
-            {/* Icon */}
-            <div className="mb-4 text-5xl">{feature.emoji}</div>
+            <div className="mb-4">
+              <feature.icon className="h-12 w-12 text-primary" />
+            </div>
 
             {/* Title */}
             <h3 className="mb-2 text-2xl font-bold">{feature.title}</h3>

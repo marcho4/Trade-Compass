@@ -20,16 +20,6 @@ export function CookieBanner() {
     setShowBanner(false)
   }
 
-  const declineCookies = () => {
-    localStorage.setItem(COOKIE_CONSENT_KEY, "declined")
-    setShowBanner(false)
-    // Optionally disable analytics here
-    if (typeof window !== "undefined" && window.ym) {
-      // Disable Yandex Metrika tracking
-      window.ym(105649346, "notBounce")
-    }
-  }
-
   if (!showBanner) return null
 
   return (
@@ -51,12 +41,6 @@ export function CookieBanner() {
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
-            <button
-              onClick={declineCookies}
-              className="px-4 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors"
-            >
-              Отклонить
-            </button>
             <button
               onClick={acceptCookies}
               className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"

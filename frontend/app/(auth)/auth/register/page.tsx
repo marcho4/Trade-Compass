@@ -123,7 +123,7 @@ export default function RegisterPage() {
     if (Object.keys(newErrors).length === 0) {
       try {
         await register(name, email, password);
-        router.push("/welcome");
+        router.push("/");
       } catch (err) {
         setErrors((prev) => ({
           ...prev,
