@@ -67,7 +67,7 @@ func (r *RatiosRepository) GetBySector(ctx context.Context, sector domain.Sector
 		return nil, fmt.Errorf("invalid sector: %d: %w", sector, domain.ErrInvalidInput)
 	}
 
-	query := fmt.Sprintf(`
+	query := `
 		SELECT
 			AVG(price_to_earnings), AVG(price_to_book), AVG(price_to_cash_flow), AVG(ev_to_ebitda), AVG(ev_to_sales), AVG(ev_to_fcf), AVG(peg),
 			AVG(roe), AVG(roa), AVG(roic), AVG(gross_profit_margin), AVG(operating_profit_margin), AVG(net_profit_margin),
@@ -79,7 +79,7 @@ func (r *RatiosRepository) GetBySector(ctx context.Context, sector domain.Sector
 			AVG(revenue_growth), AVG(earnings_growth), AVG(ebitda_growth), AVG(fcf_growth)
 		FROM ratios
 		WHERE sector = $1
-	`)
+	`
 
 	ratios := &domain.Ratios{}
 	err := r.pool.QueryRow(ctx, query, sector).Scan(ratiosScanTargets(ratios)...)

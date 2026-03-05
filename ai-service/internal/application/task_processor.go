@@ -271,31 +271,25 @@ func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task
 		slog.String("period", task.Period),
 	)
 
-	result, err := p.geminiService.ExtractRawData(ctx, task.Ticker, task.ReportURL, task.Year, period)
-	if err != nil {
-		return fmt.Errorf("extract raw data: %w", err)
-	}
-
-	result.Status = "confirmed"
-
 	existing, err := p.fdClient.GetRawData(ctx, task.Ticker, task.Year, period)
 	if err != nil {
 		return fmt.Errorf("check existing raw data: %w", err)
 	}
 
 	if existing != nil {
-		slog.Info("updating existing raw data...", slog.String("ticker", task.Ticker))
-		if err := p.fdClient.UpdateDraft(ctx, result); err != nil {
-			return fmt.Errorf("update raw data: %w", err)
+		result, err := p.geminiService.ExtractRawData(ctx, task.Ticker, task.ReportURL, task.Year, period)
+		if err != nil {
+			return fmt.Errorf("extract raw data: %w", err)
 		}
-	} else {
+		result.Status = "confirmed"
+
 		slog.Info("saving new raw data...", slog.String("ticker", task.Ticker))
 		if err := p.fdClient.SaveDraft(ctx, result); err != nil {
 			return fmt.Errorf("save raw data: %w", err)
 		}
-	}
 
-	slog.Info("raw data saved successfully", slog.String("ticker", task.Ticker))
+		slog.Info("raw data saved successfully", slog.String("ticker", task.Ticker))
+	}
 
 	periodMonths, ok := domain.PeriodToMonths[task.Period]
 	if !ok {

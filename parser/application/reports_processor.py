@@ -110,7 +110,12 @@ class ReportProcessor:
         logger.info(f"{report.year}, {report.period_months} месяцев - {report.size_mb:.2f} MB")
         logger.info(f"  Локальный путь: {report.path}")
 
-        if self._report_exists_in_s3(ticker, report):
+        existing_s3_path = self.s3_client.get_s3_report_link(ticker, report.year, report.period)
+        if existing_s3_path:
+            logger.info(f"  Пропуск: файл уже существует в S3: {existing_s3_path}")
+            if not self.repo.get_report_by_params(ticker, report.year, report.period):
+                self._save_report_to_db(ticker, report.year, report.period, existing_s3_path)
+            self._send_extract_task(ticker, report.year, report.period, existing_s3_path)
             return False
 
         s3_path = self._upload_to_s3(ticker, report)
@@ -126,13 +131,6 @@ class ReportProcessor:
 
         self._send_extract_task(ticker, report.year, report.period, s3_path)
         return True
-
-    def _report_exists_in_s3(self, ticker: str, report: DownloadedReport) -> bool:
-        existing_s3_path = self.s3_client.get_s3_report_link(ticker, report.year, report.period)
-        if existing_s3_path:
-            logger.info(f"  Пропуск: файл уже существует в S3: {existing_s3_path}")
-            return True
-        return False
 
     def _upload_to_s3(self, ticker: str, report: DownloadedReport) -> str | None:
         s3_path = self.s3_client.upload_report(ticker, report.year, report.period, report.path)

@@ -20,6 +20,8 @@ type Config struct {
 	KafkaURL            string
 	KafkaTopic          string
 	PostgresURL         string
+	RedisURL            string
+	RedisPassword       string
 }
 
 func Load() *Config {
@@ -38,6 +40,8 @@ func Load() *Config {
 		KafkaURL:            getEnv("KAFKA_URL", "kafka:9092"),
 		KafkaTopic:          getEnv("KAFKA_TOPIC", "ai-analyze-tasks"),
 		PostgresURL:         getEnv("POSTGRES_URL", ""),
+		RedisURL:            getEnv("REDIS_URL", "redis:6379"),
+		RedisPassword:       getEnv("REDIS_PASSWORD", ""),
 	}
 }
 

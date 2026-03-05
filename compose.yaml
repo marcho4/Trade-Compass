@@ -80,6 +80,8 @@ services:
     depends_on:
       postgres_ai:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       parser:
         condition: service_healthy
       financial-data:
@@ -125,6 +127,23 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 60s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - main
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 60s
       timeout: 5s
       retries: 5
@@ -354,4 +373,5 @@ volumes:
   zookeeper_log:
   kafka_data:
   loki_data:
+  redis_data:
   grafana_data:

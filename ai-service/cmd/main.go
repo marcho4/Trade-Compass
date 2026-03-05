@@ -8,6 +8,7 @@ import (
 	"ai-service/internal/infrastructure/financialdata"
 	"ai-service/internal/infrastructure/gemini"
 	kafkaclient "ai-service/internal/infrastructure/kafka"
+	redisclient "ai-service/internal/infrastructure/redis"
 	authmw "ai-service/internal/infrastructure/middleware"
 	"ai-service/internal/infrastructure/parser"
 	"ai-service/internal/infrastructure/postgres"
@@ -62,6 +63,13 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
+
+	redisClient, err := redisclient.NewClient(ctx, cfg.RedisURL, cfg.RedisPassword)
+	if err != nil {
+		slog.Error("Failed to create Redis client", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer redisClient.Close()
 
 	kafkaClient := kafkaclient.NewKafkaClient(cfg.KafkaURL, cfg.KafkaTopic)
 
