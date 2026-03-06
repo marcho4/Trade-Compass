@@ -6,7 +6,7 @@ export const SocialProofSection = () => {
       <div className="mx-auto max-w-4xl rounded-2xl border border-border bg-gradient-to-br from-card to-card/50 p-8 md:p-12">
         <div className="mb-6">
           <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary">
-            Founder's Note
+            Заметка основателя
           </span>
         </div>
 
@@ -22,12 +22,12 @@ export const SocialProofSection = () => {
         </blockquote>
 
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full">
             <User size={28} />
           </div>
           <div>
             <p className="font-semibold">Марк</p>
-            <p className="text-sm text-muted-foreground">Founder, Trade Compass</p>
+            <p className="text-sm text-muted-foreground">Основатель, Trade Compass</p>
           </div>
         </div>
       </div>
