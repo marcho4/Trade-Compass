@@ -33,7 +33,7 @@ func RespondWithError(w http.ResponseWriter, r *http.Request, code int, message 
 	})
 }
 
-func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+func RespondWithJSON(w http.ResponseWriter, code int, payload any) {
 	response, err := json.Marshal(payload)
 	if err != nil {
 		slog.Error("Failed to marshal JSON response", "error", err)
@@ -46,7 +46,7 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-func RespondWithSuccess(w http.ResponseWriter, code int, data interface{}, message string) {
+func RespondWithSuccess(w http.ResponseWriter, code int, data any, message string) {
 	response := SuccessResponse{
 		Status:  "success",
 		Data:    data,

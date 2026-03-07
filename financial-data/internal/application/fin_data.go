@@ -20,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type FinData struct {
@@ -34,6 +35,7 @@ type FinData struct {
 	eventPublisher routers.EventPublisher
 	kafkaProducer  *kafka.Producer
 	pool           *pgxpool.Pool
+	redisClient    *redis.Client
 	srv            *http.Server
 }
 
@@ -51,9 +53,16 @@ func NewFinData() (*FinData, error) {
 
 	slog.Info("database connection pool initialized")
 
+	redisClient, err := infrastructure.NewRedisClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Info("redis client initialized")
+
 	ratiosRepo := infrastructure.NewRatiosRepository(pool)
 	rawDataRepo := infrastructure.NewRawDataRepository(pool)
-	companyRepo := infrastructure.NewCompanyRepository(pool)
+	companyRepo := infrastructure.NewCompanyRepository(pool, redisClient)
 	sectorRepo := infrastructure.NewSectorRepository(pool)
 	dividendsRepo := infrastructure.NewDividendsRepository(pool)
 	cbRateRepo := infrastructure.NewCBRateRepository(pool)
@@ -80,6 +89,7 @@ func NewFinData() (*FinData, error) {
 		eventPublisher: eventPublisher,
 		kafkaProducer:  kafkaProducer,
 		pool:           pool,
+		redisClient:    redisClient,
 	}, nil
 }
 
@@ -147,6 +157,7 @@ func (f *FinData) runRouter() error {
 	case err := <-serverErrors:
 		f.kafkaProducer.Close()
 		f.pool.Close()
+		f.redisClient.Close()
 		return err
 	case sig := <-shutdown:
 		slog.Info("Shutdown signal received", "signal", sig)
@@ -161,6 +172,7 @@ func (f *FinData) runRouter() error {
 
 		f.kafkaProducer.Close()
 		f.pool.Close()
+		f.redisClient.Close()
 		slog.Info("Server stopped gracefully")
 	}
 

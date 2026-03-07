@@ -160,7 +160,7 @@ func (h *CompanyHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.RespondWithSuccess(w, 200, map[string]string{"status": "updated"}, "Company successfully updated")
+	response.RespondWithSuccess(w, 200, nil, "Company successfully updated")
 }
 
 func (h *CompanyHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {

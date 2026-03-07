@@ -5,6 +5,7 @@ import (
 	"errors"
 	"financial_data/internal/application/response"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -66,6 +67,7 @@ func (m *MiddlewareConfig) AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		if apiKey != m.AdminAPIKey {
+			slog.Warn("Tried to access API with wrong api key", slog.String("key", apiKey))
 			response.RespondWithError(w, r, http.StatusUnauthorized, "Invalid API key", nil)
 			return
 		}

@@ -2,25 +2,47 @@ package infrastructure
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"financial_data/internal/domain"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
+const companyCacheTTL = 24 * time.Hour
+
 type CompanyRepository struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	redis *redis.Client
 }
 
-func NewCompanyRepository(pool *pgxpool.Pool) *CompanyRepository {
-	return &CompanyRepository{pool: pool}
+func NewCompanyRepository(pool *pgxpool.Pool, redisClient *redis.Client) *CompanyRepository {
+	return &CompanyRepository{pool: pool, redis: redisClient}
+}
+
+func (r *CompanyRepository) companyKey(ticker string) string {
+	return fmt.Sprintf("company:%s", ticker)
 }
 
 func (r *CompanyRepository) GetByTicker(ctx context.Context, ticker string) (*domain.Company, error) {
 	if ticker == "" {
 		return nil, fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)
+	}
+
+	key := r.companyKey(ticker)
+	cached, err := r.redis.Get(ctx, key).Result()
+	if err == nil {
+		var company domain.Company
+		if jsonErr := json.Unmarshal([]byte(cached), &company); jsonErr == nil {
+			return &company, nil
+		}
+	} else if !errors.Is(err, redis.Nil) {
+		slog.Warn("redis get failed", "key", key, "error", err)
 	}
 
 	query := `
@@ -31,7 +53,7 @@ func (r *CompanyRepository) GetByTicker(ctx context.Context, ticker string) (*do
 
 	var name *string
 	company := &domain.Company{}
-	err := r.pool.QueryRow(ctx, query, ticker).Scan(
+	err = r.pool.QueryRow(ctx, query, ticker).Scan(
 		&company.ID, &company.Ticker, &name, &company.SectorID, &company.LotSize, &company.CEO,
 	)
 	if name != nil {
@@ -43,6 +65,12 @@ func (r *CompanyRepository) GetByTicker(ctx context.Context, ticker string) (*do
 			return nil, fmt.Errorf("company not found for ticker %s: %w", ticker, domain.ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to get company: %w", err)
+	}
+
+	if data, jsonErr := json.Marshal(company); jsonErr == nil {
+		if setErr := r.redis.Set(ctx, key, data, companyCacheTTL).Err(); setErr != nil {
+			slog.Warn("redis set failed", "key", key, "error", setErr)
+		}
 	}
 
 	return company, nil
@@ -172,6 +200,10 @@ func (r *CompanyRepository) Update(ctx context.Context, ticker string, company *
 		return fmt.Errorf("company not found for ticker %s: %w", ticker, domain.ErrNotFound)
 	}
 
+	if err := r.redis.Del(ctx, r.companyKey(ticker)).Err(); err != nil {
+		slog.Warn("redis del failed on update", "ticker", ticker, "error", err)
+	}
+
 	return nil
 }
 
@@ -189,6 +221,10 @@ func (r *CompanyRepository) Delete(ctx context.Context, ticker string) error {
 
 	if result.RowsAffected() == 0 {
 		return fmt.Errorf("company not found for ticker %s: %w", ticker, domain.ErrNotFound)
+	}
+
+	if err := r.redis.Del(ctx, r.companyKey(ticker)).Err(); err != nil {
+		slog.Warn("redis del failed on delete", "ticker", ticker, "error", err)
 	}
 
 	return nil
