@@ -1,19 +1,20 @@
 "use client"
 
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import { useState } from "react"
+import { Area, CartesianGrid, ComposedChart, XAxis, YAxis } from "recharts"
 import {
   ChartConfig,
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { RawData } from "@/types/raw-data"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { AnnualSnapshot } from "@/lib/build-annual-snapshots"
 
 export interface MetricsLineConfig {
-  key: keyof RawData
+  key: string
   label: string
   color: string
 }
@@ -21,15 +22,8 @@ export interface MetricsLineConfig {
 interface MetricsLineChartProps {
   title: string
   description?: string
-  data: RawData[]
+  data: AnnualSnapshot[]
   lines: MetricsLineConfig[]
-}
-
-const PERIOD_LABELS: Record<string, string> = {
-  Q1: "3 мес.",
-  Q2: "6 мес.",
-  Q3: "9 мес.",
-  YEAR: "Год",
 }
 
 function formatCompactValue(value: number): string {
@@ -40,41 +34,59 @@ function formatCompactValue(value: number): string {
   return value.toString()
 }
 
-function buildPeriodLabel(item: RawData): string {
-  const periodLabel = PERIOD_LABELS[item.period] ?? item.period
-  return `${periodLabel} ${item.year}`
-}
-
 export const MetricsLineChart = ({ title, description, data, lines }: MetricsLineChartProps) => {
-  const sorted = [...data].sort((a, b) => {
-    if (a.year !== b.year) return a.year - b.year
-    const periodOrder = ["Q1", "Q2", "Q3", "YEAR"]
-    return periodOrder.indexOf(a.period) - periodOrder.indexOf(b.period)
-  })
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
+    () => new Set(lines.map((l) => l.key))
+  )
+
+  const toggleLine = (key: string) => {
+    setVisibleKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   const chartConfig: ChartConfig = Object.fromEntries(
     lines.map((line) => [line.key, { label: line.label, color: line.color }])
   )
-
-  const chartData = sorted.map((item) => ({
-    label: buildPeriodLabel(item),
-    ...Object.fromEntries(
-      lines.map((line) => [line.key, (item[line.key] as number | null | undefined) ?? null])
-    ),
-  }))
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
+        <div className="flex flex-wrap gap-4 pt-2">
+          {lines.map((line) => (
+            <div key={line.key} className="flex items-center gap-2">
+              <Checkbox
+                id={`toggle-${line.key}`}
+                checked={visibleKeys.has(line.key)}
+                onCheckedChange={() => toggleLine(line.key)}
+                style={{ borderColor: line.color, color: line.color } as React.CSSProperties}
+              />
+              <Label htmlFor={`toggle-${line.key}`} className="text-sm cursor-pointer">
+                {line.label}
+              </Label>
+            </div>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[350px] w-full">
-          <LineChart data={chartData} accessibilityLayer>
+          <ComposedChart data={data} accessibilityLayer>
+            <defs>
+              {lines.map((line) => (
+                <linearGradient key={line.key} id={`fill-${line.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={`var(--color-${line.key})`} stopOpacity={0.25} />
+                  <stop offset="100%" stopColor={`var(--color-${line.key})`} stopOpacity={0.02} />
+                </linearGradient>
+              ))}
+            </defs>
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="label"
+              dataKey="period"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -102,20 +114,22 @@ export const MetricsLineChart = ({ title, description, data, lines }: MetricsLin
                 />
               }
             />
-            <ChartLegend content={<ChartLegendContent />} />
-            {lines.map((line) => (
-              <Line
-                key={String(line.key)}
-                type="monotone"
-                dataKey={String(line.key)}
-                stroke={`var(--color-${String(line.key)})`}
-                strokeWidth={2}
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-                connectNulls
-              />
-            ))}
-          </LineChart>
+            {lines.map((line) =>
+              visibleKeys.has(line.key) ? (
+                <Area
+                  key={line.key}
+                  type="monotone"
+                  dataKey={line.key}
+                  stroke={`var(--color-${line.key})`}
+                  fill={`url(#fill-${line.key})`}
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: `var(--color-${line.key})` }}
+                  activeDot={{ r: 6 }}
+                  connectNulls
+                />
+              ) : null,
+            )}
+          </ComposedChart>
         </ChartContainer>
       </CardContent>
     </Card>

@@ -1,7 +1,9 @@
 "use client"
 
+import { useMemo } from "react"
 import { useRawDataHistory } from "@/hooks/use-raw-data-history"
 import { MetricsLineChart, MetricsLineConfig } from "./MetricsLineChart"
+import { buildAnnualSnapshots } from "@/lib/build-annual-snapshots"
 
 interface CompanyMetricsProps {
   ticker: string
@@ -14,6 +16,11 @@ const REVENUE_NET_PROFIT_LINES: MetricsLineConfig[] = [
 
 export const CompanyMetrics = ({ ticker }: CompanyMetricsProps) => {
   const { data, loading, error } = useRawDataHistory(ticker)
+
+  const snapshots = useMemo(
+    () => (data.length > 0 ? buildAnnualSnapshots(data, ["revenue", "netProfit"]) : []),
+    [data],
+  )
 
   if (loading) {
     return (
@@ -31,7 +38,7 @@ export const CompanyMetrics = ({ ticker }: CompanyMetricsProps) => {
     )
   }
 
-  if (data.length === 0) {
+  if (snapshots.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">Нет данных по показателям</p>
@@ -43,8 +50,8 @@ export const CompanyMetrics = ({ ticker }: CompanyMetricsProps) => {
     <div className="space-y-6">
       <MetricsLineChart
         title="Выручка и чистая прибыль"
-        description="Динамика ключевых финансовых показателей по периодам"
-        data={data}
+        description="Годовые данные и TTM (trailing twelve months)"
+        data={snapshots}
         lines={REVENUE_NET_PROFIT_LINES}
       />
     </div>
