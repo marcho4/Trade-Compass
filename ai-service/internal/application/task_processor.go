@@ -2,6 +2,7 @@ package application
 
 import (
 	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
 	"ai-service/internal/infrastructure/financialdata"
 	kafkaclient "ai-service/internal/infrastructure/kafka"
 	"ai-service/internal/infrastructure/parser"
@@ -110,7 +111,7 @@ func (p *TaskProcessor) worker(ctx context.Context) {
 			if !ok {
 				return
 			}
-			var task domain.Task
+			var task entity.Task
 			if err := json.Unmarshal(msg.Value, &task); err != nil {
 				slog.Error("Failed to unmarshal task", slog.String("raw", string(msg.Value)), slog.Any("error", err))
 				if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
@@ -125,7 +126,7 @@ func (p *TaskProcessor) worker(ctx context.Context) {
 	}
 }
 
-func (p *TaskProcessor) processTask(ctx context.Context, task domain.Task, msg kafka.Message) {
+func (p *TaskProcessor) processTask(ctx context.Context, task entity.Task, msg kafka.Message) {
 	const maxRetries = 3
 
 	slog.Info("Processing task", slog.Any("task", task))
@@ -135,7 +136,7 @@ func (p *TaskProcessor) processTask(ctx context.Context, task domain.Task, msg k
 
 	for attempt := range maxRetries {
 		err = p.dispatchTask(ctx, task)
-		if errors.Is(err, errUnknownTaskType) {
+		if errors.Is(err, domain.ErrUnknownTaskType) {
 			slog.Warn("Unknown task type", slog.String("type", string(task.Type)))
 			if err := p.kafkaClient.CommitMessage(ctx, msg); err != nil {
 				slog.Error("Failed to commit message", slog.Any("error", err))
@@ -177,14 +178,14 @@ func (p *TaskProcessor) processTask(ctx context.Context, task domain.Task, msg k
 	}
 }
 
-func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task) error {
+func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task entity.Task) error {
 	slog.Info("Starting analyze task",
 		slog.String("ticker", task.Ticker),
 		slog.Int("year", task.Year),
 		slog.String("period", task.Period),
 	)
 
-	result, err := p.geminiService.AnalyzeReport(ctx, task.Ticker, task.ReportURL, task.Year, domain.ReportPeriod(task.Period))
+	result, err := p.geminiService.AnalyzeReport(ctx, task.Ticker, task.ReportURL, task.Year, entity.ReportPeriod(task.Period))
 	if err != nil {
 		slog.Error("AnalyzeReport failed",
 			slog.String("ticker", task.Ticker),
@@ -198,7 +199,7 @@ func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task
 		slog.Int("result_length", len(result)),
 	)
 
-	periodMonths, ok := domain.PeriodToMonths[task.Period]
+	periodMonths, ok := entity.PeriodToMonths[task.Period]
 	if !ok {
 		return fmt.Errorf("unknown period: %s", task.Period)
 	}
@@ -219,12 +220,12 @@ func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task
 		slog.Int("period_months", periodMonths),
 	)
 
-	extractResultTask := domain.Task{
+	extractResultTask := entity.Task{
 		Ticker:    task.Ticker,
 		Year:      task.Year,
 		Period:    task.Period,
 		ReportURL: task.ReportURL,
-		Type:      domain.ExtractResult,
+		Type:      entity.ExtractResult,
 	}
 
 	payload, err := json.Marshal(extractResultTask)
@@ -244,26 +245,26 @@ func (p *TaskProcessor) processAnalyzeTask(ctx context.Context, task domain.Task
 	return nil
 }
 
-var errUnknownTaskType = fmt.Errorf("unknown task type")
+var errUnknownTaskType = domain.ErrUnknownTaskType
 
-func (p *TaskProcessor) dispatchTask(ctx context.Context, task domain.Task) error {
+func (p *TaskProcessor) dispatchTask(ctx context.Context, task entity.Task) error {
 	taskCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
 	switch task.Type {
-	case domain.Analyze:
+	case entity.Analyze:
 		return p.processAnalyzeTask(taskCtx, task)
-	case domain.Extract:
+	case entity.Extract:
 		return p.processExtractTask(taskCtx, task)
-	case domain.ExtractResult:
+	case entity.ExtractResult:
 		return p.processExtractResultTask(taskCtx, task)
 	default:
 		return errUnknownTaskType
 	}
 }
 
-func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task) error {
-	period := domain.ReportPeriod(task.Period)
+func (p *TaskProcessor) processExtractTask(ctx context.Context, task entity.Task) error {
+	period := entity.ReportPeriod(task.Period)
 
 	slog.Info("extracting raw data...",
 		slog.String("ticker", task.Ticker),
@@ -297,7 +298,7 @@ func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task
 		slog.Info("raw data saved successfully", slog.String("ticker", task.Ticker))
 	}
 
-	periodMonths, ok := domain.PeriodToMonths[task.Period]
+	periodMonths, ok := entity.PeriodToMonths[task.Period]
 	if !ok {
 		return fmt.Errorf("unknown period: %s", task.Period)
 	}
@@ -320,12 +321,12 @@ func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task
 		return nil
 	}
 
-	analyzeTask := domain.Task{
+	analyzeTask := entity.Task{
 		Ticker:    task.Ticker,
 		Year:      task.Year,
 		Period:    task.Period,
 		ReportURL: task.ReportURL,
-		Type:      domain.Analyze,
+		Type:      entity.Analyze,
 	}
 
 	payload, err := json.Marshal(analyzeTask)
@@ -346,15 +347,15 @@ func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task
 	return nil
 }
 
-func (p *TaskProcessor) processExtractResultTask(ctx context.Context, task domain.Task) error {
-	result, err := p.geminiService.ExtractResultFromReport(ctx, task.Ticker, task.Year, domain.ReportPeriod(task.Period))
+func (p *TaskProcessor) processExtractResultTask(ctx context.Context, task entity.Task) error {
+	result, err := p.geminiService.ExtractResultFromReport(ctx, task.Ticker, task.Year, entity.ReportPeriod(task.Period))
 	if err != nil {
 		return fmt.Errorf("extract results from report: %w", err)
 	}
 
 	slog.Info("Successfully extracted results from report analysis")
 
-	periodMonths, ok := domain.PeriodToMonths[task.Period]
+	periodMonths, ok := entity.PeriodToMonths[task.Period]
 	if !ok {
 		return fmt.Errorf("unknown period: %s", task.Period)
 	}

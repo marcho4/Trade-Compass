@@ -1,7 +1,7 @@
 package gemini
 
 import (
-	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
 	"context"
 	"fmt"
 	"net/http"
@@ -44,7 +44,7 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string, model domain.AIModel) (string, error) {
+func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string, model entity.AIModel) (string, error) {
 	contents := []*genai.Content{
 		{
 			Role: "user",
@@ -87,7 +87,7 @@ func WithResponseSchema(schema *genai.Schema) GenerateOption {
 	}
 }
 
-func (c *Client) GenerateText(ctx context.Context, prompt string, model domain.AIModel, opts ...GenerateOption) (string, error) {
+func (c *Client) GenerateText(ctx context.Context, prompt string, model entity.AIModel, opts ...GenerateOption) (string, error) {
 	contents := []*genai.Content{
 		{
 			Role:  "user",

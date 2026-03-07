@@ -1,4 +1,4 @@
-package domain
+package entity
 
 type ReportResults struct {
 	Health    int `json:"health"`
@@ -7,4 +7,9 @@ type ReportResults struct {
 	Dividends int `json:"dividends"`
 	Value     int `json:"value"`
 	Total     int `json:"total"`
+}
+
+type AvailablePeriod struct {
+	Year   int `json:"year"`
+	Period int `json:"period"`
 }

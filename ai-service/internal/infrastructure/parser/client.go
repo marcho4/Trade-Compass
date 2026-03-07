@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,7 +12,7 @@ import (
 )
 
 type reportsResponse struct {
-	Reports []domain.Report `json:"reports"`
+	Reports []entity.Report `json:"reports"`
 }
 
 type Client struct {
@@ -47,7 +47,7 @@ func (c *Client) GetReportS3Path(ctx context.Context, ticker, period string, yea
 		return "", fmt.Errorf("parser API returned status %d", resp.StatusCode)
 	}
 
-	var reports []domain.Report
+	var reports []entity.Report
 	if err := json.NewDecoder(resp.Body).Decode(&reports); err != nil {
 		return "", fmt.Errorf("failed to decode parser response: %w", err)
 	}
@@ -61,7 +61,7 @@ func (c *Client) GetReportS3Path(ctx context.Context, ticker, period string, yea
 		return "", fmt.Errorf("report not found for %s year=%d period=%s", ticker, year, period)
 	}
 
-	var matching []domain.Report
+	var matching []entity.Report
 	for _, r := range reports {
 		if r.Period == period {
 			matching = append(matching, r)
@@ -97,7 +97,7 @@ func (c *Client) GetLatestReportYear(ctx context.Context, ticker, period string)
 		return 0, fmt.Errorf("parser API returned status %d", resp.StatusCode)
 	}
 
-	var reports []domain.Report
+	var reports []entity.Report
 	if err := json.NewDecoder(resp.Body).Decode(&reports); err != nil {
 		return 0, fmt.Errorf("failed to decode parser response: %w", err)
 	}
@@ -116,7 +116,7 @@ func (c *Client) GetLatestReportYear(ctx context.Context, ticker, period string)
 	return latestYear, nil
 }
 
-func (c *Client) GetReports(ctx context.Context, ticker string) ([]domain.Report, error) {
+func (c *Client) GetReports(ctx context.Context, ticker string) ([]entity.Report, error) {
 	url := fmt.Sprintf("%s/reports/%s", c.baseURL, ticker)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

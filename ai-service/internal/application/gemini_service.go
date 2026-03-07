@@ -1,7 +1,7 @@
 package application
 
 import (
-	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
 	docs "ai-service/internal/infrastructure/docs"
 	"ai-service/internal/infrastructure/financialdata"
 	"ai-service/internal/infrastructure/gemini"
@@ -37,7 +37,7 @@ func NewGeminiService(
 	}
 }
 
-func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl string, year int, period domain.ReportPeriod) (string, error) {
+func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl string, year int, period entity.ReportPeriod) (string, error) {
 	slog.Info("[AnalyzeReport] started",
 		slog.String("ticker", ticker),
 		slog.Int("year", year),
@@ -93,7 +93,7 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 
 	slog.Info("[AnalyzeReport] calling Gemini API..", slog.String("ticker", ticker))
 	start := time.Now()
-	response, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, domain.Pro)
+	response, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Pro)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate analysis: %w", err)
 	}
@@ -106,7 +106,7 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 	return response, nil
 }
 
-func (g *GeminiService) GetChatResponse(ctx context.Context, prompt string, chatContext domain.ChatContext) (string, error) {
+func (g *GeminiService) GetChatResponse(ctx context.Context, prompt string, chatContext entity.ChatContext) (string, error) {
 	return "", nil
 }
 
@@ -118,8 +118,8 @@ func (g *GeminiService) GetCompanyHistory(ctx context.Context, ticker string) (s
 	return "", nil
 }
 
-func (g *GeminiService) ExtractResultFromReport(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.ReportResults, error) {
-	reportText, err := g.db.GetAnalysis(ctx, ticker, year, domain.PeriodToMonths[string(period)])
+func (g *GeminiService) ExtractResultFromReport(ctx context.Context, ticker string, year int, period entity.ReportPeriod) (*entity.ReportResults, error) {
+	reportText, err := g.db.GetAnalysis(ctx, ticker, year, entity.PeriodToMonths[string(period)])
 	if err != nil {
 		return nil, err
 	}
@@ -128,12 +128,12 @@ func (g *GeminiService) ExtractResultFromReport(ctx context.Context, ticker stri
 	prompt := BuildExtractPrompt(reportText)
 	slog.Info("Generating Report results...")
 
-	text, err := g.geminiClient.GenerateText(ctx, prompt, domain.Flash)
+	text, err := g.geminiClient.GenerateText(ctx, prompt, entity.Flash)
 	if err != nil {
 		return nil, err
 	}
 
-	var res domain.ReportResults
+	var res entity.ReportResults
 	if err := json.Unmarshal([]byte(text), &res); err != nil {
 		slog.Error("Unable to parse text", slog.String("ai response", text))
 		return nil, err
@@ -141,7 +141,7 @@ func (g *GeminiService) ExtractResultFromReport(ctx context.Context, ticker stri
 	return &res, nil
 }
 
-func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*domain.NewsResponse, error) {
+func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*entity.NewsResponse, error) {
 	prompt := BuildNewsAgentPrompt(ticker)
 
 	newsItemSchema := &genai.Schema{
@@ -157,7 +157,7 @@ func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*domain
 	}
 
 	slog.Info("Calling Gemini to get news", slog.Any("ticker", ticker))
-	text, err := g.geminiClient.GenerateText(ctx, prompt, domain.Flash,
+	text, err := g.geminiClient.GenerateText(ctx, prompt, entity.Flash,
 		gemini.WithGoogleSearch(),
 		gemini.WithResponseSchema(&genai.Schema{
 			Type: genai.TypeObject,
@@ -172,7 +172,7 @@ func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*domain
 		return nil, fmt.Errorf("collect news: %w", err)
 	}
 
-	var res domain.NewsResponse
+	var res entity.NewsResponse
 	if err := json.Unmarshal([]byte(text), &res); err != nil {
 		slog.Error("failed to parse news response", slog.String("ai_response", text))
 		return nil, fmt.Errorf("parse news response: %w", err)
@@ -181,7 +181,7 @@ func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*domain
 	return &res, nil
 }
 
-func (g *GeminiService) ExtractRawData(ctx context.Context, ticker, reportUrl string, year int, period domain.ReportPeriod) (*domain.RawData, error) {
+func (g *GeminiService) ExtractRawData(ctx context.Context, ticker, reportUrl string, year int, period entity.ReportPeriod) (*entity.RawData, error) {
 	prompt := docs.RawDataAgentPrompt() + "\n<ticker>" + ticker + "</ticker>"
 
 	slog.Info("[Extract Raw Data] downloading PDF", slog.String("report_url", reportUrl))
@@ -191,12 +191,12 @@ func (g *GeminiService) ExtractRawData(ctx context.Context, ticker, reportUrl st
 	}
 	slog.Info("[Extract Raw Data] PDF downloaded", slog.Int("pdf_size_bytes", len(pdfBytes)))
 
-	text, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, domain.Flash)
+	text, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Flash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract from PDF: %w", err)
 	}
 
-	var rawData domain.RawData
+	var rawData entity.RawData
 	err = json.Unmarshal([]byte(text), &rawData)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal raw data: %w", err)

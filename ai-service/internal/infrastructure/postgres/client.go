@@ -2,9 +2,13 @@ package postgres
 
 import (
 	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -69,17 +73,15 @@ func (d *DBRepo) GetAnalysis(ctx context.Context, ticker string, year, period in
 	var analysis string
 	err := d.conn.QueryRow(ctx, query, ticker, year, period).Scan(&analysis)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", fmt.Errorf("%w: analysis for %s year=%d period=%d", domain.ErrNotFound, ticker, year, period)
+		}
 		return "", err
 	}
 	return analysis, nil
 }
 
-type AvailablePeriod struct {
-	Year   int `json:"year"`
-	Period int `json:"period"`
-}
-
-func (d *DBRepo) GetAvailablePeriods(ctx context.Context, ticker string) ([]AvailablePeriod, error) {
+func (d *DBRepo) GetAvailablePeriods(ctx context.Context, ticker string) ([]entity.AvailablePeriod, error) {
 	query := `SELECT year, period
 		FROM analysis_reports WHERE ticker = $1 ORDER BY year DESC, period DESC`
 	rows, err := d.conn.Query(ctx, query, ticker)
@@ -88,9 +90,9 @@ func (d *DBRepo) GetAvailablePeriods(ctx context.Context, ticker string) ([]Avai
 	}
 	defer rows.Close()
 
-	var periods []AvailablePeriod
+	var periods []entity.AvailablePeriod
 	for rows.Next() {
-		var p AvailablePeriod
+		var p entity.AvailablePeriod
 		if err := rows.Scan(&p.Year, &p.Period); err != nil {
 			return nil, err
 		}
@@ -99,7 +101,7 @@ func (d *DBRepo) GetAvailablePeriods(ctx context.Context, ticker string) ([]Avai
 	return periods, nil
 }
 
-func (d *DBRepo) SaveReportResults(ctx context.Context, result *domain.ReportResults, ticker string, year, period int) error {
+func (d *DBRepo) SaveReportResults(ctx context.Context, result *entity.ReportResults, ticker string, year, period int) error {
 	query := `
 		INSERT INTO report_results (ticker, year, period, health, growth, moat, dividends, value, total)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -134,23 +136,26 @@ func (d *DBRepo) SaveReportResults(ctx context.Context, result *domain.ReportRes
 	return nil
 }
 
-func (d *DBRepo) GetReportResults(ctx context.Context, ticker string, year, period int) (*domain.ReportResults, error) {
+func (d *DBRepo) GetReportResults(ctx context.Context, ticker string, year, period int) (*entity.ReportResults, error) {
 	query := `
 		SELECT health, growth, moat, dividends, value, total
 		FROM report_results
 		WHERE ticker = $1 AND year = $2 AND period = $3
 	`
-	var r domain.ReportResults
+	var r entity.ReportResults
 	err := d.conn.QueryRow(ctx, query, ticker, year, period).Scan(
 		&r.Health, &r.Growth, &r.Moat, &r.Dividends, &r.Value, &r.Total,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: report results for %s year=%d period=%d", domain.ErrNotFound, ticker, year, period)
+		}
 		return nil, err
 	}
 	return &r, nil
 }
 
-func (d *DBRepo) GetLatestReportResults(ctx context.Context, ticker string) (*domain.ReportResults, error) {
+func (d *DBRepo) GetLatestReportResults(ctx context.Context, ticker string) (*entity.ReportResults, error) {
 	query := `
 		SELECT health, growth, moat, dividends, value, total
 		FROM report_results
@@ -158,11 +163,14 @@ func (d *DBRepo) GetLatestReportResults(ctx context.Context, ticker string) (*do
 		ORDER BY year DESC, period DESC
 		LIMIT 1
 	`
-	var r domain.ReportResults
+	var r entity.ReportResults
 	err := d.conn.QueryRow(ctx, query, ticker).Scan(
 		&r.Health, &r.Growth, &r.Moat, &r.Dividends, &r.Value, &r.Total,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%w: latest report results for %s", domain.ErrNotFound, ticker)
+		}
 		return nil, err
 	}
 	return &r, nil

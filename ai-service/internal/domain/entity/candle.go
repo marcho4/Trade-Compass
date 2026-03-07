@@ -1,4 +1,4 @@
-package domain
+package entity
 
 type Candle struct {
 	Open   float64 `json:"open"`

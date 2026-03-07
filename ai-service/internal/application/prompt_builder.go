@@ -1,7 +1,7 @@
 package application
 
 import (
-	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
 	docs "ai-service/internal/infrastructure/docs"
 	"encoding/json"
 	"fmt"
@@ -13,12 +13,12 @@ import (
 type AnalysisContext struct {
 	Ticker         string
 	Year           int
-	Period         domain.ReportPeriod
-	RawDataHistory []domain.RawData
-	Candles        []domain.Candle
-	CBRate         *domain.CBRate
+	Period         entity.ReportPeriod
+	RawDataHistory []entity.RawData
+	Candles        []entity.Candle
+	CBRate         *entity.CBRate
 	MarketCap      float64
-	News           *domain.NewsResponse
+	News           *entity.NewsResponse
 }
 
 func BuildNewsAgentPrompt(ticker string) string {
@@ -59,7 +59,7 @@ func writeRole(b *strings.Builder, ctx AnalysisContext) {
 `, ctx.Ticker, time.Now().Format("02.01.2006"))
 }
 
-func writeFinancialHistory(b *strings.Builder, history []domain.RawData) {
+func writeFinancialHistory(b *strings.Builder, history []entity.RawData) {
 	b.WriteString("<financial_data>\n")
 
 	if len(history) == 0 {
@@ -168,7 +168,7 @@ func writeFloatMetric(b *strings.Builder, name string, val *float64) {
 	}
 }
 
-func writeMarketData(b *strings.Builder, rate *domain.CBRate, marketCap float64) {
+func writeMarketData(b *strings.Builder, rate *entity.CBRate, marketCap float64) {
 	b.WriteString("<market_data>\n")
 
 	if marketCap > 0 {
@@ -186,7 +186,7 @@ func writeMarketData(b *strings.Builder, rate *domain.CBRate, marketCap float64)
 	b.WriteString("</market_data>\n\n")
 }
 
-func writePriceHistory(b *strings.Builder, candles []domain.Candle) {
+func writePriceHistory(b *strings.Builder, candles []entity.Candle) {
 	b.WriteString("<price_history>\n")
 
 	if len(candles) == 0 {
@@ -227,7 +227,7 @@ func writeMacroContext(b *strings.Builder) {
 	b.WriteString("\n</macro_context>\n\n")
 }
 
-func writeNews(b *strings.Builder, news *domain.NewsResponse) {
+func writeNews(b *strings.Builder, news *entity.NewsResponse) {
 	b.WriteString("<news>\n")
 	json, _ := json.Marshal(news)
 	b.WriteString(string(json))

@@ -1,7 +1,7 @@
 package financialdata
 
 import (
-	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -26,7 +26,7 @@ func NewClient(baseURL, apiKey string) *Client {
 	}
 }
 
-func (c *Client) GetDraft(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.RawData, error) {
+func (c *Client) GetDraft(ctx context.Context, ticker string, year int, period entity.ReportPeriod) (*entity.RawData, error) {
 	url := fmt.Sprintf("%s/raw-data/%s/draft?year=%d&period=%s", c.baseURL, ticker, year, period)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -48,15 +48,17 @@ func (c *Client) GetDraft(ctx context.Context, ticker string, year int, period d
 		return nil, fmt.Errorf("financial-data API returned status %d", resp.StatusCode)
 	}
 
-	var rawData domain.RawData
-	if err := json.NewDecoder(resp.Body).Decode(&rawData); err != nil {
+	var result struct {
+		Data entity.RawData `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return &rawData, nil
+	return &result.Data, nil
 }
 
-func (c *Client) SaveDraft(ctx context.Context, rawData *domain.RawData) error {
+func (c *Client) SaveDraft(ctx context.Context, rawData *entity.RawData) error {
 	body, err := json.Marshal(rawData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal raw data: %w", err)
@@ -85,11 +87,11 @@ func (c *Client) SaveDraft(ctx context.Context, rawData *domain.RawData) error {
 	return nil
 }
 
-func (c *Client) GetDailyPrices(ctx context.Context, ticker string) ([]domain.Candle, error) {
+func (c *Client) GetDailyPrices(ctx context.Context, ticker string) ([]entity.Candle, error) {
 	return c.getPrice(ctx, ticker, 365, 24)
 }
 
-func (c *Client) getPrice(ctx context.Context, ticker string, days, interval int) ([]domain.Candle, error) {
+func (c *Client) getPrice(ctx context.Context, ticker string, days, interval int) ([]entity.Candle, error) {
 	url := fmt.Sprintf("%s/price?ticker=%s&days=%d&interval=%d", c.baseURL, ticker, days, interval)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -108,7 +110,7 @@ func (c *Client) getPrice(ctx context.Context, ticker string, days, interval int
 	}
 
 	var result struct {
-		Data []domain.Candle `json:"data"`
+		Data []entity.Candle `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
@@ -117,7 +119,7 @@ func (c *Client) getPrice(ctx context.Context, ticker string, days, interval int
 	return result.Data, nil
 }
 
-func (c *Client) GetCBRates(ctx context.Context) (*domain.CBRate, error) {
+func (c *Client) GetCBRates(ctx context.Context) (*entity.CBRate, error) {
 	url := fmt.Sprintf("%s/macro/cb-rate/current", c.baseURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -136,7 +138,7 @@ func (c *Client) GetCBRates(ctx context.Context) (*domain.CBRate, error) {
 	}
 
 	var result struct {
-		Data domain.CBRate `json:"data"`
+		Data entity.CBRate `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
@@ -173,7 +175,7 @@ func (c *Client) GetMarketCap(ctx context.Context, ticker string) (float64, erro
 	return result.Data, nil
 }
 
-func (c *Client) GetRawData(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.RawData, error) {
+func (c *Client) GetRawData(ctx context.Context, ticker string, year int, period entity.ReportPeriod) (*entity.RawData, error) {
 	url := fmt.Sprintf("%s/raw-data/%s?year=%d&period=%s", c.baseURL, ticker, year, period)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -195,15 +197,17 @@ func (c *Client) GetRawData(ctx context.Context, ticker string, year int, period
 		return nil, fmt.Errorf("financial-data API returned status %d", resp.StatusCode)
 	}
 
-	var rawData domain.RawData
-	if err := json.NewDecoder(resp.Body).Decode(&rawData); err != nil {
+	var result struct {
+		Data entity.RawData `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return &rawData, nil
+	return &result.Data, nil
 }
 
-func (c *Client) GetRawDataHistory(ctx context.Context, ticker string) ([]domain.RawData, error) {
+func (c *Client) GetRawDataHistory(ctx context.Context, ticker string) ([]entity.RawData, error) {
 	url := fmt.Sprintf("%s/raw-data/%s/history", c.baseURL, ticker)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -221,15 +225,17 @@ func (c *Client) GetRawDataHistory(ctx context.Context, ticker string) ([]domain
 		return nil, fmt.Errorf("financial-data API returned status %d", resp.StatusCode)
 	}
 
-	var history []domain.RawData
-	if err := json.NewDecoder(resp.Body).Decode(&history); err != nil {
+	var result struct {
+		Data []entity.RawData `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return history, nil
+	return result.Data, nil
 }
 
-func (c *Client) UpdateDraft(ctx context.Context, rawData *domain.RawData) error {
+func (c *Client) UpdateDraft(ctx context.Context, rawData *entity.RawData) error {
 	body, err := json.Marshal(rawData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal raw data: %w", err)

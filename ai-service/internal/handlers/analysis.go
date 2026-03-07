@@ -2,14 +2,13 @@ package handlers
 
 import (
 	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
 	"ai-service/internal/infrastructure/postgres"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type AnalysisHandler struct {
@@ -50,7 +49,7 @@ func (h *AnalysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if _, ok := domain.MonthsToPeriod[period]; !ok {
+	if _, ok := entity.MonthsToPeriod[period]; !ok {
 		respondWithError(w, http.StatusBadRequest, "invalid period (allowed: 3, 6, 9, 12)")
 		return
 	}
@@ -71,7 +70,7 @@ func (h *AnalysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Reque
 
 	analysis, err := h.db.GetAnalysis(r.Context(), ticker, year, periodInt)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, domain.ErrNotFound) {
 			respondWithError(w, http.StatusNotFound, "analysis not found")
 			return
 		}
@@ -96,7 +95,7 @@ func (h *AnalysisHandler) HandleGetReportResults(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if _, ok := domain.MonthsToPeriod[period]; !ok {
+	if _, ok := entity.MonthsToPeriod[period]; !ok {
 		respondWithError(w, http.StatusBadRequest, "invalid period (allowed: 3, 6, 9, 12)")
 		return
 	}
@@ -118,7 +117,7 @@ func (h *AnalysisHandler) HandleGetReportResults(w http.ResponseWriter, r *http.
 	results, err := h.db.GetReportResults(r.Context(), ticker, year, periodInt)
 	if err != nil {
 		slog.Error("Error", slog.Any("err", err))
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, domain.ErrNotFound) {
 			respondWithError(w, http.StatusNotFound, "report results not found")
 			return
 		}
@@ -139,7 +138,7 @@ func (h *AnalysisHandler) HandleGetLatestReportResults(w http.ResponseWriter, r 
 
 	results, err := h.db.GetLatestReportResults(r.Context(), ticker)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, domain.ErrNotFound) {
 			respondWithError(w, http.StatusNotFound, "report results not found")
 			return
 		}
