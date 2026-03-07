@@ -6,6 +6,7 @@ import {
   CompanyHeader,
   CompanyReports,
   CompanyAnalyses,
+  CompanyMetrics,
   // KeyMetricsGrid,
   // FinancialChart,
   // FinancialStatements
@@ -84,8 +85,9 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
 
       {/* Tabs для переключения между разными видами данных */}
       <Tabs defaultValue="reports" className="w-full">
-        <TabsList className="grid w-full lg:w-auto" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+        <TabsList className="grid w-full lg:w-auto" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
           <TabsTrigger value="reports">Отчёты</TabsTrigger>
+          <TabsTrigger value="metrics">Показатели</TabsTrigger>
           <TabsTrigger value="ai-analysis">AI Анализ</TabsTrigger>
         </TabsList>
 
@@ -108,6 +110,11 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
         {/* Отчёты — доступны всегда */}
         <TabsContent value="reports" className="mt-6">
           <CompanyReports ticker={decodedTicker} />
+        </TabsContent>
+
+        {/* Показатели */}
+        <TabsContent value="metrics" className="mt-6">
+          <CompanyMetrics ticker={decodedTicker} />
         </TabsContent>
 
         {/* AI Анализ */}
