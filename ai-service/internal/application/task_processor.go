@@ -276,7 +276,13 @@ func (p *TaskProcessor) processExtractTask(ctx context.Context, task domain.Task
 		return fmt.Errorf("check existing raw data: %w", err)
 	}
 
-	if existing != nil {
+	if existing == nil {
+		slog.Info("raw data not found. Start extracting...",
+			slog.String("ticker", task.Ticker),
+			slog.Int("year", task.Year),
+			slog.String("period", task.Period),
+		)
+
 		result, err := p.geminiService.ExtractRawData(ctx, task.Ticker, task.ReportURL, task.Year, period)
 		if err != nil {
 			return fmt.Errorf("extract raw data: %w", err)
