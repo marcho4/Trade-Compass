@@ -103,7 +103,7 @@ export const AIChatPanel = ({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary via-[hsl(var(--chart-1))] to-[hsl(var(--chart-3))] flex items-center justify-center shadow-md">
+          <div className="h-8 w-8 rounded-full flex items-center justify-center shadow-md">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
           <h2 className="font-semibold text-base">AI Ассистент</h2>

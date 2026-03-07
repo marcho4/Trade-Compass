@@ -83,10 +83,10 @@ export const TopNavbar = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full hover:scale-105 transition-all duration-200"
+            className="h-9 w-9 rounded-lg hover:scale-105 transition-all duration-200"
           >
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shadow-sm">
-              <User className="h-3.5 w-3.5 text-primary-foreground" />
+            <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+              <User className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
           </Button>
         </Link>

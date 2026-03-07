@@ -53,7 +53,7 @@ export const ScreenerFilters = ({
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="pt-1">
         <div className="space-y-4">
           {/* Первый ряд - основные фильтры */}
           <div className="flex flex-wrap items-end gap-4">
