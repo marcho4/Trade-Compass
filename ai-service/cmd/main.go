@@ -8,10 +8,10 @@ import (
 	"ai-service/internal/infrastructure/financialdata"
 	"ai-service/internal/infrastructure/gemini"
 	kafkaclient "ai-service/internal/infrastructure/kafka"
-	redisclient "ai-service/internal/infrastructure/redis"
 	authmw "ai-service/internal/infrastructure/middleware"
 	"ai-service/internal/infrastructure/parser"
 	"ai-service/internal/infrastructure/postgres"
+	redisclient "ai-service/internal/infrastructure/redis"
 	"ai-service/internal/infrastructure/s3"
 	"context"
 	"log/slog"
@@ -82,7 +82,6 @@ func main() {
 	taskProcessor.Start(context.Background())
 
 	r := chi.NewRouter()
-	r.Use(authmw.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
