@@ -14,7 +14,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const companyCacheTTL = 24 * time.Hour
+const (
+	companyCacheTTL = 24 * time.Hour
+	companiesAllKey = "companies:all"
+)
 
 type CompanyRepository struct {
 	pool  *pgxpool.Pool
@@ -27,6 +30,20 @@ func NewCompanyRepository(pool *pgxpool.Pool, redisClient *redis.Client) *Compan
 
 func (r *CompanyRepository) companyKey(ticker string) string {
 	return fmt.Sprintf("company:%s", ticker)
+}
+
+func (r *CompanyRepository) sectorKey(sectorID int) string {
+	return fmt.Sprintf("companies:sector:%d", sectorID)
+}
+
+func (r *CompanyRepository) invalidateListCaches(ctx context.Context, sectorID int) {
+	keys := []string{companiesAllKey}
+	if sectorID > 0 {
+		keys = append(keys, r.sectorKey(sectorID))
+	}
+	if err := r.redis.Del(ctx, keys...).Err(); err != nil {
+		slog.Warn("redis del list caches failed", "error", err)
+	}
 }
 
 func (r *CompanyRepository) GetByTicker(ctx context.Context, ticker string) (*domain.Company, error) {
@@ -83,13 +100,22 @@ func (r *CompanyRepository) GetAll(ctx context.Context) ([]domain.Company, error
 		ORDER BY ticker
 	`
 
+	companies := make([]domain.Company, 0)
+	cached, err := r.redis.Get(ctx, companiesAllKey).Result()
+	if err == nil {
+		if jsonErr := json.Unmarshal([]byte(cached), &companies); jsonErr == nil {
+			return companies, nil
+		}
+	} else if !errors.Is(err, redis.Nil) {
+		slog.Warn("redis get failed", "key", companiesAllKey, "error", err)
+	}
+
 	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query companies: %w", err)
 	}
 	defer rows.Close()
 
-	companies := make([]domain.Company, 0)
 	for rows.Next() {
 		var company domain.Company
 		var name *string
@@ -109,10 +135,27 @@ func (r *CompanyRepository) GetAll(ctx context.Context) ([]domain.Company, error
 		return nil, fmt.Errorf("error iterating companies: %w", err)
 	}
 
+	if data, jsonErr := json.Marshal(companies); jsonErr == nil {
+		if setErr := r.redis.Set(ctx, companiesAllKey, data, companyCacheTTL).Err(); setErr != nil {
+			slog.Warn("redis set failed", "key", companiesAllKey, "error", setErr)
+		}
+	}
+
 	return companies, nil
 }
 
 func (r *CompanyRepository) GetBySector(ctx context.Context, sectorID int) ([]domain.Company, error) {
+	key := r.sectorKey(sectorID)
+	cached, err := r.redis.Get(ctx, key).Result()
+	if err == nil {
+		var companies []domain.Company
+		if jsonErr := json.Unmarshal([]byte(cached), &companies); jsonErr == nil {
+			return companies, nil
+		}
+	} else if !errors.Is(err, redis.Nil) {
+		slog.Warn("redis get failed", "key", key, "error", err)
+	}
+
 	query := `
 		SELECT id, ticker, name, sector_id, lot_size, ceo
 		FROM companies
@@ -146,6 +189,12 @@ func (r *CompanyRepository) GetBySector(ctx context.Context, sectorID int) ([]do
 		return nil, fmt.Errorf("error iterating companies: %w", err)
 	}
 
+	if data, jsonErr := json.Marshal(companies); jsonErr == nil {
+		if setErr := r.redis.Set(ctx, key, data, companyCacheTTL).Err(); setErr != nil {
+			slog.Warn("redis set failed", "key", key, "error", setErr)
+		}
+	}
+
 	return companies, nil
 }
 
@@ -170,6 +219,8 @@ func (r *CompanyRepository) Create(ctx context.Context, company *domain.Company)
 	if err != nil {
 		return fmt.Errorf("failed to create company: %w", err)
 	}
+
+	r.invalidateListCaches(ctx, company.SectorID)
 
 	return nil
 }
@@ -203,6 +254,7 @@ func (r *CompanyRepository) Update(ctx context.Context, ticker string, company *
 	if err := r.redis.Del(ctx, r.companyKey(ticker)).Err(); err != nil {
 		slog.Warn("redis del failed on update", "ticker", ticker, "error", err)
 	}
+	r.invalidateListCaches(ctx, company.SectorID)
 
 	return nil
 }
@@ -212,20 +264,21 @@ func (r *CompanyRepository) Delete(ctx context.Context, ticker string) error {
 		return fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)
 	}
 
-	query := `DELETE FROM companies WHERE ticker = $1`
+	query := `DELETE FROM companies WHERE ticker = $1 RETURNING sector_id`
 
-	result, err := r.pool.Exec(ctx, query, ticker)
+	var sectorID int
+	err := r.pool.QueryRow(ctx, query, ticker).Scan(&sectorID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("company not found for ticker %s: %w", ticker, domain.ErrNotFound)
+		}
 		return fmt.Errorf("failed to delete company: %w", err)
-	}
-
-	if result.RowsAffected() == 0 {
-		return fmt.Errorf("company not found for ticker %s: %w", ticker, domain.ErrNotFound)
 	}
 
 	if err := r.redis.Del(ctx, r.companyKey(ticker)).Err(); err != nil {
 		slog.Warn("redis del failed on delete", "ticker", ticker, "error", err)
 	}
+	r.invalidateListCaches(ctx, sectorID)
 
 	return nil
 }
