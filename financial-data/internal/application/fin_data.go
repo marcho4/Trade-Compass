@@ -68,7 +68,7 @@ func NewFinData() (*FinData, error) {
 	cbRateRepo := infrastructure.NewCBRateRepository(pool)
 	newsRepo := infrastructure.NewNewsRepository(pool)
 
-	moexDataProvider := infrastructure.NewMoexDataProvider()
+	moexDataProvider := infrastructure.NewMoexDataProvider(redisClient)
 
 	kafkaBrokers := []string{getEnv("KAFKA_URL", "kafka:9092")}
 	parserTopic := getEnv("KAFKA_PARSER_TOPIC", "parser.parse_ticker")

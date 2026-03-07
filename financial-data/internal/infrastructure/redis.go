@@ -14,12 +14,12 @@ func NewRedisClient(ctx context.Context) (*redis.Client, error) {
 		return nil, fmt.Errorf("REDIS_URL environment variable is required")
 	}
 
-	opts, err := redis.ParseURL(redisURL)
-	if err != nil {
-		return nil, fmt.Errorf("parse redis URL: %w", err)
-	}
+	redisPassword := os.Getenv("REDIS_PASSWORD")
 
-	client := redis.NewClient(opts)
+	client := redis.NewClient(&redis.Options{
+		Addr:     redisURL,
+		Password: redisPassword,
+	})
 
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("ping redis: %w", err)

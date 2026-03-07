@@ -76,11 +76,7 @@ func (h *RawDataHandler) HandleGetByPeriod(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(rawData); err != nil {
-		response.RespondWithError(w, r, 500, "failed to encode response", err)
-		return
-	}
+	response.RespondWithSuccess(w, 200, rawData, "")
 }
 
 func (h *RawDataHandler) HandleGetLatest(w http.ResponseWriter, r *http.Request) {
@@ -96,11 +92,7 @@ func (h *RawDataHandler) HandleGetLatest(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(rawData); err != nil {
-		response.RespondWithError(w, r, 500, "failed to encode response", err)
-		return
-	}
+	response.RespondWithSuccess(w, 200, rawData, "")
 }
 
 func (h *RawDataHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request) {
@@ -116,11 +108,7 @@ func (h *RawDataHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(history); err != nil {
-		response.RespondWithError(w, r, 500, "failed to encode response", err)
-		return
-	}
+	response.RespondWithSuccess(w, 200, history, "")
 }
 
 func (h *RawDataHandler) HandleGetDrafts(w http.ResponseWriter, r *http.Request) {
@@ -140,10 +128,7 @@ func (h *RawDataHandler) HandleGetDrafts(w http.ResponseWriter, r *http.Request)
 		drafts = []domain.RawData{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(drafts); err != nil {
-		response.RespondWithError(w, r, 500, "failed to encode response", err)
-	}
+	response.RespondWithSuccess(w, 200, drafts, "")
 }
 
 func (h *RawDataHandler) HandleGetDraft(w http.ResponseWriter, r *http.Request) {
@@ -184,10 +169,7 @@ func (h *RawDataHandler) HandleGetDraft(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(draft); err != nil {
-		response.RespondWithError(w, r, 500, "failed to encode response", err)
-	}
+	response.RespondWithSuccess(w, 200, draft, "")
 }
 
 func (h *RawDataHandler) HandleConfirmDraft(w http.ResponseWriter, r *http.Request) {
@@ -297,11 +279,7 @@ func (h *RawDataHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"status": "updated"}); err != nil {
-		response.RespondWithError(w, r, 500, "failed to encode response", err)
-		return
-	}
+	response.RespondWithSuccess(w, 200, nil, "Metrics successfully updated")
 }
 
 func (h *RawDataHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {

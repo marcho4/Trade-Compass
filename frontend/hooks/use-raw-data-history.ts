@@ -25,7 +25,7 @@ export const useRawDataHistory = (ticker: string): RawDataHistoryState => {
       try {
         const history = await financialDataApi.getRawDataHistory(ticker)
         if (!cancelled) {
-          setState({ data: history, loading: false, error: null })
+          setState({ data: history ?? [], loading: false, error: null })
         }
       } catch (err) {
         if (!cancelled) {

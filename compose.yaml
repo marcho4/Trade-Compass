@@ -16,10 +16,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 60s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 5s
 
   financial-data:
     build:
@@ -38,10 +38,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 60s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 5s
 
   parser:
     build:
@@ -60,10 +60,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 60s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 5s
 
   ai-service:
     build:
@@ -90,10 +90,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
-      interval: 60s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 5s
 
   postgres:
     image: postgres:17
@@ -109,9 +109,10 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 60s
-      timeout: 5s
+      interval: 3s
+      timeout: 3s
       retries: 5
+      start_period: 3s
 
   postgres_ai:
     image: postgres:17
@@ -127,9 +128,10 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 60s
-      timeout: 5s
+      interval: 3s
+      timeout: 3s
       retries: 5
+      start_period: 3s
 
   redis:
     image: redis:7-alpine

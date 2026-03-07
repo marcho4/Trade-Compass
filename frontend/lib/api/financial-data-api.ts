@@ -156,7 +156,8 @@ export const financialDataApi = {
       { headers: { 'Content-Type': 'application/json' } }
     );
     if (!response.ok) throw new Error(`Failed to fetch raw data for ${ticker}`);
-    return response.json();
+    const result: ApiResponse<import('@/types/raw-data').RawData> = await response.json();
+    return result.data;
   },
 
   async getRawDataHistory(ticker: string): Promise<import('@/types/raw-data').RawData[]> {
@@ -165,7 +166,8 @@ export const financialDataApi = {
       { headers: { 'Content-Type': 'application/json' } }
     );
     if (!response.ok) throw new Error(`Failed to fetch raw data history for ${ticker}`);
-    return response.json();
+    const result: ApiResponse<import('@/types/raw-data').RawData[]> = await response.json();
+    return result.data;
   },
 
   async getDrafts(ticker: string): Promise<import('@/types/raw-data').RawData[]> {
@@ -174,7 +176,8 @@ export const financialDataApi = {
       { headers: { 'Content-Type': 'application/json' } }
     );
     if (!response.ok) throw new Error(`Failed to fetch drafts for ${ticker}`);
-    return response.json();
+    const result: ApiResponse<import('@/types/raw-data').RawData[]> = await response.json();
+    return result.data;
   },
 
   async getDraft(ticker: string, year: number, period: string): Promise<import('@/types/raw-data').RawData | null> {
@@ -184,7 +187,8 @@ export const financialDataApi = {
     );
     if (response.status === 404) return null;
     if (!response.ok) throw new Error(`Failed to fetch draft for ${ticker}`);
-    return response.json();
+    const result: ApiResponse<import('@/types/raw-data').RawData> = await response.json();
+    return result.data;
   },
 
   async updateRawData(ticker: string, year: number, period: string, data: import('@/types/raw-data').RawData): Promise<void> {
