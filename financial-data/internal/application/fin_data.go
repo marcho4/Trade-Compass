@@ -119,7 +119,7 @@ func (f *FinData) prepareRouter() error {
 		w.Write([]byte(`{"status":"healthy"}`))
 	})
 
-	routers.RegisterRatiosRoutes(r, f.ratiosRepo, m)
+	routers.RegisterRatiosRoutes(r, f.ratiosRepo, f.ratiosService, m)
 	routers.RegisterRawDataRoutes(r, f.rawDataRepo, f.ratiosService, m)
 	routers.RegisterCompanyRoutes(r, f.companyRepo, f.marketService, f.eventPublisher, m)
 	routers.RegisterSectorRoutes(r, f.sectorRepo, m)

@@ -81,4 +81,5 @@ type RatiosRepository interface {
 
 type RatiosCalculator interface {
 	CalculateAndSave(ctx context.Context, rawData *domain.RawData) error
+	RecalculateAll(ctx context.Context, ticker string) error
 }

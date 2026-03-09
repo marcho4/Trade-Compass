@@ -5,6 +5,7 @@ import (
 	"errors"
 	"financial_data/internal/application/routers"
 	"financial_data/internal/domain"
+	"fmt"
 	"log/slog"
 )
 
@@ -50,5 +51,24 @@ func (s *RatiosService) CalculateAndSave(ctx context.Context, rawData *domain.Ra
 	}
 
 	slog.Info("ratios: calculated and saved", "ticker", rawData.Ticker, "year", rawData.Year, "period", rawData.Period)
+	return nil
+}
+
+func (s *RatiosService) RecalculateAll(ctx context.Context, ticker string) error {
+	history, err := s.rawDataRepo.GetHistoryByTicker(ctx, ticker)
+	if err != nil {
+		return fmt.Errorf("ratios: failed to get history for %s: %w", ticker, err)
+	}
+
+	var calculated int
+	for i := range history {
+		if err := s.CalculateAndSave(ctx, &history[i]); err != nil {
+			slog.Error("ratios: failed to recalculate", "ticker", ticker, "year", history[i].Year, "period", history[i].Period, "error", err)
+			continue
+		}
+		calculated++
+	}
+
+	slog.Info("ratios: recalculated all", "ticker", ticker, "total", len(history), "calculated", calculated)
 	return nil
 }

@@ -13,15 +13,16 @@ import (
 )
 
 type RatiosHandler struct {
-	repo RatiosRepository
+	repo           RatiosRepository
+	ratiosService  RatiosCalculator
 }
 
-func NewRatiosHandler(repo RatiosRepository) *RatiosHandler {
-	return &RatiosHandler{repo: repo}
+func NewRatiosHandler(repo RatiosRepository, ratiosService RatiosCalculator) *RatiosHandler {
+	return &RatiosHandler{repo: repo, ratiosService: ratiosService}
 }
 
-func RegisterRatiosRoutes(r chi.Router, repo RatiosRepository, m *middleware.MiddlewareConfig) {
-	handler := NewRatiosHandler(repo)
+func RegisterRatiosRoutes(r chi.Router, repo RatiosRepository, ratiosService RatiosCalculator, m *middleware.MiddlewareConfig) {
+	handler := NewRatiosHandler(repo, ratiosService)
 
 	r.Get("/ratios/sector/{sector_id}", handler.HandleGetBySector)
 	r.Get("/ratios/{ticker}", handler.HandleGetByPeriod)
@@ -31,6 +32,7 @@ func RegisterRatiosRoutes(r chi.Router, repo RatiosRepository, m *middleware.Mid
 	r.Group(func(protected chi.Router) {
 		protected.Use(m.AuthMiddleware)
 
+		protected.Post("/ratios/{ticker}/recalculate", handler.HandleRecalculate)
 		protected.Post("/ratios/{ticker}", handler.HandleCreate)
 		protected.Put("/ratios/{ticker}", handler.HandleUpdate)
 		protected.Delete("/ratios/{ticker}", handler.HandleDelete)
@@ -234,4 +236,19 @@ func (h *RatiosHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.RespondWithSuccess(w, 204, nil, "Ratios successfully deleted")
+}
+
+func (h *RatiosHandler) HandleRecalculate(w http.ResponseWriter, r *http.Request) {
+	ticker := chi.URLParam(r, "ticker")
+	if ticker == "" {
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
+		return
+	}
+
+	if err := h.ratiosService.RecalculateAll(r.Context(), ticker); err != nil {
+		response.RespondWithError(w, r, 500, "failed to recalculate ratios", err)
+		return
+	}
+
+	response.RespondWithSuccess(w, 200, map[string]string{"status": "recalculated"}, "Ratios recalculated for all periods")
 }
