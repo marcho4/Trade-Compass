@@ -1,0 +1,6 @@
+ALTER TABLE ratios DROP CONSTRAINT ratios_pkey;
+
+ALTER TABLE ratios DROP COLUMN year;
+ALTER TABLE ratios DROP COLUMN period;
+
+ALTER TABLE ratios ADD PRIMARY KEY (ticker);

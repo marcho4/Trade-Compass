@@ -1,11 +1,13 @@
 package routers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -13,15 +15,16 @@ import (
 )
 
 type RawDataHandler struct {
-	repo RawDataRepository
+	repo          RawDataRepository
+	ratiosService RatiosCalculator
 }
 
-func NewRawDataHandler(repo RawDataRepository) *RawDataHandler {
-	return &RawDataHandler{repo: repo}
+func NewRawDataHandler(repo RawDataRepository, ratiosService RatiosCalculator) *RawDataHandler {
+	return &RawDataHandler{repo: repo, ratiosService: ratiosService}
 }
 
-func RegisterRawDataRoutes(r chi.Router, repo RawDataRepository, m *middleware.MiddlewareConfig) {
-	handler := NewRawDataHandler(repo)
+func RegisterRawDataRoutes(r chi.Router, repo RawDataRepository, ratiosService RatiosCalculator, m *middleware.MiddlewareConfig) {
+	handler := NewRawDataHandler(repo, ratiosService)
 
 	r.Get("/raw-data/{ticker}", handler.HandleGetByPeriod)
 	r.Get("/raw-data/{ticker}/latest", handler.HandleGetLatest)
@@ -205,6 +208,22 @@ func (h *RawDataHandler) HandleConfirmDraft(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	go func() {
+		defer func() {
+			if rv := recover(); rv != nil {
+				slog.Error("panic in ratios calculation after confirm", "ticker", ticker, "recover", rv)
+			}
+		}()
+		confirmed, err := h.repo.GetByTickerAndPeriod(context.Background(), ticker, year, period)
+		if err != nil {
+			slog.Error("failed to fetch confirmed raw data for ratios", "ticker", ticker, "error", err)
+			return
+		}
+		if err := h.ratiosService.CalculateAndSave(context.Background(), confirmed); err != nil {
+			slog.Error("failed to calculate ratios after confirm", "ticker", ticker, "error", err)
+		}
+	}()
+
 	response.RespondWithSuccess(w, 200, map[string]string{"status": "confirmed"}, "Draft confirmed successfully")
 }
 
@@ -232,6 +251,19 @@ func (h *RawDataHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	if err := h.repo.Create(r.Context(), &rawData); err != nil {
 		response.RespondWithError(w, r, 500, "failed to create metrics", err)
 		return
+	}
+
+	if rawData.Status == domain.StatusConfirmed {
+		go func() {
+			defer func() {
+				if rv := recover(); rv != nil {
+					slog.Error("panic in ratios calculation after create", "ticker", rawData.Ticker, "recover", rv)
+				}
+			}()
+			if err := h.ratiosService.CalculateAndSave(context.Background(), &rawData); err != nil {
+				slog.Error("failed to calculate ratios after create", "ticker", rawData.Ticker, "error", err)
+			}
+		}()
 	}
 
 	response.RespondWithSuccess(w, 201, map[string]string{"status": "created"}, "Metrics successfully created")
@@ -278,6 +310,25 @@ func (h *RawDataHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		response.RespondWithError(w, r, 500, "failed to update metrics", err)
 		return
 	}
+
+	go func() {
+		defer func() {
+			if rv := recover(); rv != nil {
+				slog.Error("panic in ratios calculation after update", "ticker", ticker, "recover", rv)
+			}
+		}()
+		updated, err := h.repo.GetByTickerAndPeriod(context.Background(), ticker, year, period)
+		if err != nil {
+			slog.Error("failed to fetch updated raw data for ratios", "ticker", ticker, "error", err)
+			return
+		}
+		if updated.Status != domain.StatusConfirmed {
+			return
+		}
+		if err := h.ratiosService.CalculateAndSave(context.Background(), updated); err != nil {
+			slog.Error("failed to calculate ratios after update", "ticker", ticker, "error", err)
+		}
+	}()
 
 	response.RespondWithSuccess(w, 200, nil, "Metrics successfully updated")
 }

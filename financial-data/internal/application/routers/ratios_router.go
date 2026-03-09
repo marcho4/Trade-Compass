@@ -2,6 +2,7 @@ package routers
 
 import (
 	"encoding/json"
+	"errors"
 	"financial_data/internal/application/middleware"
 	"financial_data/internal/application/response"
 	"financial_data/internal/domain"
@@ -22,63 +23,129 @@ func NewRatiosHandler(repo RatiosRepository) *RatiosHandler {
 func RegisterRatiosRoutes(r chi.Router, repo RatiosRepository, m *middleware.MiddlewareConfig) {
 	handler := NewRatiosHandler(repo)
 
-	r.Get("/ratios/sector/{sector_id}", handler.HandleGetRatiosBySector)
-	r.Get("/ratios/{ticker}", handler.HandleGetRatiosByTicker)
+	r.Get("/ratios/sector/{sector_id}", handler.HandleGetBySector)
+	r.Get("/ratios/{ticker}", handler.HandleGetByPeriod)
+	r.Get("/ratios/{ticker}/latest", handler.HandleGetLatest)
+	r.Get("/ratios/{ticker}/history", handler.HandleGetHistory)
 
 	r.Group(func(protected chi.Router) {
 		protected.Use(m.AuthMiddleware)
 
-		protected.Post("/ratios/{ticker}", handler.HandleCreateRatios)
-		protected.Put("/ratios/{ticker}", handler.HandleUpdateRatios)
-		protected.Delete("/ratios/{ticker}", handler.HandleDeleteRatios)
+		protected.Post("/ratios/{ticker}", handler.HandleCreate)
+		protected.Put("/ratios/{ticker}", handler.HandleUpdate)
+		protected.Delete("/ratios/{ticker}", handler.HandleDelete)
 	})
 }
 
-func (h *RatiosHandler) HandleGetRatiosByTicker(w http.ResponseWriter, r *http.Request) {
+func (h *RatiosHandler) HandleGetByPeriod(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
-	ratios, err := h.repo.GetByTicker(r.Context(), ticker)
+	yearStr := r.URL.Query().Get("year")
+	periodStr := r.URL.Query().Get("period")
+
+	if yearStr == "" || periodStr == "" {
+		response.RespondWithError(w, r, 400, "year and period query parameters are required", nil)
+		return
+	}
+
+	year, err := strconv.Atoi(yearStr)
 	if err != nil {
+		response.RespondWithError(w, r, 400, "invalid year parameter", err)
+		return
+	}
+
+	period := domain.ReportPeriod(periodStr)
+	if !period.IsValid() {
+		response.RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
+		return
+	}
+
+	ratios, err := h.repo.GetByTickerAndPeriod(r.Context(), ticker, year, period)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "ratios not found", err)
+			return
+		}
 		response.RespondWithError(w, r, 500, "failed to load ratios", err)
 		return
 	}
 
-	response.RespondWithSuccess(w, 200, ratios, "Successfully retrieved ratios by ticker")
+	response.RespondWithSuccess(w, 200, ratios, "")
 }
 
-func (h *RatiosHandler) HandleGetRatiosBySector(w http.ResponseWriter, r *http.Request) {
-	sector_id := chi.URLParam(r, "sector_id")
-	if sector_id == "" {
+func (h *RatiosHandler) HandleGetLatest(w http.ResponseWriter, r *http.Request) {
+	ticker := chi.URLParam(r, "ticker")
+	if ticker == "" {
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
+		return
+	}
+
+	ratios, err := h.repo.GetLatestByTicker(r.Context(), ticker)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			response.RespondWithError(w, r, 404, "ratios not found", err)
+			return
+		}
+		response.RespondWithError(w, r, 500, "failed to load latest ratios", err)
+		return
+	}
+
+	response.RespondWithSuccess(w, 200, ratios, "")
+}
+
+func (h *RatiosHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request) {
+	ticker := chi.URLParam(r, "ticker")
+	if ticker == "" {
+		response.RespondWithError(w, r, 400, "ticker is required", nil)
+		return
+	}
+
+	history, err := h.repo.GetHistoryByTicker(r.Context(), ticker)
+	if err != nil {
+		response.RespondWithError(w, r, 500, "failed to load ratios history", err)
+		return
+	}
+
+	if history == nil {
+		history = []domain.Ratios{}
+	}
+
+	response.RespondWithSuccess(w, 200, history, "")
+}
+
+func (h *RatiosHandler) HandleGetBySector(w http.ResponseWriter, r *http.Request) {
+	sectorID := chi.URLParam(r, "sector_id")
+	if sectorID == "" {
 		response.RespondWithError(w, r, 400, "sector_id is required", nil)
 		return
 	}
 
-	parsedSector, err := strconv.Atoi(sector_id)
+	parsed, err := strconv.Atoi(sectorID)
 	if err != nil {
 		response.RespondWithError(w, r, 400, "sector_id must be int", err)
 		return
 	}
 
-	sector := domain.Sector(parsedSector)
+	sector := domain.Sector(parsed)
 	if !sector.IsValid() {
 		response.RespondWithError(w, r, 400, "Sector is not valid (allowed values from 1 to 19)", nil)
 		return
 	}
 
-	ratios, err := h.repo.GetBySector(r.Context(), domain.Sector(parsedSector))
+	ratios, err := h.repo.GetBySector(r.Context(), sector)
 	if err != nil {
 		response.RespondWithError(w, r, 500, "failed to load ratios", err)
 		return
 	}
 
-	response.RespondWithSuccess(w, 200, ratios, "Successfully retrieved ratios by sector")
+	response.RespondWithSuccess(w, 200, ratios, "")
 }
 
-func (h *RatiosHandler) HandleCreateRatios(w http.ResponseWriter, r *http.Request) {
+func (h *RatiosHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)
@@ -101,7 +168,9 @@ func (h *RatiosHandler) HandleCreateRatios(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.repo.Create(r.Context(), ticker, sector, &requestBody.Ratios); err != nil {
+	requestBody.Ratios.Ticker = ticker
+
+	if err := h.repo.Create(r.Context(), sector, &requestBody.Ratios); err != nil {
 		response.RespondWithError(w, r, 500, "failed to create ratios", err)
 		return
 	}
@@ -109,7 +178,7 @@ func (h *RatiosHandler) HandleCreateRatios(w http.ResponseWriter, r *http.Reques
 	response.RespondWithSuccess(w, 201, map[string]string{"status": "created"}, "Ratios successfully created")
 }
 
-func (h *RatiosHandler) HandleUpdateRatios(w http.ResponseWriter, r *http.Request) {
+func (h *RatiosHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)
@@ -122,7 +191,9 @@ func (h *RatiosHandler) HandleUpdateRatios(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.repo.Update(r.Context(), ticker, &ratios); err != nil {
+	ratios.Ticker = ticker
+
+	if err := h.repo.Update(r.Context(), &ratios); err != nil {
 		response.RespondWithError(w, r, 500, "failed to update ratios", err)
 		return
 	}
@@ -130,14 +201,34 @@ func (h *RatiosHandler) HandleUpdateRatios(w http.ResponseWriter, r *http.Reques
 	response.RespondWithSuccess(w, 200, map[string]string{"status": "updated"}, "Ratios successfully updated")
 }
 
-func (h *RatiosHandler) HandleDeleteRatios(w http.ResponseWriter, r *http.Request) {
+func (h *RatiosHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	ticker := chi.URLParam(r, "ticker")
 	if ticker == "" {
 		response.RespondWithError(w, r, 400, "ticker is required", nil)
 		return
 	}
 
-	if err := h.repo.Delete(r.Context(), ticker); err != nil {
+	yearStr := r.URL.Query().Get("year")
+	periodStr := r.URL.Query().Get("period")
+
+	if yearStr == "" || periodStr == "" {
+		response.RespondWithError(w, r, 400, "year and period query parameters are required", nil)
+		return
+	}
+
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		response.RespondWithError(w, r, 400, "invalid year parameter", err)
+		return
+	}
+
+	period := domain.ReportPeriod(periodStr)
+	if !period.IsValid() {
+		response.RespondWithError(w, r, 400, "invalid period (allowed: Q1, Q2, Q3, Q4, YEAR)", nil)
+		return
+	}
+
+	if err := h.repo.Delete(r.Context(), ticker, year, period); err != nil {
 		response.RespondWithError(w, r, 500, "failed to delete ratios", err)
 		return
 	}

@@ -70,9 +70,15 @@ type EventPublisher interface {
 }
 
 type RatiosRepository interface {
-	GetByTicker(ctx context.Context, ticker string) (*domain.Ratios, error)
+	GetByTickerAndPeriod(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.Ratios, error)
+	GetLatestByTicker(ctx context.Context, ticker string) (*domain.Ratios, error)
+	GetHistoryByTicker(ctx context.Context, ticker string) ([]domain.Ratios, error)
 	GetBySector(ctx context.Context, sector domain.Sector) (*domain.Ratios, error)
-	Create(ctx context.Context, ticker string, sector domain.Sector, ratios *domain.Ratios) error
-	Update(ctx context.Context, ticker string, ratios *domain.Ratios) error
-	Delete(ctx context.Context, ticker string) error
+	Create(ctx context.Context, sector domain.Sector, ratios *domain.Ratios) error
+	Update(ctx context.Context, ratios *domain.Ratios) error
+	Delete(ctx context.Context, ticker string, year int, period domain.ReportPeriod) error
+}
+
+type RatiosCalculator interface {
+	CalculateAndSave(ctx context.Context, rawData *domain.RawData) error
 }

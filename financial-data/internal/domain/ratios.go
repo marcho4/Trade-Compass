@@ -1,9 +1,10 @@
 package domain
 
 type Ratios struct {
-	// Основные мультипликаторы оценки
-	// P/E - Отношение цены к прибыли (Price to Earnings)
-	// Формула: Цена акции / EPS
+	Ticker string       `json:"ticker,omitempty"`
+	Year   int          `json:"year,omitempty"`
+	Period ReportPeriod `json:"period,omitempty"`
+
 	PriceToEarnings *float64 `json:"priceToEarnings,omitempty"`
 
 	// P/BV - Отношение цены к балансовой стоимости (Price to Book Value)

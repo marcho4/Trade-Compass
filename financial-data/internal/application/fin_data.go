@@ -32,6 +32,7 @@ type FinData struct {
 	cbRateRepo     routers.MacroDataRepository
 	newsRepo       routers.NewsRepository
 	marketService  domain.MarketService
+	ratiosService  routers.RatiosCalculator
 	eventPublisher routers.EventPublisher
 	kafkaProducer  *kafka.Producer
 	pool           *pgxpool.Pool
@@ -69,6 +70,7 @@ func NewFinData() (*FinData, error) {
 	newsRepo := infrastructure.NewNewsRepository(pool)
 
 	moexDataProvider := infrastructure.NewMoexDataProvider(redisClient)
+	ratiosService := NewRatiosService(rawDataRepo, ratiosRepo, companyRepo)
 
 	kafkaBrokers := []string{getEnv("KAFKA_URL", "kafka:9092")}
 	parserTopic := getEnv("KAFKA_PARSER_TOPIC", "parser.parse_ticker")
@@ -86,6 +88,7 @@ func NewFinData() (*FinData, error) {
 		cbRateRepo:     cbRateRepo,
 		newsRepo:       newsRepo,
 		marketService:  moexDataProvider,
+		ratiosService:  ratiosService,
 		eventPublisher: eventPublisher,
 		kafkaProducer:  kafkaProducer,
 		pool:           pool,
@@ -117,7 +120,7 @@ func (f *FinData) prepareRouter() error {
 	})
 
 	routers.RegisterRatiosRoutes(r, f.ratiosRepo, m)
-	routers.RegisterRawDataRoutes(r, f.rawDataRepo, m)
+	routers.RegisterRawDataRoutes(r, f.rawDataRepo, f.ratiosService, m)
 	routers.RegisterCompanyRoutes(r, f.companyRepo, f.marketService, f.eventPublisher, m)
 	routers.RegisterSectorRoutes(r, f.sectorRepo, m)
 	routers.RegisterDividendsRoutes(r, f.dividendsRepo, m)
