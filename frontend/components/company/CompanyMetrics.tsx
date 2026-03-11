@@ -16,11 +16,21 @@ const REVENUE_NET_PROFIT_LINES: MetricsLineConfig[] = [
   { key: "freeCashFlow", label: "Свободный денежный поток", color: "hsl(280, 70%, 55%)" },
 ]
 
+const DEBT_EQUITY_LINES: MetricsLineConfig[] = [
+  { key: "debt", label: "Долг", color: "hsl(0, 72%, 51%)" },
+  { key: "equity", label: "Собственный капитал", color: "hsl(221, 83%, 53%)" },
+]
+
 export const CompanyMetrics = ({ ticker }: CompanyMetricsProps) => {
   const { data, loading, error } = useRawDataHistory(ticker)
 
   const snapshots = useMemo(
     () => (data.length > 0 ? buildAnnualSnapshots(data, ["revenue", "netProfit", "operatingCashFlow", "freeCashFlow"]) : []),
+    [data],
+  )
+
+  const debtEquitySnapshots = useMemo(
+    () => (data.length > 0 ? buildAnnualSnapshots(data, ["debt", "equity"]) : []),
     [data],
   )
 
@@ -55,6 +65,12 @@ export const CompanyMetrics = ({ ticker }: CompanyMetricsProps) => {
         description="Годовые данные и TTM (trailing twelve months)"
         data={snapshots}
         lines={REVENUE_NET_PROFIT_LINES}
+      />
+      <MetricsLineChart
+        title="Долг и собственный капитал"
+        description="Годовые данные и TTM (trailing twelve months)"
+        data={debtEquitySnapshots}
+        lines={DEBT_EQUITY_LINES}
       />
     </div>
   )
