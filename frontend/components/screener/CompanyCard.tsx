@@ -10,6 +10,7 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
 } from "recharts"
+import { curveCatmullRomClosed } from "d3-shape"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { useState, useEffect } from "react"
 import { financialDataApi } from "@/lib/api"
@@ -38,6 +39,30 @@ interface CompanyCardProps {
   pe?: number
   dividendYield?: number
   onClick?: () => void
+}
+
+const RoundedRadar = (props: any) => {
+  const { points, stroke, fill, fillOpacity } = props
+  if (!points || points.length === 0) return null
+
+  const pathD: string[] = []
+  const context = {
+    moveTo(x: number, y: number) { pathD.push(`M${x},${y}`) },
+    lineTo(x: number, y: number) { pathD.push(`L${x},${y}`) },
+    closePath() { pathD.push("Z") },
+    bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number) {
+      pathD.push(`C${cp1x},${cp1y},${cp2x},${cp2y},${x},${y}`)
+    },
+  }
+
+  const curve = curveCatmullRomClosed(context as any)
+  curve.lineStart()
+  for (const p of points) {
+    curve.point(p.x, p.y)
+  }
+  curve.lineEnd()
+
+  return <path d={pathD.join("")} stroke={stroke} fill={fill} fillOpacity={fillOpacity} />
 }
 
 export const CompanyCard = ({
@@ -212,6 +237,7 @@ export const CompanyCard = ({
                     stroke={chartFillColor}
                     fill={chartFillColor}
                     fillOpacity={0.6}
+                    shape={<RoundedRadar />}
                   />
                 </RadarChart>
               </ChartContainer>

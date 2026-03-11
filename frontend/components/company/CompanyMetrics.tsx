@@ -12,13 +12,15 @@ interface CompanyMetricsProps {
 const REVENUE_NET_PROFIT_LINES: MetricsLineConfig[] = [
   { key: "revenue", label: "Выручка", color: "hsl(221, 83%, 53%)" },
   { key: "netProfit", label: "Чистая прибыль", color: "hsl(142, 71%, 45%)" },
+  { key: "operatingCashFlow", label: "Операционный Денежный поток", color: "hsl(32, 95%, 55%)" },
+  { key: "freeCashFlow", label: "Свободный денежный поток", color: "hsl(280, 70%, 55%)" },
 ]
 
 export const CompanyMetrics = ({ ticker }: CompanyMetricsProps) => {
   const { data, loading, error } = useRawDataHistory(ticker)
 
   const snapshots = useMemo(
-    () => (data.length > 0 ? buildAnnualSnapshots(data, ["revenue", "netProfit"]) : []),
+    () => (data.length > 0 ? buildAnnualSnapshots(data, ["revenue", "netProfit", "operatingCashFlow", "freeCashFlow"]) : []),
     [data],
   )
 

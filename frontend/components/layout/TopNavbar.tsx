@@ -46,7 +46,7 @@ export const TopNavbar = () => {
         "bg-background/90 backdrop-blur-xl border-b border-border/50"
       )}
     >
-      <nav className="h-full max-w-screen-2xl mx-auto flex items-center justify-between px-2 sm:px-6">
+      <nav className="h-full w-full mx-auto flex items-center justify-between px-2 sm:px-6">
         <Link
           href="/dashboard/screener"
           className="text-base sm:text-lg font-bold tracking-tight text-foreground transition-colors hover:text-primary"

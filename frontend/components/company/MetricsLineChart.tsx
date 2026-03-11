@@ -64,7 +64,7 @@ export const MetricsLineChart = ({ title, description, data, lines }: MetricsLin
                 id={`toggle-${line.key}`}
                 checked={visibleKeys.has(line.key)}
                 onCheckedChange={() => toggleLine(line.key)}
-                style={{ borderColor: line.color, color: line.color } as React.CSSProperties}
+                style={{ borderColor: line.color, color: line.color, backgroundColor: "white" } as React.CSSProperties}
               />
               <Label htmlFor={`toggle-${line.key}`} className="text-sm cursor-pointer">
                 {line.label}

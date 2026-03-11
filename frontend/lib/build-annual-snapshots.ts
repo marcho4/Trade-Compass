@@ -65,8 +65,19 @@ export function buildAnnualSnapshots(
   return result.map(({ _sortKey, ...rest }) => rest)
 }
 
+const UNITS_MAP: Record<string, number> = {
+  units: 1,
+  thousands: 1000,
+  millions: 1000000,
+}
+
+function multiplier(row: RawData): number {
+  return (row.reportUnits && UNITS_MAP[row.reportUnits]) || 1
+}
+
 function val(row: RawData, field: NumericRawDataKey): number {
-  return (row[field] as number | null | undefined) ?? 0
+  const raw = (row[field] as number | null | undefined) ?? 0
+  return raw * multiplier(row)
 }
 
 function makeEntry(

@@ -5,6 +5,7 @@ export interface RawData {
   year: number;
   period: string;
   status: MetricsStatus;
+  reportUnits?: string | null;
 
   revenue?: number | null;
   costOfRevenue?: number | null;
