@@ -57,7 +57,6 @@ class CompanySearcher:
                                 "name": name,
                                 "id": company_id,
                                 "url": href,
-                                "element": link,
                             })
                     except Exception as e:
                         logger.error(f"Ошибка обработки ссылки: {e}")

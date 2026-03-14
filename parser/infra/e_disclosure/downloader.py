@@ -44,10 +44,8 @@ class ReportDownloader:
 
         company_id = company["id"]
         company_name = company["name"]
-        company_element = company.get("element")
-
         try:
-            self._navigate_to_company(company_element, company.get("url"))
+            self._navigate_to_company(company.get("url"))
 
             reports_url = f"{self.base_url}/portal/files.aspx?id={company_id}&type=4"
             self.driver.get(reports_url)
@@ -77,16 +75,8 @@ class ReportDownloader:
             logger.error(f"Ошибка при получении отчетов: {e}", exc_info=True)
             return []
 
-    def _navigate_to_company(self, element, url: str):
-        if element:
-            try:
-                element.click()
-            except Exception as e:
-                logger.warning(f"Не удалось кликнуть по элементу: {e}")
-                self.driver.get(url)
-        else:
-            self.driver.get(url)
-
+    def _navigate_to_company(self, url: str):
+        self.driver.get(url)
         time.sleep(config.timeout_page_load)
 
     def _download_single_report(
