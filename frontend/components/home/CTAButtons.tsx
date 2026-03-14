@@ -3,7 +3,7 @@ export const CTAButtons = () => {
     <div className="flex animate-fade-in-up flex-col gap-4 [animation-delay:300ms]">
       <a
         className="group inline-flex items-center justify-center rounded-full bg-primary px-10 py-5 text-lg font-bold text-primary-foreground shadow-lg transition-all hover:scale-105 hover:bg-primary/90 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        href="/auth/register"
+        href="/dashboard/screener"
         tabIndex={0}
         aria-label="Начать бесплатно"
       >

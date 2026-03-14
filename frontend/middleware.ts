@@ -34,12 +34,6 @@ export function middleware(request: NextRequest) {
 
   const isAuthenticated = hasAuthCookies(request);
 
-  if (isProtectedRoute(pathname) && !isAuthenticated) {
-    const loginUrl = new URL("/auth", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
   if (isAuthRoute(pathname) && isAuthenticated) {
     const redirectTo = request.nextUrl.searchParams.get("redirect");
     const dashboardUrl = new URL(

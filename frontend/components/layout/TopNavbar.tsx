@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Briefcase, User } from "lucide-react"
+import { LayoutDashboard, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -20,12 +20,6 @@ const navItems: NavItem[] = [
     label: "Скринер",
     href: "/dashboard/screener",
     key: "screener",
-  },
-  {
-    icon: Briefcase,
-    label: "Портфель",
-    href: "/dashboard/portfolio",
-    key: "portfolio",
   },
 ]
 

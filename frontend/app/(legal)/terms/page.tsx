@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -140,7 +141,7 @@ export default function TermsPage() {
         <h2>8. Персональные данные</h2>
         <p>
           Обработка персональных данных Пользователя осуществляется в соответствии
-          с <a href="/privacy" className="text-primary hover:underline">Политикой конфиденциальности</a>.
+          с <Link href="/privacy" className="text-primary hover:underline">Политикой конфиденциальности</Link>.
         </p>
       </section>
 

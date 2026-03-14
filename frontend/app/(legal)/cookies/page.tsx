@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -221,14 +222,14 @@ export default function CookiesPage() {
         <h2>8. Связанные документы</h2>
         <ul>
           <li>
-            <a href="/privacy" className="text-primary hover:underline">
+            <Link href="/privacy" className="text-primary hover:underline">
               Политика конфиденциальности
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="/terms" className="text-primary hover:underline">
+            <Link href="/terms" className="text-primary hover:underline">
               Пользовательское соглашение
-            </a>
+            </Link>
           </li>
         </ul>
       </section>

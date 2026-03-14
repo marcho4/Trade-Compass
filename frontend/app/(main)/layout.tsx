@@ -19,11 +19,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const isDashboardRoute = pathname.startsWith("/dashboard")
 
-  useEffect(() => {
-    if (isDashboardRoute && !isLoading && !isAuthenticated) {
-      router.replace(`/auth?redirect=${encodeURIComponent(pathname)}`)
-    }
-  }, [isDashboardRoute, isLoading, isAuthenticated, pathname, router])
+  // useEffect(() => {
+  //   if (isDashboardRoute && !isLoading && !isAuthenticated) {
+  //     router.replace(`/auth?redirect=${encodeURIComponent(pathname)}`)
+  //   }
+  // }, [isDashboardRoute, isLoading, isAuthenticated, pathname, router])
 
   // Определяем какие промпты показывать в зависимости от страницы
   const getPromptExamples = () => {

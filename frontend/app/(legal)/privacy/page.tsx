@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -137,7 +138,7 @@ export default function PrivacyPage() {
         <p>
           Сервис использует файлы cookies для обеспечения функционирования,
           аналитики и персонализации. Подробная информация о файлах cookies представлена
-          в <a href="/cookies" className="text-primary hover:underline">Политике использования cookies</a>.
+          в <Link href="/cookies" className="text-primary hover:underline">Политике использования cookies</Link>.
         </p>
       </section>
 

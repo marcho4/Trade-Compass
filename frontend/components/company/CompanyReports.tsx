@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Download, CalendarDays, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { parserApi } from "@/lib/api"
 import type { Report } from "@/types"
 
@@ -111,6 +112,17 @@ export const CompanyReports = ({ ticker }: CompanyReportsProps) => {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        <p className="text-xs text-muted-foreground">
+          Все отчёты взяты с сайта{" "}
+          <Link
+            href="https://e-disclosure.ru"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground transition-colors"
+          >
+            e-disclosure.ru
+          </Link>
+        </p>
         {sortedYears.map((year) => {
           const yearReports = groupedByYear[year].sort(
             (a, b) => Number(b.period) - Number(a.period)
@@ -148,14 +160,14 @@ export const CompanyReports = ({ ticker }: CompanyReportsProps) => {
                         className="h-8 w-8"
                         asChild
                       >
-                        <a
+                        <Link
                           href={report.s3_path}
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label={`Скачать отчёт ${ticker} за ${periodLabel(report.period)} ${report.year}`}
                         >
                           <Download className="h-4 w-4" />
-                        </a>
+                        </Link>
                       </Button>
                     </div>
                   </div>
