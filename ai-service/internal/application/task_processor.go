@@ -258,6 +258,8 @@ func (p *TaskProcessor) dispatchTask(ctx context.Context, task entity.Task) erro
 		return p.processExtractTask(taskCtx, task)
 	case entity.ExtractResult:
 		return p.processExtractResultTask(taskCtx, task)
+	case entity.BusinessResearch:
+		return p.processBusinessResearchTask(taskCtx, task)
 	default:
 		return errUnknownTaskType
 	}
@@ -344,6 +346,32 @@ func (p *TaskProcessor) processExtractTask(ctx context.Context, task entity.Task
 		slog.String("period", task.Period),
 	)
 
+	return nil
+}
+
+func (p *TaskProcessor) processBusinessResearchTask(ctx context.Context, task entity.Task) error {
+	slog.Info("Starting business research task", slog.String("ticker", task.Ticker))
+
+	existing, err := p.dbRepo.GetBusinessResearch(ctx, task.Ticker)
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
+		return fmt.Errorf("check existing business research: %w", err)
+	}
+
+	if existing != nil {
+		slog.Info("Business research already exists, skipping", slog.String("ticker", task.Ticker))
+		return nil
+	}
+
+	result, err := p.geminiService.ResearchBusiness(ctx, task.Ticker, task.Ticker)
+	if err != nil {
+		return fmt.Errorf("research business: %w", err)
+	}
+
+	if err := p.dbRepo.SaveBusinessResearch(ctx, result); err != nil {
+		return fmt.Errorf("save business research: %w", err)
+	}
+
+	slog.Info("Business research completed and saved", slog.String("ticker", task.Ticker))
 	return nil
 }
 

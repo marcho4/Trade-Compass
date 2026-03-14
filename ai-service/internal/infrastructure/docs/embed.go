@@ -33,6 +33,13 @@ func NewsCollectorAgent() string {
 	return newsCollectorAgent
 }
 
+//go:embed agents/business-researcher.md
+var businessResearcherPrompt string
+
 func RawDataAgentPrompt() string {
 	return rawDataAgentPrompt
+}
+
+func BusinessResearcherPrompt() string {
+	return businessResearcherPrompt
 }

@@ -35,6 +35,7 @@ type FinData struct {
 	ratiosService  routers.RatiosCalculator
 	eventPublisher routers.EventPublisher
 	kafkaProducer  *kafka.Producer
+	aiProducer     *kafka.Producer
 	pool           *pgxpool.Pool
 	redisClient    *redis.Client
 	srv            *http.Server
@@ -74,10 +75,12 @@ func NewFinData() (*FinData, error) {
 
 	kafkaBrokers := []string{getEnv("KAFKA_URL", "kafka:9092")}
 	parserTopic := getEnv("KAFKA_PARSER_TOPIC", "parser.parse_ticker")
+	aiTopic := getEnv("KAFKA_AI_TOPIC", "ai-analyze-tasks")
 	kafkaProducer := kafka.NewProducer(kafkaBrokers, parserTopic)
-	eventPublisher := kafka.NewKafkaEventPublisher(kafkaProducer)
+	aiProducer := kafka.NewProducer(kafkaBrokers, aiTopic)
+	eventPublisher := kafka.NewKafkaEventPublisher(kafkaProducer, aiProducer)
 
-	slog.Info("Kafka producer initialized", "topic", parserTopic)
+	slog.Info("Kafka producers initialized", "parser_topic", parserTopic, "ai_topic", aiTopic)
 
 	return &FinData{
 		ratiosRepo:     ratiosRepo,
@@ -91,6 +94,7 @@ func NewFinData() (*FinData, error) {
 		ratiosService:  ratiosService,
 		eventPublisher: eventPublisher,
 		kafkaProducer:  kafkaProducer,
+		aiProducer:     aiProducer,
 		pool:           pool,
 		redisClient:    redisClient,
 	}, nil
@@ -156,6 +160,7 @@ func (f *FinData) runRouter() error {
 	select {
 	case err := <-serverErrors:
 		f.kafkaProducer.Close()
+		f.aiProducer.Close()
 		f.pool.Close()
 		f.redisClient.Close()
 		return err
@@ -171,6 +176,7 @@ func (f *FinData) runRouter() error {
 		}
 
 		f.kafkaProducer.Close()
+		f.aiProducer.Close()
 		f.pool.Close()
 		f.redisClient.Close()
 		slog.Info("Server stopped gracefully")

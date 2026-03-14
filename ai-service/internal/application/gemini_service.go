@@ -181,6 +181,83 @@ func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*entity
 	return &res, nil
 }
 
+func (g *GeminiService) ResearchBusiness(ctx context.Context, ticker, companyName string) (*entity.BusinessResearchResponse, error) {
+	prompt := docs.BusinessResearcherPrompt() + "\n\n## Компания для анализа\nТикер: " + ticker + "\nНазвание: " + companyName
+
+	marketSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"market": {Type: genai.TypeString},
+			"role":   {Type: genai.TypeString},
+		},
+		Required: []string{"market", "role"},
+	}
+
+	revenueSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"segment":     {Type: genai.TypeString},
+			"share_pct":   {Type: genai.TypeNumber},
+			"approximate": {Type: genai.TypeBoolean},
+			"description": {Type: genai.TypeString},
+			"trend":       {Type: genai.TypeString, Enum: []string{"growing", "stable", "declining"}},
+		},
+		Required: []string{"segment", "share_pct", "approximate", "description", "trend"},
+	}
+
+	dependencySchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"factor":      {Type: genai.TypeString},
+			"type":        {Type: genai.TypeString, Enum: []string{"commodity", "currency", "regulation", "macro", "technology", "geopolitics", "infrastructure", "demand"}},
+			"severity":    {Type: genai.TypeString, Enum: []string{"critical", "high", "moderate"}},
+			"description": {Type: genai.TypeString},
+		},
+		Required: []string{"factor", "type", "severity", "description"},
+	}
+
+	responseSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"ticker":       {Type: genai.TypeString},
+			"company_name": {Type: genai.TypeString},
+			"profile": {
+				Type: genai.TypeObject,
+				Properties: map[string]*genai.Schema{
+					"description":          {Type: genai.TypeString},
+					"products_and_services": {Type: genai.TypeArray, Items: &genai.Schema{Type: genai.TypeString}},
+					"markets":              {Type: genai.TypeArray, Items: marketSchema},
+					"key_clients":          {Type: genai.TypeString},
+					"business_model":       {Type: genai.TypeString},
+				},
+				Required: []string{"description", "products_and_services", "markets", "key_clients", "business_model"},
+			},
+			"revenue_sources": {Type: genai.TypeArray, Items: revenueSchema},
+			"dependencies":    {Type: genai.TypeArray, Items: dependencySchema},
+		},
+		Required: []string{"ticker", "company_name", "profile", "revenue_sources", "dependencies"},
+	}
+
+	slog.Info("[ResearchBusiness] calling Gemini Flash", slog.String("ticker", ticker))
+
+	text, err := g.geminiClient.GenerateText(ctx, prompt, entity.Flash,
+		gemini.WithGoogleSearch(),
+		gemini.WithResponseSchema(responseSchema),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("research business: %w", err)
+	}
+
+	var res entity.BusinessResearchResponse
+	if err := json.Unmarshal([]byte(text), &res); err != nil {
+		slog.Error("[ResearchBusiness] failed to parse response", slog.String("ai_response", text))
+		return nil, fmt.Errorf("parse business research response: %w", err)
+	}
+
+	slog.Info("[ResearchBusiness] completed", slog.String("ticker", ticker), slog.String("company_name", res.CompanyName))
+	return &res, nil
+}
+
 func (g *GeminiService) ExtractRawData(ctx context.Context, ticker, reportUrl string, year int, period entity.ReportPeriod) (*entity.RawData, error) {
 	prompt := docs.RawDataAgentPrompt() + "\n<ticker>" + ticker + "</ticker>"
 

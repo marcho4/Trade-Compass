@@ -129,6 +129,28 @@ func (h *AnalysisHandler) HandleGetReportResults(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(map[string]any{"data": results})
 }
 
+func (h *AnalysisHandler) HandleGetBusinessResearch(w http.ResponseWriter, r *http.Request) {
+	ticker := r.URL.Query().Get("ticker")
+	if ticker == "" {
+		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
+		return
+	}
+
+	research, err := h.db.GetBusinessResearch(r.Context(), ticker)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			respondWithError(w, http.StatusNotFound, "business research not found")
+			return
+		}
+		slog.Error("GetBusinessResearch failed", slog.String("ticker", ticker), slog.Any("error", err))
+		respondWithError(w, http.StatusInternalServerError, "failed to get business research")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"data": research})
+}
+
 func (h *AnalysisHandler) HandleGetLatestReportResults(w http.ResponseWriter, r *http.Request) {
 	ticker := r.URL.Query().Get("ticker")
 	if ticker == "" {

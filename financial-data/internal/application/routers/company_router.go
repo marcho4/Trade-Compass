@@ -129,6 +129,10 @@ func (h *CompanyHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to publish company created event", "ticker", company.Ticker, "error", err)
 	}
 
+	if err := h.eventPublisher.PublishBusinessResearchTask(r.Context(), company.Ticker); err != nil {
+		slog.Error("failed to publish business research task", "ticker", company.Ticker, "error", err)
+	}
+
 	response.RespondWithSuccess(w, 201, company, "Company successfully created")
 }
 

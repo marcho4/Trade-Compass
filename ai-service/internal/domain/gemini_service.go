@@ -13,4 +13,5 @@ type GeminiService interface {
 	ExtractResultFromReport(ctx context.Context, ticker string, year int, period entity.ReportPeriod) (*entity.ReportResults, error)
 	CollectNews(ctx context.Context, ticker string) (*entity.NewsResponse, error)
 	ExtractRawData(ctx context.Context, ticker, reportUrl string, year int, period entity.ReportPeriod) (*entity.RawData, error)
+	ResearchBusiness(ctx context.Context, ticker, companyName string) (*entity.BusinessResearchResponse, error)
 }
