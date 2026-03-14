@@ -3,7 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,12 +23,10 @@ type Server struct {
 }
 
 func NewServer(handlers *Handlers, cfg *config.Config) *Server {
-	log.Println("Creating server")
+	slog.Info("Creating server")
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.RequestID)
 	r.Use(corsMiddleware(cfg.CORS))
 
 	return &Server{
@@ -39,7 +37,7 @@ func NewServer(handlers *Handlers, cfg *config.Config) *Server {
 }
 
 func (s *Server) MountRoutes() {
-	log.Println("Mounting routes")
+	slog.Info("Mounting routes")
 
 	s.Router.Get("/health", s.Handlers.HandleHealth)
 
@@ -57,7 +55,7 @@ func (s *Server) MountRoutes() {
 	s.Router.Get("/email/verify", s.Handlers.HandleEmailVerification)
 	s.Router.Post("/email/resend", s.Handlers.HandleEmailResend)
 
-	log.Println("Routes mounted")
+	slog.Info("Routes mounted")
 }
 
 func corsMiddleware(corsConfig config.CORSConfig) func(http.Handler) http.Handler {
@@ -113,7 +111,7 @@ func (s *Server) Start(port string) error {
 	errCh := make(chan error, 1)
 
 	go func() {
-		log.Printf("Starting server on %s", addr)
+		slog.Info("Starting server", slog.Any("addr", addr))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errCh <- fmt.Errorf("server error: %w", err)
 		}
@@ -121,7 +119,7 @@ func (s *Server) Start(port string) error {
 
 	select {
 	case sig := <-shutdownCh:
-		log.Printf("Received signal %v, shutting down gracefully...", sig)
+		slog.Info("shutting down gracefully...", slog.Any("sig", sig))
 	case err := <-errCh:
 		return err
 	}
@@ -133,6 +131,6 @@ func (s *Server) Start(port string) error {
 		return fmt.Errorf("server shutdown error: %w", err)
 	}
 
-	log.Println("Server stopped gracefully")
+	slog.Info("Server stopped gracefully")
 	return nil
 }

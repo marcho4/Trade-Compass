@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,7 +13,9 @@ import (
 
 	"auth-service/internal/config"
 	"auth-service/internal/domain"
+	"auth-service/internal/infrastructure"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,17 +24,10 @@ var httpClient = &http.Client{
 }
 
 type Service struct {
-	dbRepo      domain.DbRepo
-	jwtService  domain.JWTService
-	oauthConfig config.OAuthConfig
-}
-
-func NewService(dbRepo domain.DbRepo, jwtService domain.JWTService, oauthConfig config.OAuthConfig) *Service {
-	return &Service{
-		dbRepo:      dbRepo,
-		jwtService:  jwtService,
-		oauthConfig: oauthConfig,
-	}
+	dbRepo            domain.DbRepo
+	subscriptionsRepo domain.SubscriptionRepo
+	jwtService        domain.JWTService
+	oauthConfig       config.OAuthConfig
 }
 
 func (s *Service) CreateUser(ctx context.Context, name, email, hashedPassword, deviceInfo string) (string, string, error) {
@@ -221,7 +217,7 @@ func (s *Service) GetYandexAccessToken(yandexCode string) (string, error) {
 	return result.AccessToken, nil
 }
 
-func (s *Service) GetYandexUserInfo(accessToken string) (map[string]interface{}, error) {
+func (s *Service) GetYandexUserInfo(accessToken string) (map[string]any, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://login.yandex.ru/info?format=json", nil)
 	if err != nil {
 		return nil, fmt.Errorf("create yandex user info request: %w", err)
@@ -238,7 +234,7 @@ func (s *Service) GetYandexUserInfo(accessToken string) (map[string]interface{},
 		return nil, fmt.Errorf("yandex user info request failed with status: %d", resp.StatusCode)
 	}
 
-	var userInfo map[string]interface{}
+	var userInfo map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 		return nil, fmt.Errorf("decode yandex user info: %w", err)
 	}
@@ -249,4 +245,39 @@ func (s *Service) GetYandexUserInfo(accessToken string) (map[string]interface{},
 func checkPassword(hashedPassword, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err == nil
+}
+
+func NewService(cfg *config.Config) (*Service, error) {
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, cfg.Database.URL)
+	if err != nil {
+		return nil, fmt.Errorf("create connection pool: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("ping database: %v", err)
+	}
+
+	log.Println("Database connection established")
+
+	repo := infrastructure.NewDbRepo(pool)
+
+	jwtConfig := domain.JWTConfig{
+		SecretKey:       []byte(cfg.JWT.Secret),
+		AccessTokenTTL:  cfg.JWT.AccessTokenTTL,
+		RefreshTokenTTL: cfg.JWT.RefreshTokenTTL,
+	}
+
+	jwtService, err := infrastructure.NewJWTService(jwtConfig)
+	if err != nil {
+		return nil, fmt.Errorf("JWT service create: %v", err)
+	}
+
+	log.Println("JWT service initialized")
+	return &Service{
+		dbRepo:      repo,
+		jwtService:  jwtService,
+		oauthConfig: cfg.OAuth,
+	}, nil
 }

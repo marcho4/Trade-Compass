@@ -14,10 +14,9 @@ import (
 
 type Migrator struct {
 	migrate *migrate.Migrate
-	logger  *slog.Logger
 }
 
-func NewMigrator(dbURL, migrationsPath string, logger *slog.Logger) (*Migrator, error) {
+func NewMigrator(dbURL, migrationsPath string) (*Migrator, error) {
 	if dbURL == "" {
 		return nil, errors.New("database URL is required")
 	}
@@ -36,13 +35,8 @@ func NewMigrator(dbURL, migrationsPath string, logger *slog.Logger) (*Migrator, 
 		return nil, fmt.Errorf("create migrator: %w", err)
 	}
 
-	if logger == nil {
-		logger = slog.Default()
-	}
-
 	return &Migrator{
 		migrate: m,
-		logger:  logger,
 	}, nil
 }
 
@@ -50,14 +44,14 @@ func (m *Migrator) Up() error {
 	err := m.migrate.Up()
 	if err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			m.logger.Info("no new migrations to apply")
+			slog.Info("no new migrations to apply")
 			return nil
 		}
 		return fmt.Errorf("apply migrations: %w", err)
 	}
 
 	version, dirty, _ := m.migrate.Version()
-	m.logger.Info("migrations applied successfully",
+	slog.Info("migrations applied successfully",
 		slog.Uint64("version", uint64(version)),
 		slog.Bool("dirty", dirty),
 	)
@@ -99,15 +93,15 @@ func (m *Migrator) Close() error {
 	return nil
 }
 
-func RunMigrations(logger *slog.Logger) error {
+func RunMigrations() error {
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
-		return fmt.Errorf("DB_URL environment variable is required")
+		return errors.New("DB_URL environment variable is required")
 	}
 
-	migrator, err := NewMigrator(dbURL, "file://migrations", logger)
+	migrator, err := NewMigrator(dbURL, "file://migrations")
 	if err != nil {
-		return err
+		return fmt.Errorf("create migrator: %w", err)
 	}
 	defer migrator.Close()
 
