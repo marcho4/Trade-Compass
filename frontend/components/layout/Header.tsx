@@ -17,7 +17,7 @@ export const Header = ({ showLogin = true }: { showLogin?: boolean }) => {
         {showLogin && (
           <Link
             href="/auth"
-            className="text-lg font-bold tracking-tight text-gray-900 transition-all hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="text-lg font-bold tracking-tight text-foreground transition-all hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           > 
             Войти
           </Link>

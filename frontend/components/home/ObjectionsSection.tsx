@@ -1,3 +1,5 @@
+import { Check } from "lucide-react"
+
 export const ObjectionsSection = () => {
   const objections = [
     {
@@ -40,20 +42,7 @@ export const ObjectionsSection = () => {
               <div className="space-y-3">
                 {objection.benefits.map((benefit, idx) => (
                   <div key={idx} className="flex items-start gap-2">
-                    <svg
-                      className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M5 13l4 4L19 7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
                     <p className="text-sm leading-relaxed">{benefit}</p>
                   </div>
                 ))}
@@ -65,5 +54,3 @@ export const ObjectionsSection = () => {
     </section>
   )
 }
-
-

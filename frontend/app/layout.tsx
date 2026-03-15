@@ -66,7 +66,13 @@ export default function RootLayout({
         </noscript>
 
         <Providers>
-          <div className="relative min-h-screen bg-background text-foreground">
+          <a
+            href="#main-content"
+            className="fixed left-4 top-4 z-[100] -translate-y-20 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform focus:translate-y-0"
+          >
+            Перейти к содержимому
+          </a>
+          <div id="main-content" className="relative min-h-screen bg-background text-foreground">
             {children}
           </div>
         </Providers>

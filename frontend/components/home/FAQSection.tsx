@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react"
+
 export const FAQSection = () => {
   const faqs = [
     {
@@ -29,21 +31,19 @@ export const FAQSection = () => {
         </h2>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="mx-auto max-w-3xl divide-y divide-border">
         {faqs.map((faq, index) => (
-          <div
-            key={index}
-            className="rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/50"
-          >
-            <h3 className="mb-3 text-lg font-bold">{faq.question}</h3>
-            <p className="text-sm leading-relaxed text-muted-foreground">
+          <details key={index} className="group">
+            <summary className="flex cursor-pointer items-center justify-between py-5 text-left text-lg font-semibold transition-colors hover:text-primary [&::-webkit-details-marker]:hidden">
+              {faq.question}
+              <ChevronDown className="ml-4 h-5 w-5 flex-shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <p className="pb-5 text-sm leading-relaxed text-muted-foreground">
               {faq.answer}
             </p>
-          </div>
+          </details>
         ))}
       </div>
     </section>
   )
 }
-
-

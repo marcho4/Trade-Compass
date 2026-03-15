@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Check } from "lucide-react"
 
 export const PricingSection = () => {
   const plans = [
@@ -79,20 +80,7 @@ export const PricingSection = () => {
             <ul className="mb-8 space-y-3">
               {plan.features.map((feature, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M5 13l4 4L19 7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
                   <span className="text-sm">{feature}</span>
                 </li>
               ))}
@@ -100,12 +88,11 @@ export const PricingSection = () => {
 
             <Link
               href={plan.ctaLink}
-              className={`block w-full rounded-full py-3 text-center text-sm font-semibold transition-all hover:scale-105 ${
+              className={`block w-full rounded-full py-3 text-center text-sm font-semibold transition-colors ${
                 plan.popular
                   ? "bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
                   : "border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80"
               }`}
-              tabIndex={0}
               aria-label={plan.cta}
             >
               {plan.cta}
@@ -116,5 +103,3 @@ export const PricingSection = () => {
     </section>
   )
 }
-
-

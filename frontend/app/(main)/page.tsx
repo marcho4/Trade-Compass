@@ -12,9 +12,7 @@ const LandingPage = () => {
   return (
     <div className="flex flex-col">
       <Header />
-      <div className="my-2 mx-1">
-        <HeroSection />
-      </div>
+      <HeroSection />
 
       <div className="container mx-auto px-4 md:px-6">
         <DetailedFeatures />

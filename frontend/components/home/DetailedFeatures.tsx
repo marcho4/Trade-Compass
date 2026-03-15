@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Bot, BarChart3, Target } from "lucide-react"
+import { Bot, BarChart3, Target, ArrowRight } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 type Feature = {
@@ -60,43 +60,25 @@ export const DetailedFeatures = () => {
               <feature.icon className="h-12 w-12 text-primary" />
             </div>
 
-            {/* Title */}
             <h3 className="mb-2 text-2xl font-bold">{feature.title}</h3>
 
-            {/* Subtitle */}
             <p className="mb-4 text-base font-semibold text-primary">
               {feature.subtitle}
             </p>
 
-            {/* Description */}
             <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
               {feature.description}
             </p>
 
-            {/* Example Link */}
             {feature.example && (
               <div className="mt-4">
                 <Link
                   href={feature.example_url}
                   className="inline-flex items-center text-sm font-medium text-primary transition-colors hover:text-primary/80"
-                  tabIndex={0}
                   aria-label={feature.example}
                 >
                   {feature.example}
-                  <svg
-                    className="ml-1 h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M13 7l5 5m0 0l-5 5m5-5H6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <ArrowRight className="ml-1 h-4 w-4" aria-hidden="true" />
                 </Link>
               </div>
             )}
@@ -106,4 +88,3 @@ export const DetailedFeatures = () => {
     </section>
   )
 }
-
