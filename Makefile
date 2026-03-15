@@ -4,19 +4,24 @@ build:
 	docker compose build --no-cache
 
 financial-data:
-	docker compose build financial-data && docker compose down && docker compose up -d
+	docker compose up -d --build --force-recreate financial-data
+	docker compose restart nginx
 
 parser:
-	docker compose build parser && docker compose down && docker compose up -d
+	docker compose up -d --build --force-recreate parser
+	docker compose restart nginx
 
 auth:
-	docker compose build auth-service && docker compose down && docker compose up -d
+	docker compose up -d --build --force-recreate auth-service
+	docker compose restart nginx
 
 frontend:
-	docker compose build frontend --no-cache && docker compose down && docker compose up -d
+	docker compose up -d --build --force-recreate frontend
+	docker compose restart nginx
 
 ai:
-	docker compose build ai-service && docker compose down && docker compose up -d
+	docker compose up -d --build --force-recreate ai-service
+	docker compose restart nginx
 
 restart:
 	docker compose down && docker compose up -d

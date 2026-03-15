@@ -16,6 +16,33 @@ export interface ReportResults {
   total: number;
 }
 
+export interface BusinessResearch {
+  profile: {
+    ticker: string;
+    company_name: string;
+    description: string;
+    products_and_services: string[];
+    markets: { market: string; role: string }[];
+    key_clients: string;
+    business_model: string;
+  };
+  revenue_sources: {
+    ticker: string;
+    segment: string;
+    share_pct: number;
+    approximate: boolean;
+    description: string;
+    trend: string;
+  }[];
+  dependencies: {
+    ticker: string;
+    factor: string;
+    type: string;
+    severity: string;
+    description: string;
+  }[];
+}
+
 export const aiApi = {
   async extractData(
     ticker: string,
@@ -88,6 +115,25 @@ export const aiApi = {
 
     const json = await response.json();
     return json.data;
+  },
+
+  async getBusinessResearch(
+    ticker: string,
+    signal?: AbortSignal
+  ): Promise<BusinessResearch | null> {
+    const params = new URLSearchParams({ ticker });
+
+    const response = await fetch(`${AI_BASE_URL}/business-research?${params}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+    });
+
+    if (response.status === 404) return null;
+    if (!response.ok) return null;
+
+    const json = await response.json();
+    return json.data || null;
   },
 
   async getReportResults(

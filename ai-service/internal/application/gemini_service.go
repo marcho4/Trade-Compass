@@ -182,7 +182,7 @@ func (g *GeminiService) CollectNews(ctx context.Context, ticker string) (*entity
 }
 
 func (g *GeminiService) ResearchBusiness(ctx context.Context, ticker, companyName string) (*entity.BusinessResearchResponse, error) {
-	prompt := docs.BusinessResearcherPrompt() + "\n\n## Компания для анализа\nТикер: " + ticker + "\nНазвание: " + companyName
+	prompt := docs.BusinessResearcherPrompt() + "\n\n## Компания для анализа\nТикер: " + ticker + "\nНазвание: " + companyName + "\n\nВАЖНО: В поле ticker ответа используй СТРОГО \"" + ticker + "\". Не заменяй тикер на альтернативный."
 
 	marketSchema := &genai.Schema{
 		Type: genai.TypeObject,
@@ -253,6 +253,8 @@ func (g *GeminiService) ResearchBusiness(ctx context.Context, ticker, companyNam
 		slog.Error("[ResearchBusiness] failed to parse response", slog.String("ai_response", text))
 		return nil, fmt.Errorf("parse business research response: %w", err)
 	}
+
+	res.Ticker = ticker
 
 	slog.Info("[ResearchBusiness] completed", slog.String("ticker", ticker), slog.String("company_name", res.CompanyName))
 	return &res, nil

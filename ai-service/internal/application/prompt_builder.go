@@ -39,7 +39,7 @@ func BuildAnalysisPrompt(ctx AnalysisContext) string {
 	writeMarketData(&b, ctx.CBRate, ctx.MarketCap)
 	writePriceHistory(&b, ctx.Candles)
 	writeNews(&b, ctx.News)
-	slog.Debug("final prompt", slog.String("Prompt", b.String()))
+	slog.Info("Full Prompt", slog.String("Prompt", b.String()))
 	return b.String()
 }
 
@@ -68,9 +68,6 @@ func writeFinancialHistory(b *strings.Builder, history []entity.RawData) {
 		return
 	}
 
-	b.WriteString("Ниже представлены данные финансовой отчётности компании за несколько периодов.\n")
-	b.WriteString("Используй их для анализа динамики и трендов.\n\n")
-
 	for i, rd := range history {
 		if i > 0 {
 			b.WriteString("---\n\n")
@@ -85,71 +82,8 @@ func writeFinancialHistory(b *strings.Builder, history []entity.RawData) {
 		}
 
 		fmt.Fprintf(b, "## Период: %d / %s (%s)\n\n", rd.Year, rd.Period, units)
-
-		b.WriteString("Отчёт о прибылях и убытках:\n")
-		writeMetric(b, "Выручка", rd.Revenue)
-		writeMetric(b, "Себестоимость", rd.CostOfRevenue)
-		writeMetric(b, "Валовая прибыль", rd.GrossProfit)
-		writeMetric(b, "Операционные расходы (SG&A)", rd.OperatingExpenses)
-		writeMetric(b, "Прочие доходы", rd.OtherIncome)
-		writeMetric(b, "Прочие расходы", rd.OtherExpenses)
-		writeMetric(b, "EBIT", rd.EBIT)
-		writeMetric(b, "EBITDA", rd.EBITDA)
-		writeMetric(b, "Амортизация (D&A)", rd.Depreciation)
-		writeMetric(b, "Процентные доходы", rd.InterestIncome)
-		writeMetric(b, "Процентные расходы", rd.InterestExpense)
-		writeMetric(b, "Прибыль до налогов", rd.ProfitBeforeTax)
-		writeMetric(b, "Налог на прибыль", rd.TaxExpense)
-		writeMetric(b, "Чистая прибыль", rd.NetProfit)
-		writeMetric(b, "ЧП акционеров материнской", rd.NetProfitParent)
-		writeFloatMetric(b, "Базовая EPS (руб.)", rd.BasicEPS)
-
-		b.WriteString("\nБаланс:\n")
-		writeMetric(b, "Итого активы", rd.TotalAssets)
-		writeMetric(b, "Оборотные активы", rd.CurrentAssets)
-		writeMetric(b, "Денежные средства", rd.CashAndEquivalents)
-		writeMetric(b, "Запасы", rd.Inventories)
-		writeMetric(b, "Дебиторская задолженность", rd.Receivables)
-		writeMetric(b, "Основные средства", rd.FixedAssets)
-		writeMetric(b, "Активы ППА (IFRS 16)", rd.RightOfUseAssets)
-		writeMetric(b, "НМА", rd.IntangibleAssets)
-		writeMetric(b, "Гудвилл", rd.Goodwill)
-		writeMetric(b, "Внеоборотные активы", rd.TotalNonCurrentAssets)
-		writeMetric(b, "Итого обязательства", rd.TotalLiabilities)
-		writeMetric(b, "Краткосрочные обязательства", rd.CurrentLiabilities)
-		writeMetric(b, "Общий долг", rd.Debt)
-		writeMetric(b, "Долгосрочный долг", rd.LongTermDebt)
-		writeMetric(b, "Краткосрочный долг", rd.ShortTermDebt)
-		writeMetric(b, "Долгосрочные обязательства по аренде", rd.LtLeaseLiabilities)
-		writeMetric(b, "Краткосрочные обязательства по аренде", rd.StLeaseLiabilities)
-		writeMetric(b, "Торговая кредиторка", rd.TradePayables)
-		writeMetric(b, "Собственный капитал", rd.Equity)
-		writeMetric(b, "Капитал акционеров материнской", rd.EquityParent)
-		writeMetric(b, "Казначейские акции", rd.TreasuryShares)
-		writeMetric(b, "Нераспределённая прибыль", rd.RetainedEarnings)
-
-		b.WriteString("\nДенежные потоки:\n")
-		writeMetric(b, "OCF", rd.OperatingCashFlow)
-		writeMetric(b, "Инвестиционный CF", rd.InvestingCashFlow)
-		writeMetric(b, "Финансовый CF", rd.FinancingCashFlow)
-		writeMetric(b, "CAPEX", rd.CAPEX)
-		writeMetric(b, "FCF", rd.FreeCashFlow)
-		writeMetric(b, "Дивиденды выплаченные", rd.DividendsPaid)
-		writeMetric(b, "Погашение аренды", rd.LeasePayments)
-		writeMetric(b, "Покупки бизнесов нетто", rd.AcquisitionsNet)
-		writeMetric(b, "Проценты уплаченные", rd.InterestPaid)
-		writeMetric(b, "Привлечение кредитов", rd.DebtProceeds)
-		writeMetric(b, "Погашение кредитов", rd.DebtRepayments)
-
-		b.WriteString("\nПроизводные показатели:\n")
-		writeMetric(b, "Акции в обращении", rd.SharesOutstanding)
-		writeMetric(b, "Рыночная капитализация", rd.MarketCap)
-		writeMetric(b, "EV", rd.EnterpriseValue)
-		writeMetric(b, "Оборотный капитал", rd.WorkingCapital)
-		writeMetric(b, "Задействованный капитал", rd.CapitalEmployed)
-		writeMetric(b, "Чистый долг", rd.NetDebt)
-		writeMetric(b, "Проценты по аренде", rd.InterestOnLeases)
-		writeMetric(b, "Проценты по кредитам", rd.InterestOnLoans)
+		json, _ := json.Marshal(rd)
+		b.WriteString(string(json))
 		b.WriteString("\n")
 	}
 
