@@ -38,6 +38,18 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-rating-1: var(--rating-1);
+  --color-rating-1-foreground: var(--rating-1-foreground);
+  --color-rating-2: var(--rating-2);
+  --color-rating-2-foreground: var(--rating-2-foreground);
+  --color-rating-3: var(--rating-3);
+  --color-rating-3-foreground: var(--rating-3-foreground);
+  --color-rating-4: var(--rating-4);
+  --color-rating-4-foreground: var(--rating-4-foreground);
+  --color-rating-5: var(--rating-5);
+  --color-rating-5-foreground: var(--rating-5-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -78,6 +90,33 @@
   --sidebar-accent-foreground: oklch(0.3 0.02 240);
   --sidebar-border: oklch(0.9 0.005 240);
   --sidebar-ring: oklch(0.5 0.03 240);
+
+  /* Semantic: price direction */
+  --positive: oklch(0.45 0.16 145);
+  --negative: oklch(0.5 0.2 25);
+
+  /* Semantic: rating scale (1–5) */
+  --rating-1: oklch(0.55 0.18 25);
+  --rating-1-foreground: oklch(1 0 0);
+  --rating-2: oklch(0.65 0.16 55);
+  --rating-2-foreground: oklch(0.2 0.02 55);
+  --rating-3: oklch(0.8 0.14 85);
+  --rating-3-foreground: oklch(0.25 0.02 85);
+  --rating-4: oklch(0.7 0.14 145);
+  --rating-4-foreground: oklch(1 0 0);
+  --rating-5: oklch(0.52 0.17 145);
+  --rating-5-foreground: oklch(1 0 0);
+
+  /* Semantic: chart rating gradient anchors (oklch) */
+  --chart-rating-low-l: 0.55;
+  --chart-rating-low-c: 0.18;
+  --chart-rating-low-h: 25;
+  --chart-rating-mid-l: 0.8;
+  --chart-rating-mid-c: 0.14;
+  --chart-rating-mid-h: 85;
+  --chart-rating-high-l: 0.52;
+  --chart-rating-high-c: 0.17;
+  --chart-rating-high-h: 145;
 }
 
 .dark {
@@ -113,6 +152,33 @@
   --sidebar-accent-foreground: oklch(0.95 0.005 240);
   --sidebar-border: oklch(0.3 0.015 240);
   --sidebar-ring: oklch(0.6 0.05 240);
+
+  /* Semantic: price direction */
+  --positive: oklch(0.6 0.18 145);
+  --negative: oklch(0.65 0.2 25);
+
+  /* Semantic: rating scale (1–5) */
+  --rating-1: oklch(0.6 0.2 25);
+  --rating-1-foreground: oklch(1 0 0);
+  --rating-2: oklch(0.7 0.15 55);
+  --rating-2-foreground: oklch(0.15 0.01 55);
+  --rating-3: oklch(0.82 0.12 85);
+  --rating-3-foreground: oklch(0.2 0.02 85);
+  --rating-4: oklch(0.72 0.15 145);
+  --rating-4-foreground: oklch(1 0 0);
+  --rating-5: oklch(0.6 0.18 145);
+  --rating-5-foreground: oklch(1 0 0);
+
+  /* Semantic: chart rating gradient anchors (oklch) */
+  --chart-rating-low-l: 0.6;
+  --chart-rating-low-c: 0.2;
+  --chart-rating-low-h: 25;
+  --chart-rating-mid-l: 0.82;
+  --chart-rating-mid-c: 0.12;
+  --chart-rating-mid-h: 85;
+  --chart-rating-high-l: 0.6;
+  --chart-rating-high-c: 0.18;
+  --chart-rating-high-h: 145;
 }
 
 @layer base {

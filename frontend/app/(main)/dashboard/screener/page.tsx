@@ -1,208 +1,195 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { CompanyCard, ScreenerFilters } from "@/components/screener"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { financialDataApi, Sector, Company } from "@/lib/api"
 import { aiApi } from "@/lib/api/ai-api"
+import type { FilterValues, CompanyRating } from "@/components/screener/types"
 
-interface FilterValues {
-  search: string
-  sector: string
-  peMin: string
-  peMax: string
-  dividendYieldMin: string
-  marketCapMin: string
-  marketCapMax: string
-  ratingMin: string
-  debtToEquityMax: string
-  roeMin: string
+interface CompanyWithRating extends Company {
+  name: string
+  sectorName: string
+  rating: CompanyRating
 }
 
-interface CompanyWithDetails extends Company {
-  name: string
-  sector: string
+interface PriceInfo {
   price: number
   priceChange: number
   priceChangePercent: number
-  rating: {
-    health: number
-    growth: number
-    moat: number
-    dividends: number
-    value: number
-    total: number
-  }
-  marketCap?: number
-  pe?: number
-  dividendYield?: number
 }
 
 const ITEMS_PER_PAGE = 9
+
+const DEFAULT_RATING: CompanyRating = {
+  health: 0,
+  growth: 0,
+  moat: 0,
+  dividends: 0,
+  value: 0,
+  total: 0,
+}
 
 export default function ScreenerPage() {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
   const [sectors, setSectors] = useState<Sector[]>([])
-  const [companies, setCompanies] = useState<CompanyWithDetails[]>([])
+  const [companies, setCompanies] = useState<CompanyWithRating[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<FilterValues>({
     search: "",
     sector: "",
-    peMin: "",
-    peMax: "",
-    dividendYieldMin: "",
-    marketCapMin: "",
-    marketCapMax: "",
     ratingMin: "",
-    debtToEquityMax: "",
-    roeMin: "",
   })
 
+  const [priceMap, setPriceMap] = useState<Map<string, PriceInfo>>(new Map())
+  const [marketCapMap, setMarketCapMap] = useState<Map<string, number>>(new Map())
+
   useEffect(() => {
+    const controller = new AbortController()
+
     const loadData = async () => {
       try {
         const [sectorsData, companiesData] = await Promise.all([
           financialDataApi.getSectors(),
           financialDataApi.getCompanies(),
         ])
-        
+
         setSectors(sectorsData)
-        
-        const reportResultsMap = new Map<string, { health: number; growth: number; moat: number; dividends: number; value: number; total: number }>()
-        const reportPromises = companiesData.map(async (company) => {
-          const result = await aiApi.getReportResults(company.ticker)
-          if (result) {
-            reportResultsMap.set(company.ticker, result)
-          }
-        })
-        await Promise.allSettled(reportPromises)
 
-        const randomRating = () => ({
-          health: Math.floor(Math.random() * 6) + 1,
-          growth: Math.floor(Math.random() * 6) + 1,
-          moat: Math.floor(Math.random() * 6) + 1,
-          dividends: Math.floor(Math.random() * 6) + 1,
-          value: Math.floor(Math.random() * 6) + 1,
-          total: Math.floor(Math.random() * 5) + 1,
-        })
+        const sectorMap = new Map(sectorsData.map((s) => [s.id, s.name]))
 
-        const companiesWithDetails: CompanyWithDetails[] = companiesData.map((company) => {
-          const sector = sectorsData.find((s) => s.id === company.sectorId)
-          const rating = reportResultsMap.get(company.ticker) || randomRating()
-          return {
-            ...company,
-            name: company.name || company.ticker,
-            sector: sector?.name || "Неизвестно",
-            price: Math.random() * 1000 + 100,
-            priceChange: (Math.random() - 0.5) * 20,
-            priceChangePercent: (Math.random() - 0.5) * 5,
-            rating,
-            marketCap: Math.random() * 5000000000000 + 100000000000,
-            pe: Math.random() * 20 + 2,
-            dividendYield: Math.random() * 15,
+        const reportResults = await Promise.allSettled(
+          companiesData.map((c) => aiApi.getReportResults(c.ticker, controller.signal))
+        )
+        const reportMap = new Map<string, CompanyRating>()
+        companiesData.forEach((company, i) => {
+          const result = reportResults[i]
+          if (result.status === "fulfilled" && result.value) {
+            reportMap.set(company.ticker, result.value)
           }
         })
 
-        setCompanies(companiesWithDetails)
+        const enriched: CompanyWithRating[] = companiesData.map((company) => ({
+          ...company,
+          name: company.name || company.ticker,
+          sectorName: sectorMap.get(company.sectorId) || "Неизвестно",
+          rating: reportMap.get(company.ticker) || DEFAULT_RATING,
+        }))
+
+        setCompanies(enriched)
       } catch (error) {
         console.error("Failed to load data:", error)
       } finally {
         setLoading(false)
       }
     }
-    
+
     loadData()
+    return () => controller.abort()
   }, [])
 
-  // Функция для обработки изменения фильтра
   const handleFilterChange = (key: keyof FilterValues, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
-    setCurrentPage(1) // Сбрасываем на первую страницу при изменении фильтров
+    setCurrentPage(1)
   }
 
-  // Функция сброса фильтров
   const handleResetFilters = () => {
     setFilters({
       search: "",
       sector: "",
-      peMin: "",
-      peMax: "",
-      dividendYieldMin: "",
-      marketCapMin: "",
-      marketCapMax: "",
       ratingMin: "",
-      debtToEquityMax: "",
-      roeMin: "",
     })
     setCurrentPage(1)
   }
 
-  // Фильтрация компаний
-  const filteredCompanies = companies.filter((company) => {
-    // Поиск по названию или тикеру
-    if (
-      filters.search &&
-      !company.ticker.toLowerCase().includes(filters.search.toLowerCase())
-    ) {
-      return false
-    }
+  const filteredCompanies = useMemo(() => {
+    return companies.filter((company) => {
+      if (filters.search) {
+        const q = filters.search.toLowerCase()
+        if (
+          !company.ticker.toLowerCase().includes(q) &&
+          !company.name.toLowerCase().includes(q)
+        ) {
+          return false
+        }
+      }
 
-    // Фильтр по сектору
-    if (filters.sector && company.sectorId !== parseInt(filters.sector)) {
-      return false
-    }
-
-    // Фильтр по P/E
-    if (filters.peMin && company.pe && company.pe < parseFloat(filters.peMin)) {
-      return false
-    }
-    if (filters.peMax && company.pe && company.pe > parseFloat(filters.peMax)) {
-      return false
-    }
-
-    // Фильтр по дивидендной доходности
-    if (
-      filters.dividendYieldMin &&
-      company.dividendYield &&
-      company.dividendYield < parseFloat(filters.dividendYieldMin)
-    ) {
-      return false
-    }
-
-    // Фильтр по капитализации (конвертируем в млрд)
-    const marketCapBillion = company.marketCap ? company.marketCap / 1000000000 : 0
-    if (
-      filters.marketCapMin &&
-      marketCapBillion < parseFloat(filters.marketCapMin)
-    ) {
-      return false
-    }
-    if (
-      filters.marketCapMax &&
-      marketCapBillion > parseFloat(filters.marketCapMax)
-    ) {
-      return false
-    }
-
-    if (filters.ratingMin) {
-      if (company.rating.total < parseFloat(filters.ratingMin)) {
+      if (filters.sector && company.sectorId !== parseInt(filters.sector)) {
         return false
       }
-    }
 
-    return true
-  })
+      if (filters.ratingMin) {
+        if (company.rating.total < parseFloat(filters.ratingMin)) {
+          return false
+        }
+      }
 
-  // Пагинация
+      return true
+    })
+  }, [companies, filters])
+
   const totalPages = Math.ceil(filteredCompanies.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const paginatedCompanies = filteredCompanies.slice(
     startIndex,
     startIndex + ITEMS_PER_PAGE
   )
+
+  const visibleTickers = useMemo(
+    () => paginatedCompanies.map((c) => c.ticker),
+    [paginatedCompanies]
+  )
+
+  useEffect(() => {
+    if (visibleTickers.length === 0) return
+    const controller = new AbortController()
+
+    const fetchVisibleData = async () => {
+      const [priceResults, mcapResults] = await Promise.all([
+        Promise.allSettled(
+          visibleTickers.map((ticker) =>
+            financialDataApi.getPriceCandles(ticker, 2, 24, controller.signal)
+          )
+        ),
+        Promise.allSettled(
+          visibleTickers.map((ticker) =>
+            financialDataApi.getMarketCap(ticker, controller.signal)
+          )
+        ),
+      ])
+
+      if (controller.signal.aborted) return
+
+      const newPriceMap = new Map(priceMap)
+      visibleTickers.forEach((ticker, i) => {
+        const result = priceResults[i]
+        if (result.status === "fulfilled" && result.value.length > 0) {
+          const candles = result.value
+          const current = candles[candles.length - 1].close
+          const previous = candles.length >= 2 ? candles[candles.length - 2].close : current
+          const change = current - previous
+          const changePercent = previous !== 0 ? (change / previous) * 100 : 0
+          newPriceMap.set(ticker, { price: current, priceChange: change, priceChangePercent: changePercent })
+        }
+      })
+      setPriceMap(newPriceMap)
+
+      const newMcapMap = new Map(marketCapMap)
+      visibleTickers.forEach((ticker, i) => {
+        const result = mcapResults[i]
+        if (result.status === "fulfilled" && result.value) {
+          newMcapMap.set(ticker, result.value)
+        }
+      })
+      setMarketCapMap(newMcapMap)
+    }
+
+    fetchVisibleData()
+    return () => controller.abort()
+  }, [visibleTickers.join(",")])
 
   const handlePreviousPage = () => {
     setCurrentPage((prev) => Math.max(1, prev - 1))
@@ -215,6 +202,22 @@ export default function ScreenerPage() {
   const handleCompanyClick = (ticker: string) => {
     router.push(`/dashboard/${ticker}`)
   }
+
+  const paginationPages = useMemo(() => {
+    if (totalPages <= 1) return []
+    const pages: (number | "ellipsis")[] = []
+    const addPage = (p: number) => { if (!pages.includes(p)) pages.push(p) }
+
+    addPage(1)
+    if (currentPage - 1 > 2) pages.push("ellipsis")
+    for (let p = Math.max(2, currentPage - 1); p <= Math.min(totalPages - 1, currentPage + 1); p++) {
+      addPage(p)
+    }
+    if (currentPage + 1 < totalPages - 1) pages.push("ellipsis")
+    if (totalPages > 1) addPage(totalPages)
+
+    return pages
+  }, [currentPage, totalPages])
 
   if (loading) {
     return (
@@ -235,7 +238,6 @@ export default function ScreenerPage() {
         </p>
       </div>
 
-      {/* Фильтры сверху */}
       <div className="mb-6">
         <ScreenerFilters
           filters={filters}
@@ -245,9 +247,7 @@ export default function ScreenerPage() {
         />
       </div>
 
-      {/* Список компаний */}
       <div className="space-y-6">
-        {/* Информация о результатах */}
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Найдено компаний: <span className="font-semibold text-foreground">{filteredCompanies.length}</span>
@@ -259,16 +259,28 @@ export default function ScreenerPage() {
           )}
         </div>
 
-        {/* Сетка с карточками компаний */}
         {paginatedCompanies.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-            {paginatedCompanies.map((company) => (
-              <CompanyCard
-                key={company.id}
-                {...company}
-                onClick={() => handleCompanyClick(company.ticker)}
-              />
-            ))}
+            {paginatedCompanies.map((company) => {
+              const priceInfo = priceMap.get(company.ticker)
+              const mcap = marketCapMap.get(company.ticker)
+              return (
+                <CompanyCard
+                  key={company.id}
+                  id={company.id}
+                  ticker={company.ticker}
+                  name={company.name}
+                  sector={company.sectorName}
+                  price={priceInfo?.price ?? 0}
+                  priceChange={priceInfo?.priceChange ?? 0}
+                  priceChangePercent={priceInfo?.priceChangePercent ?? 0}
+                  priceLoading={!priceInfo}
+                  rating={company.rating}
+                  marketCap={mcap}
+                  onClick={() => handleCompanyClick(company.ticker)}
+                />
+              )
+            })}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -284,8 +296,7 @@ export default function ScreenerPage() {
           </div>
         )}
 
-        {/* Пагинация */}
-        {totalPages > 1 && paginatedCompanies.length > 0 && (
+        {paginationPages.length > 0 && paginatedCompanies.length > 0 && (
           <div className="flex items-center justify-center gap-2 mt-8">
             <Button
               variant="outline"
@@ -298,38 +309,23 @@ export default function ScreenerPage() {
             </Button>
 
             <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => {
-                  // Показываем только несколько страниц около текущей
-                  if (
-                    page === 1 ||
-                    page === totalPages ||
-                    (page >= currentPage - 1 && page <= currentPage + 1)
-                  ) {
-                    return (
-                      <Button
-                        key={page}
-                        variant={page === currentPage ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => setCurrentPage(page)}
-                        aria-label={`Страница ${page}`}
-                        className="w-10"
-                      >
-                        {page}
-                      </Button>
-                    )
-                  } else if (
-                    page === currentPage - 2 ||
-                    page === currentPage + 2
-                  ) {
-                    return (
-                      <span key={page} className="px-2 text-muted-foreground">
-                        ...
-                      </span>
-                    )
-                  }
-                  return null
-                }
+              {paginationPages.map((item, idx) =>
+                item === "ellipsis" ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground" aria-hidden="true">
+                    ...
+                  </span>
+                ) : (
+                  <Button
+                    key={item}
+                    variant={item === currentPage ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCurrentPage(item)}
+                    aria-label={`Страница ${item}`}
+                    className="w-10"
+                  >
+                    {item}
+                  </Button>
+                )
               )}
             </div>
 
@@ -348,4 +344,3 @@ export default function ScreenerPage() {
     </div>
   )
 }
-
