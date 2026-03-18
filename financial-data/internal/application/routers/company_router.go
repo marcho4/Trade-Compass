@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type CompanyHandler struct {
@@ -125,11 +126,12 @@ func (h *CompanyHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.eventPublisher.PublishCompanyCreated(r.Context(), company.Ticker, company.Name); err != nil {
+	id := uuid.New().String()
+	if err := h.eventPublisher.PublishCompanyCreated(r.Context(), company.Ticker, company.Name, id); err != nil {
 		slog.Error("failed to publish company created event", "ticker", company.Ticker, "error", err)
 	}
 
-	if err := h.eventPublisher.PublishBusinessResearchTask(r.Context(), company.Ticker); err != nil {
+	if err := h.eventPublisher.PublishBusinessResearchTask(r.Context(), company.Ticker, id); err != nil {
 		slog.Error("failed to publish business research task", "ticker", company.Ticker, "error", err)
 	}
 

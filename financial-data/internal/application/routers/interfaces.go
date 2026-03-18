@@ -66,8 +66,8 @@ type PriceRepository interface {
 }
 
 type EventPublisher interface {
-	PublishCompanyCreated(ctx context.Context, ticker, name string) error
-	PublishBusinessResearchTask(ctx context.Context, ticker string) error
+	PublishCompanyCreated(ctx context.Context, ticker, name, id string) error
+	PublishBusinessResearchTask(ctx context.Context, ticker, id string) error
 }
 
 type RatiosRepository interface {
