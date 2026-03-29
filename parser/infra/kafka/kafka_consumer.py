@@ -60,15 +60,20 @@ class TickerParseConsumer:
                 if msg is None:
                     continue
 
-                if msg.error():
-                    if msg.error().code() == KafkaError._PARTITION_EOF:
+                error = msg.error()
+                if error is not None:
+                    if error.code() == KafkaError._PARTITION_EOF:
                         continue
 
-                    logger.error("Kafka consumer error: %s", msg.error())
+                    logger.error("Kafka consumer error: %s", error)
+                    continue
+
+                raw = msg.value()
+                if raw is None:
                     continue
 
                 try:
-                    data = json.loads(msg.value().decode("utf-8"))
+                    data = json.loads(raw.decode("utf-8"))
                     self._handle_message(data)
                 except Exception as e:
                     logger.error("Failed to process Kafka message: %s", e)
@@ -78,6 +83,11 @@ class TickerParseConsumer:
     def _handle_message(self, data: dict):
         ticker = data.get("ticker")
         name = data.get("name")
+        task_id = data.get("id")
+
+        if not task_id:
+            logger.warning("Received message without id: %s", data)
+            return
 
         if not ticker:
             logger.warning("Received message without ticker: %s", data)
@@ -90,7 +100,6 @@ class TickerParseConsumer:
         logger.info("Processing parsing request for ticker=%s, name=%s", ticker, name)
 
         try:
-            # Под одной транзакцией считываем сообщение и отправляем наружу
             self._producer.begin_transaction()
 
             with get_db_session() as db:
@@ -100,18 +109,18 @@ class TickerParseConsumer:
                 processor = ReportProcessor(s3_client, repo, vectorization_service)
                 with EDisclosureClient() as client:
                     inn = get_inn_by_ticker(ticker)
-                    if inn:
-                        name = inn
+                    query = inn if inn else name
 
                     result = processor.process_company_by_query(
                         client,
-                        query=name,
+                        query=query,
                         ticker=ticker,
                         skip_indexing=True,
                     )
 
                 for meta in result.reports_metadata:
-                    self.send_analyze_task(ticker, meta.year, meta.period, meta.s3_path)  
+                    self.send_task(ticker, meta.year, meta.period, meta.s3_path, task_id, "extract")
+                    self.send_task(ticker, meta.year, meta.period, meta.s3_path, task_id, "expect")  
 
                 self._producer.send_offsets_to_transaction(
                     self._consumer.position(self._consumer.assignment()),                                                                                      
@@ -125,10 +134,18 @@ class TickerParseConsumer:
             self._producer.abort_transaction()
             logger.error("Failed to process ticker %s: %s", ticker, e)
 
-    def send_analyze_task(self, ticker: str, year: int, period: str, report_url: str) -> None:
+    @staticmethod
+    def _delivery_callback(err, msg):
+        if err:
+            logger.error("Kafka delivery failed: %s", err)
+        else:
+            logger.debug("Message delivered to %s [%d]", msg.topic(), msg.partition())
+
+
+    def send_task(self, ticker: str, year: int, period: str, report_url: str, task_id: str, task_type: str) -> None:
         ai_period = MONTHS_TO_PERIOD.get(period)
         if not ai_period:
-            logger.warning("Unknown period '%s' for ticker %s, skipping analyze task", period, ticker)
+            logger.warning("unknown period '%s' for ticker %s, skipping analyze task", period, ticker)
             return
 
         message = {
@@ -136,7 +153,8 @@ class TickerParseConsumer:
             "year": year,
             "period": ai_period,
             "report_url": report_url,
-            "type": "extract",
+            "type": task_type,
+            "id": task_id,
         }
 
         try:
@@ -146,16 +164,5 @@ class TickerParseConsumer:
                 callback=self._delivery_callback,
             )
 
-            self._producer.flush(timeout=5)
-
-            logger.info("Sent analyze task for %s %d %s", ticker, year, ai_period)
         except Exception as e:
             logger.error("Failed to send analyze task for %s: %s", ticker, e)
-
-    @staticmethod
-    def _delivery_callback(err, msg):
-        if err:
-            logger.error("Kafka delivery failed: %s", err)
-        else:
-            logger.debug("Message delivered to %s [%d]", msg.topic(), msg.partition())
-
