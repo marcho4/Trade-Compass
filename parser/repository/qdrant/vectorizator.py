@@ -1,10 +1,10 @@
 import logging
 from typing import Optional, Dict, Any
 
-from parser.gateway.pdf.pdf_processor import PDFTextExtractor, TextChunker
-from parser.gateway.gemini.embedder import GeminiEmbeddingService
-from parser.repository.qdrant.vector_store import QdrantVectorStore
-from parser.usecase.interfaces import VectorizationService
+from gateway.pdf.pdf_processor import PDFTextExtractor, TextChunker
+from gateway.gemini.embedder import GeminiEmbeddingService
+from repository.qdrant.vector_store import QdrantVectorStore
+from usecase.interfaces import VectorizationService
 
 
 logger = logging.getLogger(__name__)

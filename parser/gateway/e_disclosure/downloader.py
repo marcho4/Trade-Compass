@@ -6,15 +6,15 @@ import requests
 
 from bs4 import BeautifulSoup
 
-from parser.domain.model.report_metadata import ReportMetadata
+from domain.model.report_metadata import ReportMetadata
 
 from infra.config import config
 
 from urllib.parse import urljoin
 
-from parser.gateway.e_disclosure.metadata_parser import ReportMetadataParser
-from parser.gateway.e_disclosure.unzipper import FileUnzipper
-from parser.gateway.e_disclosure.utils import *
+from gateway.e_disclosure.metadata_parser import ReportMetadataParser
+from gateway.e_disclosure.unzipper import FileUnzipper
+from gateway.e_disclosure.utils import *
 
 logger = logging.getLogger(__name__)
 

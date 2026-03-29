@@ -4,7 +4,7 @@ import logging
 from confluent_kafka import Producer
 
 from infra.config import config
-from parser.usecase.interfaces import AnalyzeTaskGateway
+from usecase.interfaces import AnalyzeTaskGateway
 
 logger = logging.getLogger(__name__)
 

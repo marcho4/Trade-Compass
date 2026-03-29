@@ -1,7 +1,7 @@
 import logging
 from bs4 import BeautifulSoup
 
-from parser.domain.model.report_metadata import ReportMetadata
+from domain.model.report_metadata import ReportMetadata
 
 logger = logging.getLogger(__name__)
 

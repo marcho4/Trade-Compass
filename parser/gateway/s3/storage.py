@@ -5,8 +5,8 @@ import boto3
 
 from typing import Optional
 from botocore.exceptions import ClientError
-from parser.domain.errors import ConfigurationError
-from parser.usecase.interfaces import ColdStorage
+from domain.errors import ConfigurationError
+from usecase.interfaces import ColdStorage
 
 logger = logging.getLogger(__name__)
 

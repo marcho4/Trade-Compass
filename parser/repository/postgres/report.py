@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from models import ReportORM
 
-from parser.domain.model.report import ReportEntity
-from parser.usecase.interfaces import ReportsRepository
+from domain.model.report import ReportEntity
+from usecase.interfaces import ReportsRepository
 
 logger = logging.getLogger(__name__)
 

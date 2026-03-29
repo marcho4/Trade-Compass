@@ -4,10 +4,10 @@ from typing import cast
 
 from companies import get_ticker_by_inn
 
-from parser.domain.model.processing_result import ProcessingResult, ProcessingError, ReportMetadata, SingleCompanyProcessingResult
-from parser.domain.model.report import DownloadedReport, ReportEntity
+from domain.model.processing_result import ProcessingResult, ProcessingError, ReportMetadata, SingleCompanyProcessingResult
+from domain.model.report import DownloadedReport, ReportEntity
 
-from parser.usecase.interfaces import ReportsParser, VectorizationService, ReportsRepository, ColdStorage
+from usecase.interfaces import ReportsParser, VectorizationService, ReportsRepository, ColdStorage
 
 logger = logging.getLogger(__name__)
 

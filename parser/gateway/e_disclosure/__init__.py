@@ -2,7 +2,7 @@ from .driver import SeleniumDriver
 from .searcher import CompanySearcher
 from .downloader import ReportDownloader
 from .metadata_parser import ReportMetadataParser
-from unzipper import FileUnzipper
+from .unzipper import FileUnzipper
 from usecase.interfaces import ReportsParser
 
 
