@@ -3,7 +3,7 @@ import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from models import ReportORM
+from repository.postgres.models import ReportORM
 
 from domain.model.report import ReportEntity
 from usecase.interfaces import ReportsRepository

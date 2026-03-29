@@ -22,7 +22,7 @@ class AiAnalyzeGateway(AnalyzeTaskGateway):
             "bootstrap.servers": config.kafka_bootstrap_servers,
             "transactional.id": "parser-txn-id-553",
         })
-        self._producer.init_transactions(timeout=10)
+        self._producer.init_transactions(10)
 
     def send_task(self, ticker: str, year: int, period: str, report_url: str, task_id: str, task_type: str) -> None:
         ai_period = MONTHS_TO_PERIOD.get(period)
