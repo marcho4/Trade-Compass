@@ -9,7 +9,6 @@ from companies import COMPANIES
 from infra.database import get_db, get_db_session
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
-from infra.kafka_producer import AnalyzeTaskProducer
 from infra.config import config
 from application.vectorization_service import VectorizationService
 
@@ -56,8 +55,7 @@ def run_parsing(skip_indexing: bool = False):
         repo = ReportsRepository(db)
         s3_client = S3ReportsStorage()
         vectorization_service = VectorizationService()
-        task_producer = AnalyzeTaskProducer()
-        processor = ReportProcessor(s3_client, repo, vectorization_service, task_producer)
+        processor = ReportProcessor(s3_client, repo, vectorization_service)
         results = processor.process_companies(list(COMPANIES.keys()), skip_indexing=skip_indexing)
         logger.info(f"Parsing completed: {results}")
 

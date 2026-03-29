@@ -5,10 +5,9 @@ from infra.e_disclosure import EDisclosureClient
 from infra.s3_storage import S3ReportsStorage
 from infra.db_repo import ReportsRepository
 from infra.models import ReportORM
-from infra.kafka_producer import AnalyzeTaskProducer
 from companies import get_ticker_by_inn
 from application.vectorization_service import VectorizationService
-from domain.processing_result import ProcessingResult, ProcessingError, SingleCompanyProcessingResult
+from domain.processing_result import ProcessingResult, ProcessingError, ReportMetadata, SingleCompanyProcessingResult
 from domain.report import DownloadedReport
 
 logger = logging.getLogger(__name__)
@@ -20,12 +19,10 @@ class ReportProcessor:
         s3_client: S3ReportsStorage,
         repo: ReportsRepository,
         vectorization_service: VectorizationService,
-        task_producer: AnalyzeTaskProducer | None = None,
     ):
         self.s3_client = s3_client
         self.repo = repo
         self.vectorization_service = vectorization_service
-        self.task_producer = task_producer
 
     def process_companies(self, companies_inn: list[str], skip_indexing: bool = False) -> ProcessingResult:
         results = ProcessingResult(
@@ -37,16 +34,16 @@ class ReportProcessor:
         with EDisclosureClient() as client:
             for inn in companies_inn:
                 try:
-                    result = self.process_company(client, inn, skip_indexing=skip_indexing)
+                    result = self.process_company_by_inn(client, inn, skip_indexing=skip_indexing)
                     results.processed += 1
                     results.saved += result.saved
                 except Exception as e:
-                    logger.error(f"Ошибка обработки {inn}: {e}")
+                    logger.error(f"error while processing {inn}: {e}")
                     results.errors.append(ProcessingError(inn=inn, error=str(e)))
 
         return results
 
-    def process_company(self, client: EDisclosureClient, inn: str, skip_indexing: bool = False) -> SingleCompanyProcessingResult:
+    def process_company_by_inn(self, client: EDisclosureClient, inn: str, skip_indexing: bool = False) -> SingleCompanyProcessingResult:
         ticker = get_ticker_by_inn(inn)
         return self.process_company_by_query(
             client,
@@ -65,21 +62,21 @@ class ReportProcessor:
         companies = client.search_company(query)
 
         if not companies:
-            logger.warning(f"Компания не найдена: {query}")
-            raise ValueError(f"Компания не найдена: {query}")
+            logger.warning(f"company not found: {query}")
+            raise ValueError(f"company not found: {query}")
 
         first_company = companies[0]
-        logger.info(f"Выбрана компания: {first_company['name']} (ID: {first_company['id']}, тикер: {ticker})")
+        logger.info(f"selected company: {first_company['name']} (ID: {first_company['id']}, {ticker})")
 
-        logger.info("Получение отчетности эмитента для %s", ticker)
-        reports = client.get_reports(first_company)
+        logger.info("downloading reports for %s...", ticker)
+        reports = client.download_reports(first_company)
         downloaded = self._convert_to_downloaded_reports(reports)
 
-        saved = self.upload_and_save_reports(downloaded, ticker, skip_indexing=skip_indexing)
+        saved = self.process_downloaded_reports(downloaded, ticker, skip_indexing=skip_indexing)
 
-        self._log_results(len(downloaded), saved)
+        self._log_results(len(downloaded), len(saved))
 
-        return SingleCompanyProcessingResult(ticker=ticker, saved=saved)
+        return SingleCompanyProcessingResult(ticker=ticker, saved=len(saved), reports_metadata=saved)
 
     def _convert_to_downloaded_reports(self, reports: list[dict]) -> list[DownloadedReport]:
         result = []
@@ -95,42 +92,35 @@ class ReportProcessor:
                 ))
         return result
 
-    def upload_and_save_reports(self, reports: list[DownloadedReport], ticker: str, skip_indexing: bool = False) -> int:
-        saved = 0
+    def process_downloaded_reports(self, reports: list[DownloadedReport], ticker: str, skip_indexing: bool = False) -> list[ReportMetadata]:
+        saved : list[ReportMetadata] = []
         for report in reports:
-            if self._process_single_report(report, ticker, skip_indexing=skip_indexing):
-                saved += 1
+            meta = self._process_downloaded_report(report, ticker, skip_indexing=skip_indexing)
+            if meta is not None:
+                saved.append(meta)
         return saved
 
-    def _process_single_report(self, report: DownloadedReport, ticker: str, skip_indexing: bool = False) -> bool:
+    def _process_downloaded_report(self, report: DownloadedReport, ticker: str, skip_indexing: bool = False) -> ReportMetadata | None:
         if not report.is_valid():
-            logger.warning("Пропуск: отсутствуют year или period_months в данных отчета")
-            return False
+            logger.warning(f"skipping: report {report} is not valid")
+            return None
 
-        logger.info(f"{report.year}, {report.period_months} месяцев - {report.size_mb:.2f} MB")
-        logger.info(f"  Локальный путь: {report.path}")
+        logger.info(f"{report.year}, {report.period_months} months - {report.size_mb:.2f} MB")
+        logger.info(f"local path: {report.path}")
 
-        existing_s3_path = self.s3_client.get_s3_report_link(ticker, report.year, report.period)
-        if existing_s3_path:
-            logger.info(f"  Пропуск: файл уже существует в S3: {existing_s3_path}")
-            if not self.repo.get_report_by_params(ticker, report.year, report.period):
-                self._save_report_to_db(ticker, report.year, report.period, existing_s3_path)
-            self._send_extract_task(ticker, report.year, report.period, existing_s3_path)
-            return False
-
-        s3_path = self._upload_to_s3(ticker, report)
-        if not s3_path:
-            return False
+        s3_path = self._ensure_s3_uploaded(ticker, report)
+        if s3_path is None:
+            logger.error("error while saving to s3")
+            return None
 
         report_orm = self._save_report_to_db(ticker, report.year, report.period, s3_path)
         if not report_orm:
-            return False
+            return None
 
         if not skip_indexing:
             self._vectorize_report(report_orm, report, ticker)
 
-        self._send_extract_task(ticker, report.year, report.period, s3_path)
-        return True
+        return ReportMetadata(s3_path=s3_path, year=report.year, period=report.period)
 
     def _upload_to_s3(self, ticker: str, report: DownloadedReport) -> str | None:
         s3_path = self.s3_client.upload_report(ticker, report.year, report.period, report.path)
@@ -163,18 +153,16 @@ class ReportProcessor:
             logger.error(f"Ошибка сохранения отчёта в БД: {e}")
             return None
 
-    def _send_extract_task(self, ticker: str, year: int, period: str, s3_path: str) -> None:
-        if not self.task_producer:
-            return
-        self.task_producer.send_analyze_task(
-            ticker=ticker,
-            year=year,
-            period=period,
-            report_url=s3_path,
-        )
-
     def _log_results(self, downloaded_count: int, saved: int) -> None:
         logger.info(f"Всего файлов обработано: {downloaded_count}")
         logger.info("=" * 60)
         logger.info(f"Сохранено в БД: {saved} отчётов")
         logger.info("=" * 60)
+
+    def _ensure_s3_uploaded(self, ticker, report) -> str | None:
+        existing_s3_path = self.s3_client.get_s3_report_link(ticker, report.year, report.period)
+        if existing_s3_path:
+            logger.info(f"Skipping: report already exists in S3: {existing_s3_path}")
+            return existing_s3_path
+
+        return self._upload_to_s3(ticker, report)

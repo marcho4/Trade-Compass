@@ -3,7 +3,7 @@ from fastapi import FastAPI
 
 from application.handlers import router
 from infra.database import init_db
-from infra.kafka_consumer import TickerParseConsumer
+from infra.kafka.kafka_consumer import TickerParseConsumer
 
 
 @asynccontextmanager

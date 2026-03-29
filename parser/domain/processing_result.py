@@ -14,9 +14,16 @@ class ProcessingResult:
     errors: List[ProcessingError]
 
 @dataclass
+class ReportMetadata:
+    year: int
+    period: str
+    s3_path: str
+
+@dataclass
 class SingleCompanyProcessingResult:
     saved: int
     ticker: str
+    reports_metadata: list[ReportMetadata]
 
 @dataclass
 class VectorizationError:

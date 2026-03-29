@@ -24,9 +24,15 @@ class EDisclosureClient:
         self._driver_manager.__exit__(exc_type, exc_val, exc_tb)
 
     def search_company(self, query: str) -> list[dict]:
+        if self._searcher is None:
+            return []
+    
         return self._searcher.search(query)
 
-    def get_reports(self, company: dict, download_dir: str = None) -> list[dict]:
+    def download_reports(self, company: dict, download_dir: str = None) -> list[dict]:
+        if self._downloader is None:
+            return []
+
         return self._downloader.download_reports(company, download_dir)
 
     def unzip_files(self, source_dir: str = None, target_dir: str = None) -> list[str]:
