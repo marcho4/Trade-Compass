@@ -56,3 +56,18 @@ func (p *KafkaEventPublisher) PublishBusinessResearchTask(ctx context.Context, t
 
 	return p.aiProducer.Publish(ctx, []byte(ticker), value)
 }
+
+func (p *KafkaEventPublisher) PublishExpectRiskAndGrowthAnalysis(ctx context.Context, ticker, id string) error {
+	task := AITask{
+		Id:     id,
+		Ticker: ticker,
+		Type:   "expect-risk-and-growth",
+	}
+
+	value, err := json.Marshal(task)
+	if err != nil {
+		return fmt.Errorf("marshal business research task: %w", err)
+	}
+
+	return p.aiProducer.Publish(ctx, []byte(ticker), value)
+}
