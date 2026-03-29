@@ -23,7 +23,7 @@ Base = declarative_base()
 
 
 def init_db():
-    from infra.models import ReportORM
+    from repository.postgres.models import ReportORM
 
     Base.metadata.create_all(bind=engine)
 

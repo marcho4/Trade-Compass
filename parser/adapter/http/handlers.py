@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session
 from companies import COMPANIES
 from infra.database import get_db, get_db_session
 from infra.config import config
-from parser.gateway.e_disclosure import EDisclosureClient
-from parser.gateway.s3.storage import S3ReportsStorage
-from parser.repository.postgres.report import PostgresReportsRepository
-from parser.repository.qdrant.vectorizator import QdrantVectorizationService
-from parser.usecase.interfaces import ReportsRepository
-from parser.usecase.reports import ReportProcessor
+from gateway.e_disclosure import EDisclosureClient
+from gateway.s3.storage import S3ReportsStorage
+from repository.postgres.report import PostgresReportsRepository
+from repository.qdrant.vectorizator import QdrantVectorizationService
+from usecase.interfaces import ReportsRepository
+from usecase.reports import ReportProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -54,13 +54,13 @@ def start_parsing(
 
 def run_parsing(skip_indexing: bool = False):
     with get_db_session() as db:
-        scrapper = EDisclosureClient()
         repo = PostgresReportsRepository(db)
         s3_client = S3ReportsStorage()
         vectorization_service = QdrantVectorizationService()
-        processor = ReportProcessor(scrapper, s3_client, repo, vectorization_service)
-        results = processor.process_companies(list(COMPANIES.keys()), skip_indexing=skip_indexing)
-        logger.info(f"Parsing completed: {results}")
+        with EDisclosureClient() as scrapper:
+            processor = ReportProcessor(scrapper, s3_client, repo, vectorization_service)
+            results = processor.process_companies(list(COMPANIES.keys()), skip_indexing=skip_indexing)
+            logger.info(f"Parsing completed: {results}")
 
 
 @router.get("/reports")

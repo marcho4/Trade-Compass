@@ -7,11 +7,11 @@ from confluent_kafka import Consumer, KafkaError
 from companies import get_inn_by_ticker
 from infra.config import config
 from infra.database import get_db_session
-from parser.gateway.e_disclosure import EDisclosureClient
-from parser.repository.qdrant.vectorizator import QdrantVectorizationService
-from parser.usecase.interfaces import AnalyzeTaskGateway
-from parser.repository.postgres.report import PostgresReportsRepository
-from parser.gateway.s3.storage import S3ReportsStorage
+from gateway.e_disclosure import EDisclosureClient
+from repository.qdrant.vectorizator import QdrantVectorizationService
+from usecase.interfaces import AnalyzeTaskGateway
+from repository.postgres.report import PostgresReportsRepository
+from gateway.s3.storage import S3ReportsStorage
 from usecase.reports import ReportProcessor
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,9 @@ class TickerParseConsumer:
         self._gateway = gateway
         self._thread: threading.Thread | None = None
         self._running = False
+
+        self._s3_client = S3ReportsStorage()
+        self._vector_store = QdrantVectorizationService()
 
         self._consumer = Consumer({
             "bootstrap.servers": config.kafka_bootstrap_servers,
@@ -93,13 +96,11 @@ class TickerParseConsumer:
 
             with get_db_session() as db:
                 repo = PostgresReportsRepository(db)
-                s3_client = S3ReportsStorage()
-                vector_store = QdrantVectorizationService()
                 with EDisclosureClient() as client:
                     inn = get_inn_by_ticker(ticker)
                     query = inn if inn else name
 
-                    processor = ReportProcessor(client, s3_client, repo, vector_store)
+                    processor = ReportProcessor(client, self._s3_client, repo, self._vector_store)
                     result = processor.process_company_by_query(
                         query=query,
                         ticker=ticker,
