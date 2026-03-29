@@ -1,7 +1,7 @@
 import re
 from typing import Tuple
 
-from application.exceptions import PeriodParseError
+from parser.domain.exceptions import PeriodParseError
 
 
 QUARTER_TO_MONTHS = {

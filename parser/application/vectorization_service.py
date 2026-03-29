@@ -4,11 +4,12 @@ from typing import Optional, Dict, Any
 from infra.pdf_processor import PDFTextExtractor, TextChunker
 from infra.gemini_embeddings import GeminiEmbeddingService
 from infra.qdrant_client import QdrantVectorStore
+from domain.ports import VectorizationService
 
 logger = logging.getLogger(__name__)
 
 
-class VectorizationService:
+class QdrantVectorizationService(VectorizationService):
     def __init__(
         self,
         pdf_extractor: Optional[PDFTextExtractor] = None,

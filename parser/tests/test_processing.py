@@ -3,7 +3,7 @@ from infra.database import get_db_session, init_db
 from infra.db_repo import ReportsRepository
 from infra.s3_storage import S3ReportsStorage
 from application.reports_processor import ReportProcessor
-from application.vectorization_service import VectorizationService
+from application.vectorization_service import QdrantVectorizationService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,7 +21,7 @@ def main():
     with get_db_session() as db:
         repo = ReportsRepository(db)
         s3_client = S3ReportsStorage()
-        vectorization_service = VectorizationService()
+        vectorization_service = QdrantVectorizationService()
         logger.info("Запуск тестового парсинга...")
         processor = ReportProcessor(
             s3_client, repo, vectorization_service

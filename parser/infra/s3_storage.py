@@ -4,7 +4,7 @@ import re
 import boto3
 from typing import Optional
 from botocore.exceptions import ClientError
-from application.exceptions import ConfigurationError
+from parser.domain.exceptions import ConfigurationError
 
 logger = logging.getLogger(__name__)
 

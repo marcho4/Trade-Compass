@@ -5,7 +5,7 @@ import threading
 from confluent_kafka import Consumer, KafkaError, Producer
 
 from application.reports_processor import ReportProcessor
-from application.vectorization_service import VectorizationService
+from application.vectorization_service import QdrantVectorizationService
 from infra.e_disclosure import EDisclosureClient
 from infra.database import get_db_session
 from infra.db_repo import ReportsRepository
@@ -105,7 +105,7 @@ class TickerParseConsumer:
             with get_db_session() as db:
                 repo = ReportsRepository(db)
                 s3_client = S3ReportsStorage()
-                vectorization_service = VectorizationService()
+                vectorization_service = QdrantVectorizationService()
                 processor = ReportProcessor(s3_client, repo, vectorization_service)
                 with EDisclosureClient() as client:
                     inn = get_inn_by_ticker(ticker)

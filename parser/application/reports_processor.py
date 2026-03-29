@@ -6,9 +6,9 @@ from infra.s3_storage import S3ReportsStorage
 from infra.db_repo import ReportsRepository
 from infra.models import ReportORM
 from companies import get_ticker_by_inn
-from application.vectorization_service import VectorizationService
 from domain.processing_result import ProcessingResult, ProcessingError, ReportMetadata, SingleCompanyProcessingResult
 from domain.report import DownloadedReport
+from parser.domain.ports import VectorizationService
 
 logger = logging.getLogger(__name__)
 
@@ -154,15 +154,13 @@ class ReportProcessor:
             return None
 
     def _log_results(self, downloaded_count: int, saved: int) -> None:
-        logger.info(f"Всего файлов обработано: {downloaded_count}")
-        logger.info("=" * 60)
-        logger.info(f"Сохранено в БД: {saved} отчётов")
-        logger.info("=" * 60)
+        logger.info(f"total file processed: {downloaded_count}")
+        logger.info(f"{saved} reports saved")
 
     def _ensure_s3_uploaded(self, ticker, report) -> str | None:
         existing_s3_path = self.s3_client.get_s3_report_link(ticker, report.year, report.period)
         if existing_s3_path:
-            logger.info(f"Skipping: report already exists in S3: {existing_s3_path}")
+            logger.info(f"skipping: report already exists in S3: {existing_s3_path}")
             return existing_s3_path
 
         return self._upload_to_s3(ticker, report)
