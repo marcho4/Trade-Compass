@@ -14,11 +14,12 @@ type KafkaClient struct {
 
 func NewKafkaClient(kafkaUrl, consumeTopic string) *KafkaClient {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  []string{kafkaUrl},
-		GroupID:  "ai-service-group",
-		Topic:    consumeTopic,
-		MinBytes: 10e3,
-		MaxBytes: 10e6,
+		Brokers:        []string{kafkaUrl},
+		GroupID:        "ai-service-group",
+		Topic:          consumeTopic,
+		MinBytes:       10e3,
+		MaxBytes:       10e6,
+		IsolationLevel: kafka.ReadCommitted,
 	})
 
 	writer := &kafka.Writer{
