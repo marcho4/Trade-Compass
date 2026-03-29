@@ -1,5 +1,6 @@
 import subprocess
 import time
+from pathlib import Path
 
 import pytest
 import requests
@@ -9,15 +10,22 @@ from testcontainers.core.waiting_utils import wait_for_logs
 from testcontainers.postgres import PostgresContainer
 
 ADMIN_API_KEY = "test-admin-key-integration"
+PARSER_DIR = Path(__file__).parent.parent.parent
 
 
 @pytest.fixture(scope="session", autouse=True)
 def build_parser_image():
-    subprocess.run(
-        ["docker", "build", "-t", "trade-compass-parser-test", "."],
-        cwd="/home/marcho/bull-run/parser",
-        check=True,
-    )
+    already_built = subprocess.run(
+        ["docker", "image", "inspect", "trade-compass-parser-test:latest"],
+        capture_output=True,
+    ).returncode == 0
+
+    if not already_built:
+        subprocess.run(
+            ["docker", "build", "-t", "trade-compass-parser-test", "."],
+            cwd=str(PARSER_DIR),
+            check=True,
+        )
 
 
 @pytest.fixture(scope="session")
