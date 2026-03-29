@@ -3,17 +3,18 @@ import os
 import time
 import requests
 
-from application.utils import extract_year_and_period, normalize_filename
 
 from bs4 import BeautifulSoup
 
-from domain.report_metadata import ReportMetadata
+from parser.domain.model.report_metadata import ReportMetadata
 
 from infra.config import config
-from infra.e_disclosure.metadata_parser import ReportMetadataParser
-from infra.e_disclosure.unzipper import FileUnzipper
 
 from urllib.parse import urljoin
+
+from parser.gateway.e_disclosure.metadata_parser import ReportMetadataParser
+from parser.gateway.e_disclosure.unzipper import FileUnzipper
+from parser.gateway.e_disclosure.utils import *
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class ReportDownloader:
         return any(allowed in doc_type_lower for allowed in self.ALLOWED_DOCUMENT_TYPES)
 
     def download_reports(
-        self, company: dict, download_dir: str = None
+        self, company: dict, download_dir: str = ""
     ) -> list[dict]:
         download_dir = download_dir or config.download_dir
         os.makedirs(download_dir, exist_ok=True)
@@ -45,7 +46,7 @@ class ReportDownloader:
         company_id = company["id"]
         company_name = company["name"]
         try:
-            self._navigate_to_company(company.get("url"))
+            self._navigate_to_company(company.get("url")) # type: ignore
 
             reports_url = f"{self.base_url}/portal/files.aspx?id={company_id}&type=4"
             self.driver.get(reports_url)

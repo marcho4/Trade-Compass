@@ -1,11 +1,12 @@
-from infra.e_disclosure.driver import SeleniumDriver
-from infra.e_disclosure.searcher import CompanySearcher
-from infra.e_disclosure.downloader import ReportDownloader
-from infra.e_disclosure.metadata_parser import ReportMetadataParser
-from infra.e_disclosure.unzipper import FileUnzipper
+from .driver import SeleniumDriver
+from .searcher import CompanySearcher
+from .downloader import ReportDownloader
+from .metadata_parser import ReportMetadataParser
+from unzipper import FileUnzipper
+from usecase.interfaces import ReportsParser
 
 
-class EDisclosureClient:
+class EDisclosureClient(ReportsParser):
     def __init__(self):
         self._driver_manager = SeleniumDriver()
         self._driver = None
@@ -29,13 +30,13 @@ class EDisclosureClient:
     
         return self._searcher.search(query)
 
-    def download_reports(self, company: dict, download_dir: str = None) -> list[dict]:
+    def download_reports(self, company: dict, download_dir: str = "") -> list[dict]:
         if self._downloader is None:
             return []
 
         return self._downloader.download_reports(company, download_dir)
 
-    def unzip_files(self, source_dir: str = None, target_dir: str = None) -> list[str]:
+    def unzip_files(self, source_dir: str = "", target_dir: str = "") -> list[str]:
         return self._unzipper.unzip_all(source_dir, target_dir)
 
 

@@ -4,13 +4,15 @@ import tempfile
 from fastapi import APIRouter, Depends, BackgroundTasks, UploadFile, File, Form, HTTPException, Header, Query
 from sqlalchemy.orm import Session
 
-from application.reports_processor import ReportProcessor
 from companies import COMPANIES
 from infra.database import get_db, get_db_session
-from infra.db_repo import ReportsRepository
-from infra.s3_storage import S3ReportsStorage
 from infra.config import config
-from parser.application.vectorization_service import QdrantVectorizationService
+from parser.gateway.e_disclosure import EDisclosureClient
+from parser.gateway.s3.storage import S3ReportsStorage
+from parser.repository.postgres.report import PostgresReportsRepository
+from parser.repository.qdrant.vectorizator import QdrantVectorizationService
+from parser.usecase.interfaces import ReportsRepository
+from parser.usecase.reports import ReportProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ router = APIRouter()
 
 
 def get_reports_repo(db: Session = Depends(get_db)) -> ReportsRepository:
-    return ReportsRepository(db)
+    return PostgresReportsRepository(db)
 
 
 def verify_admin_key(x_api_key: str = Header(..., alias="X-API-Key")):
@@ -52,10 +54,11 @@ def start_parsing(
 
 def run_parsing(skip_indexing: bool = False):
     with get_db_session() as db:
-        repo = ReportsRepository(db)
+        scrapper = EDisclosureClient()
+        repo = PostgresReportsRepository(db)
         s3_client = S3ReportsStorage()
         vectorization_service = QdrantVectorizationService()
-        processor = ReportProcessor(s3_client, repo, vectorization_service)
+        processor = ReportProcessor(scrapper, s3_client, repo, vectorization_service)
         results = processor.process_companies(list(COMPANIES.keys()), skip_indexing=skip_indexing)
         logger.info(f"Parsing completed: {results}")
 
@@ -110,7 +113,7 @@ async def upload_report(
     period_str = str(period)
     s3_client = S3ReportsStorage()
 
-    existing_s3_path = s3_client.get_s3_report_link(ticker, year, period_str)
+    existing_s3_path = s3_client.get_report_link(ticker, year, period_str)
     if existing_s3_path:
         raise HTTPException(
             status_code=409,

@@ -1,4 +1,4 @@
-from infra.pdf_processor import PDFTextExtractor, TextChunker
+from parser.gateway.pdf.pdf_processor import PDFTextExtractor, TextChunker
 import pytest
 
 @pytest.fixture()

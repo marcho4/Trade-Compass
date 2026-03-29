@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 CHROMEDRIVER_PATH = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
 
-
 class SeleniumDriver:
     def __init__(self):
         self.driver = None

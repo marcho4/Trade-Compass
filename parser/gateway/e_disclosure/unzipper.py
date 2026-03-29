@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class FileUnzipper:
     @staticmethod
-    def unzip_all(source_dir: str = None, target_dir: str = None):
+    def unzip_all(source_dir: str = "", target_dir: str = ""):
         source_dir = source_dir or config.download_dir
         target_dir = target_dir or config.unzip_dir
 

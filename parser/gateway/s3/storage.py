@@ -2,14 +2,16 @@ import logging
 import os
 import re
 import boto3
+
 from typing import Optional
 from botocore.exceptions import ClientError
-from parser.domain.exceptions import ConfigurationError
+from parser.domain.errors import ConfigurationError
+from parser.usecase.interfaces import ColdStorage
 
 logger = logging.getLogger(__name__)
 
 
-class S3ReportsStorage:
+class S3ReportsStorage(ColdStorage):
     def __init__(self):
         key_id = os.environ.get("YANDEX_CLOUD_S3_ACCESS_KEY_ID")
         key_secret = os.environ.get("YANDEX_CLOUD_S3_SECRET_ACCESS_KEY")
@@ -52,7 +54,7 @@ class S3ReportsStorage:
             logger.error(f"Ошибка при загрузке файла: {e}")
             return None
 
-    def get_s3_report_link(self, ticker: str, year: int, period: str, extension: str = ".pdf") -> Optional[str]:
+    def get_report_link(self, ticker: str, year: int, period: str, extension: str = ".pdf") -> Optional[str]:
         try:
             ticker_normalized = self.__normalize_string(ticker)
             period_normalized = self.__normalize_string(period)

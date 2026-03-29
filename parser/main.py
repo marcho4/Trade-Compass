@@ -1,15 +1,17 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from application.handlers import router
+from parser.adapter.http.handlers import router
+from adapter.kafka.consumer import TickerParseConsumer
+from gateway.kafka.producer import AiAnalyzeGateway
 from infra.database import init_db
-from infra.kafka.kafka_consumer import TickerParseConsumer
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    consumer = TickerParseConsumer()
+    gateway = AiAnalyzeGateway()
+    consumer = TickerParseConsumer(gateway)
     consumer.start()
     yield
     consumer.stop()

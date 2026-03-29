@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -15,8 +15,7 @@ from infra.config import config
 
 logger = logging.getLogger(__name__)
 
-
-class QdrantVectorStore:
+class QdrantVectorStore():
     def __init__(self, host: Optional[str] = None, port: Optional[int] = None):
         self.host = host or config.qdrant_host
         self.port = port or config.qdrant_port

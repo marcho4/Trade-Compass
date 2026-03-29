@@ -18,12 +18,3 @@ class ReportORM(Base):
 
     def __repr__(self):
         return f"<ReportORM(id={self.id}, ticker={self.ticker}, year={self.year}, period={self.period})>"
-
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "ticker": self.ticker,
-            "year": self.year,
-            "period": self.period,
-            "s3_path": self.s3_path,
-        }

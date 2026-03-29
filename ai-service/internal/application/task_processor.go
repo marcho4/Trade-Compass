@@ -390,3 +390,11 @@ func (p *TaskProcessor) processExtractResultTask(ctx context.Context, task entit
 
 	return p.dbRepo.SaveReportResults(ctx, result, task.Ticker, task.Year, periodMonths)
 }
+
+func (p *TaskProcessor) processNewsResearchTask(ctx context.Context, task entity.Task) error {
+	return nil
+}
+
+func (p *TaskProcessor) processRiskAndGrowthTask(ctx context.Context, task entity.Task) error {
+	return nil
+}
