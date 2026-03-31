@@ -21,6 +21,7 @@ type GeminiService struct {
 	s3Client      *s3.Client
 	finDataClient *financialdata.Client
 	db            *postgres.DBRepo
+	newsTTL       time.Duration
 }
 
 func NewGeminiService(
@@ -28,22 +29,22 @@ func NewGeminiService(
 	s3Client *s3.Client,
 	finDataClient *financialdata.Client,
 	db *postgres.DBRepo,
+	newsTTL time.Duration,
 ) *GeminiService {
 	return &GeminiService{
 		geminiClient:  client,
 		finDataClient: finDataClient,
 		s3Client:      s3Client,
 		db:            db,
+		newsTTL:       newsTTL,
 	}
 }
 
 func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl string, year int, period entity.ReportPeriod) (string, error) {
-	slog.Info("[AnalyzeReport] started",
-		slog.String("ticker", ticker),
+	logger := slog.With(slog.String("ticker", ticker),
 		slog.Int("year", year),
 		slog.String("period", string(period)),
-		slog.String("report_url", reportUrl),
-	)
+		slog.String("report_url", reportUrl))
 
 	candles, err := g.finDataClient.GetDailyPrices(ctx, ticker)
 	if err != nil {
@@ -60,15 +61,19 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 		return "", fmt.Errorf("failed to get market cap: %w", err)
 	}
 
-	news, err := g.CollectNews(ctx, ticker)
+	news, err := g.db.GetFreshNews(ctx, ticker, g.newsTTL)
 	if err != nil {
-		return "", fmt.Errorf("news: %w", err)
+		logger.Warn("failed to get news from DB, continuing without it",
+			slog.Any("error", err),
+		)
+	}
+	if news == nil {
+		logger.Warn("no fresh news found in DB")
 	}
 
 	rawDataHistory, err := g.finDataClient.GetRawDataHistory(ctx, ticker)
 	if err != nil {
-		slog.Warn("[AnalyzeReport] failed to get raw data history, continuing without it",
-			slog.String("ticker", ticker),
+		logger.Warn("[AnalyzeReport] failed to get raw data history, continuing without it",
 			slog.Any("error", err),
 		)
 	}
@@ -84,23 +89,22 @@ func (g *GeminiService) AnalyzeReport(ctx context.Context, ticker, reportUrl str
 		News:           news,
 	})
 
-	slog.Info("[AnalyzeReport] downloading PDF", slog.String("report_url", reportUrl))
+	logger.Info("downloading PDF")
 	pdfBytes, err := g.s3Client.DownloadPDF(ctx, reportUrl)
 	if err != nil {
 		return "", fmt.Errorf("failed to download PDF: %w", err)
 	}
-	slog.Info("[AnalyzeReport] PDF downloaded", slog.Int("pdf_size_bytes", len(pdfBytes)))
+	logger.Info("PDF downloaded", slog.Int("pdf_size_bytes", len(pdfBytes)))
 
-	slog.Info("[AnalyzeReport] calling Gemini API..", slog.String("ticker", ticker))
+	logger.Info("calling Gemini API..")
 	start := time.Now()
 	response, err := g.geminiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Pro)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate analysis: %w", err)
 	}
-	slog.Info("[AnalyzeReport] Gemini response received",
+	logger.Info("Gemini response received",
 		slog.Int("response_length", len(response)),
 		slog.String("duration", time.Since(start).String()),
-		slog.String("ticker", ticker),
 	)
 
 	return response, nil
@@ -224,11 +228,11 @@ func (g *GeminiService) ResearchBusiness(ctx context.Context, ticker, companyNam
 			"profile": {
 				Type: genai.TypeObject,
 				Properties: map[string]*genai.Schema{
-					"description":          {Type: genai.TypeString},
+					"description":           {Type: genai.TypeString},
 					"products_and_services": {Type: genai.TypeArray, Items: &genai.Schema{Type: genai.TypeString}},
-					"markets":              {Type: genai.TypeArray, Items: marketSchema},
-					"key_clients":          {Type: genai.TypeString},
-					"business_model":       {Type: genai.TypeString},
+					"markets":               {Type: genai.TypeArray, Items: marketSchema},
+					"key_clients":           {Type: genai.TypeString},
+					"business_model":        {Type: genai.TypeString},
 				},
 				Required: []string{"description", "products_and_services", "markets", "key_clients", "business_model"},
 			},

@@ -26,6 +26,7 @@ type TaskProcessor struct {
 	parserClient  *parser.Client
 	geminiService domain.GeminiService
 	dbRepo        *postgres.DBRepo
+	newsTTL       time.Duration
 	cancel        context.CancelFunc
 	wg            sync.WaitGroup
 }
@@ -37,6 +38,7 @@ func NewTaskProcessor(
 	fdClient *financialdata.Client,
 	parserClient *parser.Client,
 	dbRepo *postgres.DBRepo,
+	newsTTL time.Duration,
 ) *TaskProcessor {
 	taskChan := make(chan kafka.Message, numWorkers)
 
@@ -48,6 +50,7 @@ func NewTaskProcessor(
 		parserClient:  parserClient,
 		dbRepo:        dbRepo,
 		fdClient:      fdClient,
+		newsTTL:       newsTTL,
 	}
 }
 
@@ -260,6 +263,10 @@ func (p *TaskProcessor) dispatchTask(ctx context.Context, task entity.Task) erro
 		return p.processExtractResultTask(taskCtx, task)
 	case entity.BusinessResearch:
 		return p.processBusinessResearchTask(taskCtx, task)
+	case entity.NewsResearch:
+		return p.processNewsResearchTask(taskCtx, task)
+	case entity.RiskAndGrowth:
+		return p.processRiskAndGrowthTask(taskCtx, task)
 	default:
 		return errUnknownTaskType
 	}
@@ -372,6 +379,20 @@ func (p *TaskProcessor) processBusinessResearchTask(ctx context.Context, task en
 	}
 
 	slog.Info("Business research completed and saved", slog.String("ticker", task.Ticker))
+
+	newsTask := entity.Task{
+		Ticker: task.Ticker,
+		Type:   entity.NewsResearch,
+	}
+	payload, err := json.Marshal(newsTask)
+	if err != nil {
+		return fmt.Errorf("marshal news-research task: %w", err)
+	}
+	if err := p.kafkaClient.PublishMessage(ctx, payload); err != nil {
+		return fmt.Errorf("publish news-research task: %w", err)
+	}
+	slog.Info("Published news-research task", slog.String("ticker", task.Ticker))
+
 	return nil
 }
 
@@ -392,6 +413,42 @@ func (p *TaskProcessor) processExtractResultTask(ctx context.Context, task entit
 }
 
 func (p *TaskProcessor) processNewsResearchTask(ctx context.Context, task entity.Task) error {
+	slog.Info("Starting news research task", slog.String("ticker", task.Ticker))
+
+	existing, err := p.dbRepo.GetFreshNews(ctx, task.Ticker, p.newsTTL)
+	if err != nil {
+		return fmt.Errorf("check existing news: %w", err)
+	}
+
+	if existing != nil {
+		slog.Info("Fresh news already exist, skipping", slog.String("ticker", task.Ticker))
+		return nil
+	}
+
+	news, err := p.geminiService.CollectNews(ctx, task.Ticker)
+	if err != nil {
+		return fmt.Errorf("collect news: %w", err)
+	}
+
+	if err := p.dbRepo.SaveNews(ctx, task.Ticker, news); err != nil {
+		return fmt.Errorf("save news: %w", err)
+	}
+
+	slog.Info("News research completed and saved", slog.String("ticker", task.Ticker))
+
+	ragTask := entity.Task{
+		Ticker: task.Ticker,
+		Type:   entity.RiskAndGrowth,
+	}
+	payload, err := json.Marshal(ragTask)
+	if err != nil {
+		return fmt.Errorf("marshal risk-and-growth task: %w", err)
+	}
+	if err := p.kafkaClient.PublishMessage(ctx, payload); err != nil {
+		return fmt.Errorf("publish risk-and-growth task: %w", err)
+	}
+	slog.Info("Published risk-and-growth task", slog.String("ticker", task.Ticker))
+
 	return nil
 }
 

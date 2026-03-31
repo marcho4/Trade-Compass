@@ -76,9 +76,9 @@ func main() {
 	fdClient := financialdata.NewClient(cfg.FinancialDataURL, cfg.FinancialDataAPIKey)
 	parserClient := parser.NewClient(cfg.ParserURL)
 
-	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient, db)
+	geminiService := application.NewGeminiService(geminiClient, s3Client, fdClient, db, cfg.NewsTTL)
 	analysisHandler := handlers.NewAnalysisHandler(db)
-	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, fdClient, parserClient, db)
+	taskProcessor := application.NewTaskProcessor(10, geminiService, kafkaClient, fdClient, parserClient, db, cfg.NewsTTL)
 	taskProcessor.Start(context.Background())
 
 	r := chi.NewRouter()

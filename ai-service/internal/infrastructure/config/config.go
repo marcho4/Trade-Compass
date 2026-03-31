@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -22,6 +23,16 @@ type Config struct {
 	PostgresURL         string
 	RedisURL            string
 	RedisPassword       string
+	NewsTTL             time.Duration
+}
+
+func parseDuration(key, fallback string) time.Duration {
+	raw := getEnv(key, fallback)
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		d, _ = time.ParseDuration(fallback)
+	}
+	return d
 }
 
 func Load() *Config {
@@ -42,6 +53,7 @@ func Load() *Config {
 		PostgresURL:         getEnv("POSTGRES_URL", ""),
 		RedisURL:            getEnv("REDIS_URL", "redis:6379"),
 		RedisPassword:       getEnv("REDIS_PASSWORD", ""),
+		NewsTTL:             parseDuration("NEWS_TTL", "72h"),
 	}
 }
 

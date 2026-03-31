@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -278,6 +279,57 @@ func (d *DBRepo) GetBusinessResearch(ctx context.Context, ticker string) (*entit
 		Revenue:      revenues,
 		Dependencies: deps,
 	}, nil
+}
+
+func (d *DBRepo) SaveNews(ctx context.Context, ticker string, news *entity.NewsResponse) error {
+	latestJSON, err := json.Marshal(news.LatestNews)
+	if err != nil {
+		return fmt.Errorf("marshal latest_news: %w", err)
+	}
+
+	importantJSON, err := json.Marshal(news.ImportantNews)
+	if err != nil {
+		return fmt.Errorf("marshal important_news: %w", err)
+	}
+
+	_, err = d.conn.Exec(ctx, `
+		INSERT INTO company_news (ticker, latest_news, important_news)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (ticker) DO UPDATE SET
+			latest_news = EXCLUDED.latest_news,
+			important_news = EXCLUDED.important_news,
+			created_at = NOW()
+	`, ticker, latestJSON, importantJSON)
+	if err != nil {
+		return fmt.Errorf("upsert company_news: %w", err)
+	}
+
+	return nil
+}
+
+func (d *DBRepo) GetFreshNews(ctx context.Context, ticker string, ttl time.Duration) (*entity.NewsResponse, error) {
+	var latestJSON, importantJSON []byte
+	err := d.conn.QueryRow(ctx, `
+		SELECT latest_news, important_news
+		FROM company_news
+		WHERE ticker = $1 AND created_at > NOW() - $2::interval
+	`, ticker, ttl.String()).Scan(&latestJSON, &importantJSON)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get fresh news: %w", err)
+	}
+
+	var news entity.NewsResponse
+	if err := json.Unmarshal(latestJSON, &news.LatestNews); err != nil {
+		return nil, fmt.Errorf("unmarshal latest_news: %w", err)
+	}
+	if err := json.Unmarshal(importantJSON, &news.ImportantNews); err != nil {
+		return nil, fmt.Errorf("unmarshal important_news: %w", err)
+	}
+
+	return &news, nil
 }
 
 func (d *DBRepo) GetLatestReportResults(ctx context.Context, ticker string) (*entity.ReportResults, error) {
