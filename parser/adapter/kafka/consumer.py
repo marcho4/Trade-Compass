@@ -109,7 +109,7 @@ class TickerParseConsumer:
 
             for meta in result.reports_metadata:
                 self._gateway.send_task(ticker, meta.year, meta.period, meta.s3_path, task_id, "extract")
-                self._gateway.send_task(ticker, meta.year, meta.period, meta.s3_path, task_id, "expect-raw-data")
+                self._gateway.send_task(ticker, meta.year, meta.period, meta.s3_path, task_id, "raw-data-expect")
 
             self._gateway.send_offsets_to_transaction(
                 self._consumer.position(self._consumer.assignment()),
