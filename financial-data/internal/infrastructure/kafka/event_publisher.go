@@ -61,7 +61,7 @@ func (p *KafkaEventPublisher) PublishExpectRiskAndGrowthAnalysis(ctx context.Con
 	task := AITask{
 		Id:     id,
 		Ticker: ticker,
-		Type:   "expect-risk-and-growth",
+		Type:   "risk-and-growth-expect",
 	}
 
 	value, err := json.Marshal(task)
