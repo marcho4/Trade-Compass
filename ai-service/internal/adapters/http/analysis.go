@@ -1,42 +1,52 @@
-package handlers
+package http
 
 import (
-	"ai-service/internal/domain"
-	"ai-service/internal/domain/entity"
-	"ai-service/internal/infrastructure/postgres"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"ai-service/internal/domain"
+	"ai-service/internal/domain/entity"
+	"ai-service/internal/usecase"
 )
 
-type AnalysisHandler struct {
-	db *postgres.DBRepo
+type analysisHandler struct {
+	analysis         *usecase.GetAnalysisUsecase
+	reportResults    *usecase.GetReportResultsUsecase
+	businessResearch *usecase.BusinessResearchUsecase
 }
 
-func NewAnalysisHandler(db *postgres.DBRepo) *AnalysisHandler {
-	return &AnalysisHandler{db: db}
+func NewAnalysisHandler(
+	analysis *usecase.GetAnalysisUsecase,
+	reportResults *usecase.GetReportResultsUsecase,
+	businessResearch *usecase.BusinessResearchUsecase,
+) *analysisHandler {
+	return &analysisHandler{
+		analysis:         analysis,
+		reportResults:    reportResults,
+		businessResearch: businessResearch,
+	}
 }
 
-func (h *AnalysisHandler) HandleGetAnalysesByTicker(w http.ResponseWriter, r *http.Request) {
+func (h *analysisHandler) HandleGetAnalysesByTicker(w http.ResponseWriter, r *http.Request) {
 	ticker := r.URL.Query().Get("ticker")
 	if ticker == "" {
 		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
 		return
 	}
 
-	periods, err := h.db.GetAvailablePeriods(r.Context(), ticker)
+	periods, err := h.analysis.GetAvailablePeriods(r.Context(), ticker)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to get available periods")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": periods})
+	respondWithJSON(w, http.StatusOK, map[string]any{"data": periods})
 }
 
-func (h *AnalysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Request) {
+func (h *analysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Request) {
 	ticker := r.URL.Query().Get("ticker")
 	if ticker == "" {
 		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
@@ -68,7 +78,7 @@ func (h *AnalysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Reque
 
 	periodInt, _ := strconv.Atoi(period)
 
-	analysis, err := h.db.GetAnalysis(r.Context(), ticker, year, periodInt)
+	analysis, err := h.analysis.GetAnalysis(r.Context(), ticker, year, periodInt)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			respondWithError(w, http.StatusNotFound, "analysis not found")
@@ -78,11 +88,10 @@ func (h *AnalysisHandler) HandleGetAnalysis(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"data": analysis})
+	respondWithJSON(w, http.StatusOK, map[string]string{"data": analysis})
 }
 
-func (h *AnalysisHandler) HandleGetReportResults(w http.ResponseWriter, r *http.Request) {
+func (h *analysisHandler) HandleGetReportResults(w http.ResponseWriter, r *http.Request) {
 	ticker := r.URL.Query().Get("ticker")
 	if ticker == "" {
 		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
@@ -114,29 +123,28 @@ func (h *AnalysisHandler) HandleGetReportResults(w http.ResponseWriter, r *http.
 
 	periodInt, _ := strconv.Atoi(period)
 
-	results, err := h.db.GetReportResults(r.Context(), ticker, year, periodInt)
+	results, err := h.reportResults.GetReportResults(r.Context(), ticker, year, periodInt)
 	if err != nil {
-		slog.Error("Error", slog.Any("err", err))
 		if errors.Is(err, domain.ErrNotFound) {
 			respondWithError(w, http.StatusNotFound, "report results not found")
 			return
 		}
+		slog.Error("GetReportResults failed", slog.String("ticker", ticker), slog.Any("error", err))
 		respondWithError(w, http.StatusInternalServerError, "failed to get report results")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": results})
+	respondWithJSON(w, http.StatusOK, map[string]any{"data": results})
 }
 
-func (h *AnalysisHandler) HandleGetBusinessResearch(w http.ResponseWriter, r *http.Request) {
+func (h *analysisHandler) HandleGetBusinessResearch(w http.ResponseWriter, r *http.Request) {
 	ticker := r.URL.Query().Get("ticker")
 	if ticker == "" {
 		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
 		return
 	}
 
-	research, err := h.db.GetBusinessResearch(r.Context(), ticker)
+	research, err := h.businessResearch.GetBusinessResearch(r.Context(), ticker)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			respondWithError(w, http.StatusNotFound, "business research not found")
@@ -147,18 +155,17 @@ func (h *AnalysisHandler) HandleGetBusinessResearch(w http.ResponseWriter, r *ht
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": research})
+	respondWithJSON(w, http.StatusOK, map[string]any{"data": research})
 }
 
-func (h *AnalysisHandler) HandleGetLatestReportResults(w http.ResponseWriter, r *http.Request) {
+func (h *analysisHandler) HandleGetLatestReportResults(w http.ResponseWriter, r *http.Request) {
 	ticker := r.URL.Query().Get("ticker")
 	if ticker == "" {
 		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
 		return
 	}
 
-	results, err := h.db.GetLatestReportResults(r.Context(), ticker)
+	results, err := h.reportResults.GetLatestReportResults(r.Context(), ticker)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			respondWithError(w, http.StatusNotFound, "report results not found")
@@ -169,6 +176,15 @@ func (h *AnalysisHandler) HandleGetLatestReportResults(w http.ResponseWriter, r 
 		return
 	}
 
+	respondWithJSON(w, http.StatusOK, map[string]any{"data": results})
+}
+
+func respondWithError(w http.ResponseWriter, code int, message string) {
+	respondWithJSON(w, code, map[string]string{"error": message})
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": results})
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(payload)
 }
