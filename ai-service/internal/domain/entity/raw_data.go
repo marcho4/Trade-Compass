@@ -24,6 +24,8 @@ var PeriodToMonths = map[string]int{
 	string(YEAR): 12,
 }
 
+const RawDataStatusConfirmed = "confirmed"
+
 type RawData struct {
 	Ticker      string       `json:"ticker"`
 	Year        int          `json:"year"`
