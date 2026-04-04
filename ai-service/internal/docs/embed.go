@@ -23,6 +23,9 @@ var businessResearcherPrompt string
 //go:embed agents/risk-n-growth-finder.md
 var riskAndGrowthPrompt string
 
+//go:embed agents/scenarios-generator.md
+var scenarioGeneratorPrompt string
+
 func RussianHistory() string {
 	return russianHistory
 }
@@ -49,4 +52,8 @@ func BusinessResearcherPrompt() string {
 
 func RiskAndGrowthPrompt() string {
 	return riskAndGrowthPrompt
+}
+
+func ScenarioGeneratorPrompt() string {
+	return scenarioGeneratorPrompt
 }

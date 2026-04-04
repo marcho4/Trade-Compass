@@ -80,6 +80,12 @@ func WithGoogleSearch() GenerateOption {
 	}
 }
 
+func WithTemperature(t float32) GenerateOption {
+	return func(cfg *genai.GenerateContentConfig) {
+		cfg.Temperature = genai.Ptr(t)
+	}
+}
+
 func WithResponseSchema(schema *genai.Schema) GenerateOption {
 	return func(cfg *genai.GenerateContentConfig) {
 		cfg.ResponseMIMEType = "application/json"

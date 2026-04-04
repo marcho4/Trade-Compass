@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"ai-service/internal/domain/entity"
 	docs "ai-service/internal/docs"
+	"ai-service/internal/domain/entity"
 
 	"google.golang.org/genai"
 )
@@ -341,11 +341,99 @@ func (s *AIService) ExtractRiskAndGrowth(ctx context.Context, ticker string, new
 		return nil, fmt.Errorf("parse risk and growth response: %w", err)
 	}
 
-	res.Ticker = ticker
-
 	slog.Info("risk and growth analysis completed",
-		slog.String("ticker", ticker),
+		slog.String("ticker", res.Ticker),
 		slog.Int("factors_count", len(res.Factors)),
 	)
+
 	return &res, nil
+}
+
+func (a *AIService) GenerateScenarios(ctx context.Context, ticker string, years int, history []entity.RawData, cbRate *entity.CBRate, wacc float64, riskAndGrowth *entity.RiskAndGrowthResponse) ([]entity.Scenario, error) {
+	historyJSON, err := json.Marshal(history)
+	if err != nil {
+		return nil, fmt.Errorf("marshal history: %w", err)
+	}
+
+	prompt := docs.ScenarioGeneratorPrompt()
+
+	prompt += fmt.Sprintf("\n\n## Кол-во лет\n\n%d", years)
+
+	prompt += fmt.Sprintf("\n\n## Исторические данные компании\n\nТикер: %s\n\n%s", ticker, string(historyJSON))
+
+	prompt += fmt.Sprintf("\n\n## Макроэкономические данные\n\nСтавка ЦБ РФ: %.2f%%\nWACC: %.4f", cbRate.Rate, wacc)
+
+	var risks, growthFactors []entity.RiskAndGrowthFactor
+	for _, f := range riskAndGrowth.Factors {
+		if f.Type == entity.FactorRisk {
+			risks = append(risks, f)
+		} else {
+			growthFactors = append(growthFactors, f)
+		}
+	}
+
+	risksJSON, _ := json.Marshal(risks)
+	growthJSON, _ := json.Marshal(growthFactors)
+
+	prompt += fmt.Sprintf("\n\n## Факторы риска\n\n%s", string(risksJSON))
+
+	prompt += fmt.Sprintf("\n\n## Факторы роста\n\n%s", string(growthJSON))
+
+	factorSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"factor": {Type: genai.TypeString},
+			"impact": {Type: genai.TypeString},
+		},
+		Required: []string{"factor", "impact"},
+	}
+
+	assumptionSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"year":             {Type: genai.TypeInteger},
+			"revenue_growth":   {Type: genai.TypeNumber},
+			"cogs_pct_revenue": {Type: genai.TypeNumber},
+			"sga_pct_revenue":  {Type: genai.TypeNumber},
+			"tax_rate":         {Type: genai.TypeNumber},
+			"capex_pct_revenue": {Type: genai.TypeNumber},
+			"da_pct_revenue":   {Type: genai.TypeNumber},
+			"nwc_pct_revenue":  {Type: genai.TypeNumber},
+		},
+		Required: []string{"year", "revenue_growth", "cogs_pct_revenue", "sga_pct_revenue", "tax_rate", "capex_pct_revenue", "da_pct_revenue", "nwc_pct_revenue"},
+	}
+
+	scenarioSchema := &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			"id":                     {Type: genai.TypeString},
+			"name":                   {Type: genai.TypeString},
+			"description":            {Type: genai.TypeString},
+			"probability":            {Type: genai.TypeNumber},
+			"terminal_growth_rate":   {Type: genai.TypeNumber},
+			"growth_factors_applied": {Type: genai.TypeArray, Items: factorSchema},
+			"risks_applied":          {Type: genai.TypeArray, Items: factorSchema},
+			"assumptions":            {Type: genai.TypeArray, Items: assumptionSchema},
+		},
+		Required: []string{"id", "name", "description", "probability", "terminal_growth_rate", "assumptions"},
+	}
+
+	text, err := a.client.GenerateText(ctx, prompt, entity.Pro,
+		WithTemperature(0.2),
+		WithResponseSchema(&genai.Schema{
+			Type:  genai.TypeArray,
+			Items: scenarioSchema,
+		}),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("generate scenarios: %w", err)
+	}
+
+	var scenarios []entity.Scenario
+	if err := json.Unmarshal([]byte(text), &scenarios); err != nil {
+		slog.Error("failed to parse scenarios response", slog.String("ai_response", text))
+		return nil, fmt.Errorf("parse scenarios response: %w", err)
+	}
+
+	return scenarios, nil
 }
