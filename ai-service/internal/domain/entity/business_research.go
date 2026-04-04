@@ -1,13 +1,13 @@
 package entity
 
 type CompanyProfile struct {
-	Ticker             string   `json:"ticker"`
-	CompanyName        string   `json:"company_name"`
-	Description        string   `json:"description"`
+	Ticker              string   `json:"ticker"`
+	CompanyName         string   `json:"company_name"`
+	Description         string   `json:"description"`
 	ProductsAndServices []string `json:"products_and_services"`
-	Markets            []Market `json:"markets"`
-	KeyClients         string   `json:"key_clients"`
-	BusinessModel      string   `json:"business_model"`
+	Markets             []Market `json:"markets"`
+	KeyClients          string   `json:"key_clients"`
+	BusinessModel       string   `json:"business_model"`
 }
 
 type Market struct {
@@ -36,11 +36,11 @@ type BusinessResearchResponse struct {
 	Ticker      string `json:"ticker"`
 	CompanyName string `json:"company_name"`
 	Profile     struct {
-		Description        string   `json:"description"`
+		Description         string   `json:"description"`
 		ProductsAndServices []string `json:"products_and_services"`
-		Markets            []Market `json:"markets"`
-		KeyClients         string   `json:"key_clients"`
-		BusinessModel      string   `json:"business_model"`
+		Markets             []Market `json:"markets"`
+		KeyClients          string   `json:"key_clients"`
+		BusinessModel       string   `json:"business_model"`
 	} `json:"profile"`
 	RevenueSources []struct {
 		Segment     string  `json:"segment"`

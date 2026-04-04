@@ -23,4 +23,6 @@ const (
 	RiskAndGrowthSuccess TaskType = "risk-and-growth-success"
 	RawDataExpect        TaskType = "raw-data-expect"
 	RawDataSuccess       TaskType = "raw-data-success"
+	GenerateScenarios    TaskType = "generate-scenarios"
+	CalculateDCF         TaskType = "calculate-dcf"
 )

@@ -6,46 +6,44 @@ import (
 
 	"ai-service/internal/domain"
 	"ai-service/internal/domain/entity"
-	"ai-service/internal/usecase"
 )
 
+type TaskExecutor interface {
+	Execute(ctx context.Context, task entity.Task) error
+}
+
 type TaskDispatcher struct {
-	handlers map[entity.TaskType]usecase.TaskExecutor
-	counter  usecase.TaskCounter
+	handlers map[entity.TaskType]TaskExecutor
 }
 
 func NewTaskDispatcher(
-	analyzeReport usecase.TaskExecutor,
-	extractRawData usecase.TaskExecutor,
-	extractResult usecase.TaskExecutor,
-	businessResearch usecase.TaskExecutor,
-	newsResearch usecase.TaskExecutor,
-	riskAndGrowth usecase.TaskExecutor,
-	counter usecase.TaskCounter,
+	analyzeReport TaskExecutor,
+	extractRawData TaskExecutor,
+	extractResult TaskExecutor,
+	businessResearch TaskExecutor,
+	newsResearch TaskExecutor,
+	riskAndGrowth TaskExecutor,
+	counter TaskExecutor,
 ) *TaskDispatcher {
-	handlers := map[entity.TaskType]usecase.TaskExecutor{
-		entity.Analyze:          analyzeReport,
-		entity.Extract:          extractRawData,
-		entity.ExtractResult:    extractResult,
-		entity.BusinessResearch: businessResearch,
-		entity.NewsResearch:     newsResearch,
-		entity.RiskAndGrowth:    riskAndGrowth,
+	handlers := map[entity.TaskType]TaskExecutor{
+		entity.Analyze:              analyzeReport,
+		entity.Extract:              extractRawData,
+		entity.ExtractResult:        extractResult,
+		entity.BusinessResearch:     businessResearch,
+		entity.NewsResearch:         newsResearch,
+		entity.RiskAndGrowth:        riskAndGrowth,
+		entity.RiskAndGrowthSuccess: counter,
+		entity.RiskAndGrowthExpect:  counter,
+		entity.RawDataExpect:        counter,
+		entity.RawDataSuccess:       counter,
 	}
 
 	return &TaskDispatcher{
 		handlers: handlers,
-		counter:  counter,
 	}
 }
 
 func (d *TaskDispatcher) Dispatch(ctx context.Context, task entity.Task) error {
-	switch task.Type {
-	case entity.RawDataExpect, entity.RiskAndGrowthExpect:
-		return d.counter.Increment(ctx, task)
-	case entity.RawDataSuccess, entity.RiskAndGrowthSuccess:
-		return d.counter.Decrement(ctx, task)
-	}
-
 	handler, ok := d.handlers[task.Type]
 	if !ok {
 		return fmt.Errorf("%w: %s", domain.ErrUnknownTaskType, task.Type)

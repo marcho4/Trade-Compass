@@ -81,6 +81,8 @@ func (h *HttpServer) RunServer(ctx context.Context) error {
 		h.srv.Shutdown(ctx)
 	}
 
+	close(errChan)
+
 	return nil
 }
 
