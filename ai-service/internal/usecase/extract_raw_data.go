@@ -62,28 +62,13 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 		logger.Info("raw data saved")
 	}
 
-	periodMonths, ok := entity.PeriodToMonths[task.Period]
-	if !ok {
-		return fmt.Errorf("unknown period: %s", task.Period)
-	}
-
-	latest, err := u.parser.IsLatestReport(ctx, task.Ticker, task.Year, periodMonths)
-	if err != nil {
-		logger.Warn("failed to check if report is latest, skipping analyze", slog.Any("error", err))
-		return nil
-	}
-
-	if !latest {
-		logger.Info("report is not the latest, skipping analyze")
-		return nil
-	}
-
 	nextTask := entity.Task{
+		Id:        task.Id,
 		Ticker:    task.Ticker,
 		Year:      task.Year,
 		Period:    task.Period,
 		ReportURL: task.ReportURL,
-		Type:      entity.Analyze,
+		Type:      entity.RawDataSuccess,
 	}
 
 	payload, err := json.Marshal(nextTask)
@@ -96,5 +81,6 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 	}
 
 	logger.Info("report is the latest, published analyze task")
+
 	return nil
 }

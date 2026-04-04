@@ -43,9 +43,20 @@ func (u *TaskCounterUsecase) Execute(ctx context.Context, task entity.Task) erro
 	}
 }
 
+func successToExpect(t entity.TaskType) string {
+	switch t {
+	case entity.RawDataSuccess:
+		return string(entity.RawDataExpect)
+	case entity.RiskAndGrowthSuccess:
+		return string(entity.RiskAndGrowthExpect)
+	default:
+		return string(t)
+	}
+}
+
 func (u *TaskCounterUsecase) decrement(ctx context.Context, task entity.Task) error {
 	return u.transactor.RunInTx(ctx, func(txCtx context.Context) error {
-		_, err := u.tasks.DecrementPending(txCtx, task.Id, string(task.Type))
+		_, err := u.tasks.DecrementPending(txCtx, task.Id, successToExpect(task.Type))
 		if err != nil {
 			return fmt.Errorf("decrement pending: %w", err)
 		}

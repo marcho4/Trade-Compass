@@ -66,5 +66,6 @@ func (u *AnalyzeReportUsecase) Execute(ctx context.Context, task entity.Task) er
 	}
 
 	logger.Info("published extract-result task")
+
 	return nil
 }

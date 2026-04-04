@@ -53,6 +53,7 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 	logger.Info("news research completed and saved")
 
 	nextTask := entity.Task{
+		Id:     task.Id,
 		Ticker: task.Ticker,
 		Type:   entity.RiskAndGrowth,
 	}
