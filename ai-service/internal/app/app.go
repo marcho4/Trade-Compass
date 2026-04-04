@@ -89,7 +89,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	extractResultUC := usecase.NewExtractResultUsecase(aiService, reportResultsRepo)
 	newsResearchUC := usecase.NewNewsResearchUsecase(aiService, newsRepo, kafkaClient, cfg.NewsTTL)
 	riskAndGrowthUC := usecase.NewRiskAndGrowthUsecase(aiService, riskAndGrowthRepo, newsRepo, businessResearchRepo, kafkaClient, cfg.NewsTTL)
-	taskCounterUC := usecase.NewTaskCounterUsecase(taskRepo, transactor)
+	taskCounterUC := usecase.NewTaskCounterUsecase(taskRepo, transactor, kafkaClient)
 
 	// adapters
 	port, err := strconv.Atoi(cfg.Port)
