@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -10,11 +11,12 @@ import (
 )
 
 type RiskAndGrowthUsecase struct {
-	ai       AIService
-	rag      RiskAndGrowthRepository
-	news     NewsRepository
-	business BusinessResearchRepository
-	ttl      time.Duration
+	ai        AIService
+	rag       RiskAndGrowthRepository
+	news      NewsRepository
+	business  BusinessResearchRepository
+	ttl       time.Duration
+	publisher MessagePublisher
 }
 
 func NewRiskAndGrowthUsecase(
@@ -22,14 +24,16 @@ func NewRiskAndGrowthUsecase(
 	rag RiskAndGrowthRepository,
 	news NewsRepository,
 	business BusinessResearchRepository,
+	publisher MessagePublisher,
 	ttl time.Duration,
 ) *RiskAndGrowthUsecase {
 	return &RiskAndGrowthUsecase{
-		ai:       ai,
-		rag:      rag,
-		news:     news,
-		business: business,
-		ttl:      ttl,
+		ai:        ai,
+		rag:       rag,
+		news:      news,
+		business:  business,
+		ttl:       ttl,
+		publisher: publisher,
 	}
 }
 
@@ -68,5 +72,23 @@ func (u *RiskAndGrowthUsecase) Execute(ctx context.Context, task entity.Task) er
 	}
 
 	logger.Info("risk and growth completed and saved")
+
+	nextTask := entity.Task{
+		Id:     task.Id,
+		Type:   entity.RiskAndGrowthSuccess,
+		Ticker: task.Ticker,
+	}
+
+	marshalled, err := json.Marshal(nextTask)
+	if err != nil {
+		return fmt.Errorf("marshal risk-and-growth success task: %w", err)
+	}
+
+	if err := u.publisher.PublishMessage(ctx, marshalled); err != nil {
+		return fmt.Errorf("publish risk-and-growth task: %w", err)
+	}
+
+	logger.Info("published risk-and-growth success task")
+
 	return nil
 }
