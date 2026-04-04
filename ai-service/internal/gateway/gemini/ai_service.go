@@ -210,10 +210,9 @@ func (s *AIService) CollectNews(ctx context.Context, ticker string) (*entity.New
 	return &res, nil
 }
 
-func (s *AIService) ResearchBusiness(ctx context.Context, ticker, companyName string) (*entity.BusinessResearchResponse, error) {
+func (s *AIService) ResearchBusiness(ctx context.Context, ticker string) (*entity.BusinessResearchResponse, error) {
 	prompt := docs.BusinessResearcherPrompt() +
 		"\n\n## Компания для анализа\nТикер: " + ticker +
-		"\nНазвание: " + companyName +
 		"\n\nВАЖНО: В поле ticker ответа используй СТРОГО \"" + ticker + "\". Не заменяй тикер на альтернативный."
 
 	marketSchema := &genai.Schema{

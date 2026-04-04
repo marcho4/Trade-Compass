@@ -11,6 +11,6 @@ type AIService interface {
 	ExtractRawData(ctx context.Context, ticker, reportURL string, year int, period entity.ReportPeriod) (*entity.RawData, error)
 	ExtractResultFromReport(ctx context.Context, ticker string, year int, period entity.ReportPeriod) (*entity.ReportResults, error)
 	CollectNews(ctx context.Context, ticker string) (*entity.NewsResponse, error)
-	ResearchBusiness(ctx context.Context, ticker, companyName string) (*entity.BusinessResearchResponse, error)
+	ResearchBusiness(ctx context.Context, ticker string) (*entity.BusinessResearchResponse, error)
 	ExtractRiskAndGrowth(ctx context.Context, ticker string, news *entity.NewsResponse, business *entity.BusinessResearchResult) (*entity.RiskAndGrowthResponse, error)
 }

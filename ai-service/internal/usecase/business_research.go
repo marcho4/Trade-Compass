@@ -40,7 +40,7 @@ func (u *BusinessResearchUsecase) Execute(ctx context.Context, task entity.Task)
 		return nil
 	}
 
-	result, err := u.ai.ResearchBusiness(ctx, task.Ticker, task.Ticker)
+	result, err := u.ai.ResearchBusiness(ctx, task.Ticker)
 	if err != nil {
 		return fmt.Errorf("research business: %w", err)
 	}
