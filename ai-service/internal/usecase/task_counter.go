@@ -7,6 +7,11 @@ import (
 	"ai-service/internal/domain/entity"
 )
 
+type TaskCounter interface {
+	Increment(ctx context.Context, task entity.Task) error
+	Decrement(ctx context.Context, task entity.Task) error
+}
+
 type TaskCounterUsecase struct {
 	tasks      TasksRepository
 	transactor Transactor

@@ -11,17 +11,17 @@ import (
 
 type TaskDispatcher struct {
 	handlers map[entity.TaskType]usecase.TaskExecutor
-	counter  *usecase.TaskCounterUsecase
+	counter  usecase.TaskCounter
 }
 
 func NewTaskDispatcher(
-	analyzeReport *usecase.AnalyzeReportUsecase,
-	extractRawData *usecase.ExtractRawDataUsecase,
-	extractResult *usecase.ExtractResultUsecase,
-	businessResearch *usecase.BusinessResearchUsecase,
-	newsResearch *usecase.NewsResearchUsecase,
-	riskAndGrowth *usecase.RiskAndGrowthUsecase,
-	counter *usecase.TaskCounterUsecase,
+	analyzeReport usecase.TaskExecutor,
+	extractRawData usecase.TaskExecutor,
+	extractResult usecase.TaskExecutor,
+	businessResearch usecase.TaskExecutor,
+	newsResearch usecase.TaskExecutor,
+	riskAndGrowth usecase.TaskExecutor,
+	counter usecase.TaskCounter,
 ) *TaskDispatcher {
 	handlers := map[entity.TaskType]usecase.TaskExecutor{
 		entity.Analyze:          analyzeReport,
