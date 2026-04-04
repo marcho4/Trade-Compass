@@ -81,7 +81,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 
 	// usecases
 	analysisUC := usecase.NewGetAnalysisUsecase(analysisRepo)
-	reportResultsUC := usecase.NewGetReportResultsUsecase(analysisRepo)
+	reportResultsUC := usecase.NewGetReportResultsUsecase(reportResultsRepo)
 	businessResearchUC := usecase.NewBusinessResearchUsecase(aiService, businessResearchRepo, kafkaClient)
 
 	analyzeReportUC := usecase.NewAnalyzeReportUsecase(aiService, analysisRepo, kafkaClient)
