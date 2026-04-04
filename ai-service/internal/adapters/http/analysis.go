@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -9,19 +10,32 @@ import (
 
 	"ai-service/internal/domain"
 	"ai-service/internal/domain/entity"
-	"ai-service/internal/usecase"
 )
 
+type analysisReader interface {
+	GetAnalysis(ctx context.Context, ticker string, year, period int) (string, error)
+	GetAvailablePeriods(ctx context.Context, ticker string) ([]entity.AvailablePeriod, error)
+}
+
+type reportResultsReader interface {
+	GetReportResults(ctx context.Context, ticker string, year, period int) (*entity.ReportResults, error)
+	GetLatestReportResults(ctx context.Context, ticker string) (*entity.ReportResults, error)
+}
+
+type businessResearchReader interface {
+	GetBusinessResearch(ctx context.Context, ticker string) (*entity.BusinessResearchResult, error)
+}
+
 type analysisHandler struct {
-	analysis         *usecase.GetAnalysisUsecase
-	reportResults    *usecase.GetReportResultsUsecase
-	businessResearch *usecase.BusinessResearchUsecase
+	analysis         analysisReader
+	reportResults    reportResultsReader
+	businessResearch businessResearchReader
 }
 
 func NewAnalysisHandler(
-	analysis *usecase.GetAnalysisUsecase,
-	reportResults *usecase.GetReportResultsUsecase,
-	businessResearch *usecase.BusinessResearchUsecase,
+	analysis analysisReader,
+	reportResults reportResultsReader,
+	businessResearch businessResearchReader,
 ) *analysisHandler {
 	return &analysisHandler{
 		analysis:         analysis,
