@@ -7,19 +7,23 @@ import (
 	"strings"
 	"time"
 
-	"ai-service/internal/domain/entity"
 	docs "ai-service/internal/docs"
+	"ai-service/internal/domain/entity"
 )
 
 type analysisContext struct {
-	Ticker         string
-	Year           int
-	Period         entity.ReportPeriod
-	RawDataHistory []entity.RawData
-	Candles        []entity.Candle
-	CBRate         *entity.CBRate
-	MarketCap      float64
-	News           *entity.NewsResponse
+	Ticker              string
+	Year                int
+	Period              entity.ReportPeriod
+	RawDataHistory      []entity.RawData
+	Candles             []entity.Candle
+	CBRate              *entity.CBRate
+	MarketCap           float64
+	News                *entity.NewsResponse
+	BusinessResearch    entity.BusinessResearchResult
+	RisksAndGrowth      entity.RiskAndGrowthResponse
+	Scenarios           []entity.Scenario
+	DCFScenariosResults []entity.DCFResult
 }
 
 func buildNewsAgentPrompt(ticker string) string {
@@ -40,6 +44,11 @@ func buildAnalysisPrompt(ctx analysisContext) string {
 	writeMarketData(&b, ctx.CBRate, ctx.MarketCap)
 	writePriceHistory(&b, ctx.Candles)
 	writeNews(&b, ctx.News)
+
+	b.WriteString(ctx.RisksAndGrowth.String())
+	b.WriteString(ctx.BusinessResearch.String())
+	writeScenarios(&b, ctx.Scenarios, ctx.DCFScenariosResults)
+
 	slog.Info("Full Prompt", slog.String("Prompt", b.String()))
 	return b.String()
 }
@@ -155,4 +164,23 @@ func writeNews(b *strings.Builder, news *entity.NewsResponse) {
 	data, _ := json.Marshal(news)
 	b.WriteString(string(data))
 	b.WriteString("\n</news>\n\n")
+}
+
+func writeScenarios(b *strings.Builder, scenarios []entity.Scenario, dcf []entity.DCFResult) {
+	m := make(map[string]entity.Scenario)
+	for _, i := range scenarios {
+		m[i.Name] = i
+	}
+
+	for _, x := range dcf {
+		scenario, ok := m[x.ID]
+		if !ok {
+			slog.Error("Scenario not found for dcf", "dcf", dcf)
+		}
+
+		b.WriteString("---- Сценарий ------\n")
+		b.WriteString(scenario.String() + "\n")
+		b.WriteString(x.String() + "\n")
+		b.WriteString("----------\n")
+	}
 }

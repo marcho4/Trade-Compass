@@ -3,6 +3,7 @@ package usecase
 import (
 	"ai-service/internal/domain/entity"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -23,6 +24,7 @@ type ScenarioGenerator struct {
 	scenarioRepo      ScenarioRepository
 	dcfRepo           DCFResultsRepository
 	transactor        Transactor
+	publisher         MessagePublisher
 }
 
 func NewScenarioGenerator(
@@ -32,6 +34,7 @@ func NewScenarioGenerator(
 	scenarioRepo ScenarioRepository,
 	dcfRepo DCFResultsRepository,
 	transactor Transactor,
+	publisher MessagePublisher,
 ) *ScenarioGenerator {
 	return &ScenarioGenerator{
 		ai:                ai,
@@ -40,6 +43,7 @@ func NewScenarioGenerator(
 		scenarioRepo:      scenarioRepo,
 		dcfRepo:           dcfRepo,
 		transactor:        transactor,
+		publisher:         publisher,
 	}
 }
 
@@ -86,6 +90,24 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 		return nil
 	}); err != nil {
 		return fmt.Errorf("save results: %w", err)
+	}
+
+	nextTask := entity.Task{
+		Id:        task.Id,
+		Ticker:    task.Ticker,
+		Year:      task.Year,
+		Period:    task.Period,
+		ReportURL: task.ReportURL,
+		Type:      entity.Analyze,
+	}
+
+	payload, err := json.Marshal(nextTask)
+	if err != nil {
+		return fmt.Errorf("marshal analyze task: %w", err)
+	}
+
+	if err := s.publisher.PublishMessage(ctx, payload); err != nil {
+		return fmt.Errorf("publish analyze task: %w", err)
 	}
 
 	return nil
