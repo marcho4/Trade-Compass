@@ -25,7 +25,17 @@ type ScenarioDCFResult struct {
 }
 
 type DCFResult struct {
+	ID            string
 	WeightedPrice float64
 	WeightedEV    float64
 	Scenarios     []ScenarioDCFResult
+}
+
+func (r *DCFResult) ComputeWeighted() {
+	r.WeightedPrice = 0
+	r.WeightedEV = 0
+	for _, s := range r.Scenarios {
+		r.WeightedPrice += s.PricePerShare * s.Probability
+		r.WeightedEV += s.EnterpriseValue * s.Probability
+	}
 }

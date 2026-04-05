@@ -20,17 +20,26 @@ type ScenarioGenerator struct {
 	ai                AIService
 	finData           FinancialDataGateway
 	riskAndGrowthRepo RiskAndGrowthRepository
+	scenarioRepo      ScenarioRepository
+	dcfRepo           DCFResultsRepository
+	transactor        Transactor
 }
 
 func NewScenarioGenerator(
 	ai AIService,
 	finData FinancialDataGateway,
 	riskAndGrowthRepo RiskAndGrowthRepository,
+	scenarioRepo ScenarioRepository,
+	dcfRepo DCFResultsRepository,
+	transactor Transactor,
 ) *ScenarioGenerator {
 	return &ScenarioGenerator{
 		ai:                ai,
 		finData:           finData,
 		riskAndGrowthRepo: riskAndGrowthRepo,
+		scenarioRepo:      scenarioRepo,
+		dcfRepo:           dcfRepo,
+		transactor:        transactor,
 	}
 }
 
@@ -65,6 +74,19 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 	dcfInput := buildDCFInput(latest, wacc)
 
 	dcfResult := Calculate(dcfInput, scenarios)
+	dcfResult.ID = task.Id
+
+	if err := s.transactor.RunInTx(ctx, func(txCtx context.Context) error {
+		if err := s.scenarioRepo.SaveScenarios(txCtx, task.Ticker, scenarios); err != nil {
+			return fmt.Errorf("save scenarios: %w", err)
+		}
+		if err := s.dcfRepo.SaveDCFResults(txCtx, task.Ticker, dcfResult); err != nil {
+			return fmt.Errorf("save dcf results: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("save results: %w", err)
+	}
 
 	return nil
 }

@@ -147,6 +147,8 @@ func (s *AIService) ExtractRawData(ctx context.Context, ticker, reportURL string
 		return nil, fmt.Errorf("unmarshal raw data: %w", err)
 	}
 
+	rawData.ComputeDerivedFields()
+
 	return &rawData, nil
 }
 
@@ -429,11 +431,11 @@ func (a *AIService) GenerateScenarios(ctx context.Context, ticker string, years 
 		return nil, fmt.Errorf("generate scenarios: %w", err)
 	}
 
-	var scenarios []entity.Scenario
-	if err := json.Unmarshal([]byte(text), &scenarios); err != nil {
+	var dtos []scenarioDTO
+	if err := json.Unmarshal([]byte(text), &dtos); err != nil {
 		slog.Error("failed to parse scenarios response", slog.String("ai_response", text))
 		return nil, fmt.Errorf("parse scenarios response: %w", err)
 	}
 
-	return scenarios, nil
+	return mapScenariosToDomain(dtos), nil
 }

@@ -39,6 +39,16 @@ type TasksRepository interface {
 	CheckIfTaskIsReady(ctx context.Context, taskID string, expectedTasks int) (bool, error)
 }
 
+type ScenarioRepository interface {
+	SaveScenarios(ctx context.Context, ticker string, scenarios []entity.Scenario) error
+	GetScenarios(ctx context.Context, ticker string) ([]entity.Scenario, error)
+}
+
+type DCFResultsRepository interface {
+	SaveDCFResults(ctx context.Context, ticker string, result entity.DCFResult) error
+	GetDCFResults(ctx context.Context, ticker string) (*entity.DCFResult, error)
+}
+
 type Transactor interface {
 	RunInTx(ctx context.Context, fn func(ctx context.Context) error) error
 }

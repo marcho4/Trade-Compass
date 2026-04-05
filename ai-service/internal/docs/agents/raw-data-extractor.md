@@ -75,11 +75,9 @@
 
 | Строка в PDF | Поле JSON | Знак |
 |---|---|---|
-| Амортизация и обесценение ОС и ППА | _da_fixed_rou (промежуточное) | + |
-| Амортизация и обесценение НМА | _da_intangibles (промежуточное) | + |
+| Амортизация (сумма всех строк D&A: ОС, ППА, НМА) | depreciation | + |
 | Чистое поступление/использование от операционной деятельности (итог раздела) | operatingCashFlow | +/− |
-| Приобретение основных средств | _capex_fa | − |
-| Приобретение нематериальных активов | _capex_ia | − |
+| Приобретение основных средств + Приобретение НМА (сумма) | capex | − |
 | Приобретение бизнеса, за вычетом полученных ДС | acquisitionsNet | − |
 | Итог инвестиционной деятельности | investingCashFlow | − |
 | Поступления по кредитам и займам | debtProceeds | + |
@@ -107,20 +105,10 @@
 
 ## Расчётные поля
 
-Рассчитай на основе извлечённых данных:
+Следующие поля НЕ НУЖНО возвращать — они рассчитываются автоматически на сервере:
+- ebitda, freeCashFlow, debt, netDebt, workingCapital, capitalEmployed
 
-```
-depreciation = _da_fixed_rou + _da_intangibles
-ebitda = ebit + depreciation
-capex = _capex_fa + _capex_ia                    (оба отрицательные → результат отрицательный)
-freeCashFlow = operatingCashFlow + capex          (capex отрицательный)
-debt = longTermDebt + shortTermDebt
-netDebt = longTermDebt + shortTermDebt - cashAndEquivalents
-workingCapital = currentAssets - currentLiabilities
-capitalEmployed = totalAssets - currentLiabilities
-```
-
-Если входное значение = null → расчётное поле тоже null.
+НЕ включай эти поля в JSON-ответ.
 
 ## Валидация
 
@@ -129,8 +117,6 @@ capitalEmployed = totalAssets - currentLiabilities
 1. totalAssets ≈ equity + totalLiabilities (допуск ±500)
 2. grossProfit ≈ revenue - costOfRevenue (допуск ±500, costOfRevenue хранится как положительное число в JSON)
 3. ebit ≈ grossProfit - operatingExpenses + otherIncome + otherExpenses (допуск ±500)
-4. ebitda ≈ ebit + depreciation (допуск ±500)
-5. debt = longTermDebt + shortTermDebt (точно)
 
 Если проверка НЕ проходит — перепроверь извлечённые значения. Если ошибка в PDF (опечатка), верни как есть и добавь описание в поле "warnings".
 
@@ -141,12 +127,10 @@ capitalEmployed = totalAssets - currentLiabilities
 - В JSON расходы храни как ПОЛОЖИТЕЛЬНЫЕ числа, КРОМЕ:
   - operatingCashFlow, investingCashFlow, financingCashFlow → могут быть отрицательные
   - capex → всегда отрицательный
-  - freeCashFlow → может быть отрицательный
   - interestPaid, dividendsPaid, leasePayments, debtRepayments → всегда отрицательные
   - acquisitionsNet → обычно отрицательный
   - treasuryShares → отрицательный
   - otherExpenses → отрицательный
-  - workingCapital → может быть отрицательный
 
 ### Сканы и фото
 - Числа могут быть размыты — если не уверен, ставь null.
@@ -174,7 +158,7 @@ capitalEmployed = totalAssets - currentLiabilities
   "otherIncome": <int64 или null>,
   "otherExpenses": <int64 или null>,
   "ebit": <int64>,
-  "ebitda": <int64>,
+  // ebitda — рассчитывается на сервере
   "depreciation": <int64>,
   "interestIncome": <int64 или null>,
   "interestExpense": <int64>,
@@ -212,7 +196,7 @@ capitalEmployed = totalAssets - currentLiabilities
   "investingCashFlow": <int64>,
   "financingCashFlow": <int64>,
   "capex": <int64>,
-  "freeCashFlow": <int64>,
+  // freeCashFlow — рассчитывается на сервере
   "dividendsPaid": <int64 или null>,
   "leasePayments": <int64 или null>,
   "acquisitionsNet": <int64 или null>,
@@ -224,9 +208,7 @@ capitalEmployed = totalAssets - currentLiabilities
   "marketCap": null,
   "enterpriseValue": null,
 
-  "workingCapital": <int64>,
-  "capitalEmployed": <int64>,
-  "netDebt": <int64>,
+  // workingCapital, capitalEmployed, netDebt — рассчитываются на сервере
 
   "interestOnLeases": <int64 или null>,
   "interestOnLoans": <int64 или null>,

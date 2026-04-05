@@ -107,6 +107,31 @@ type RawData struct {
 	Warnings []string `json:"warnings,omitempty"`
 }
 
+func ptr64(v int64) *int64 { return &v }
+
+func sumPtr(a, b *int64) *int64 {
+	if a == nil || b == nil {
+		return nil
+	}
+	return ptr64(*a + *b)
+}
+
+func subPtr(a, b *int64) *int64 {
+	if a == nil || b == nil {
+		return nil
+	}
+	return ptr64(*a - *b)
+}
+
+func (r *RawData) ComputeDerivedFields() {
+	r.EBITDA = sumPtr(r.EBIT, r.Depreciation)
+	r.FreeCashFlow = sumPtr(r.OperatingCashFlow, r.CAPEX)
+	r.Debt = sumPtr(r.LongTermDebt, r.ShortTermDebt)
+	r.NetDebt = subPtr(r.Debt, r.CashAndEquivalents)
+	r.WorkingCapital = subPtr(r.CurrentAssets, r.CurrentLiabilities)
+	r.CapitalEmployed = subPtr(r.TotalAssets, r.CurrentLiabilities)
+}
+
 type Report struct {
 	ID     int    `json:"id"`
 	Ticker string `json:"ticker"`
