@@ -56,7 +56,14 @@ func (r *TasksRepository) DecrementPending(ctx context.Context, taskID string, t
 func (r *TasksRepository) CheckIfTaskIsReady(ctx context.Context, taskID string, expectedTasks int) (bool, error) {
 	db := Executor(ctx, r.db)
 
-	sql := `select count(*) from tasks where task_id = $1 and pending_count = 0`
+	sql := `
+		select count(*) from tasks
+		where task_id = $1
+		  and (
+		      (task_type = 'raw-data-expect' and pending_count < 3)
+		      or (task_type <> 'raw-data-expect' and pending_count = 0)
+		  )
+	`
 
 	var count int
 	err := db.QueryRow(ctx, sql, taskID).Scan(&count)

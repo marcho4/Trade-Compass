@@ -23,6 +23,7 @@ func NewTaskDispatcher(
 	businessResearch TaskExecutor,
 	newsResearch TaskExecutor,
 	riskAndGrowth TaskExecutor,
+	scenarioGenerator TaskExecutor,
 	counter TaskExecutor,
 ) *TaskDispatcher {
 	handlers := map[entity.TaskType]TaskExecutor{
@@ -32,6 +33,7 @@ func NewTaskDispatcher(
 		entity.BusinessResearch:     businessResearch,
 		entity.NewsResearch:         newsResearch,
 		entity.RiskAndGrowth:        riskAndGrowth,
+		entity.GenerateScenarios:    scenarioGenerator,
 		entity.RiskAndGrowthSuccess: counter,
 		entity.RiskAndGrowthExpect:  counter,
 		entity.RawDataExpect:        counter,

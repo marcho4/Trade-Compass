@@ -1,4 +1,4 @@
-package gemini
+package usecase
 
 import (
 	"encoding/json"
@@ -12,18 +12,18 @@ import (
 )
 
 type analysisContext struct {
-	Ticker              string
-	Year                int
-	Period              entity.ReportPeriod
-	RawDataHistory      []entity.RawData
-	Candles             []entity.Candle
-	CBRate              *entity.CBRate
-	MarketCap           float64
-	News                *entity.NewsResponse
-	BusinessResearch    entity.BusinessResearchResult
-	RisksAndGrowth      entity.RiskAndGrowthResponse
-	Scenarios           []entity.Scenario
-	DCFScenariosResults []entity.DCFResult
+	Ticker           string
+	Year             int
+	Period           entity.ReportPeriod
+	RawDataHistory   []entity.RawData
+	Candles          []entity.Candle
+	CBRate           *entity.CBRate
+	MarketCap        float64
+	News             *entity.NewsResponse
+	BusinessResearch *entity.BusinessResearchResult
+	RisksAndGrowth   *entity.RiskAndGrowthResponse
+	Scenarios        []entity.Scenario
+	DCFResult        *entity.DCFResult
 }
 
 func buildNewsAgentPrompt(ticker string) string {
@@ -41,15 +41,19 @@ func buildAnalysisPrompt(ctx analysisContext) string {
 	writeAnalysisMethodology(&b)
 	writeMacroContext(&b)
 	writeFinancialHistory(&b, ctx.RawDataHistory)
+	writePrecomputedDCF(&b, ctx.Scenarios, ctx.DCFResult)
 	writeMarketData(&b, ctx.CBRate, ctx.MarketCap)
 	writePriceHistory(&b, ctx.Candles)
 	writeNews(&b, ctx.News)
 
-	b.WriteString(ctx.RisksAndGrowth.String())
-	b.WriteString(ctx.BusinessResearch.String())
-	writeScenarios(&b, ctx.Scenarios, ctx.DCFScenariosResults)
+	if ctx.RisksAndGrowth != nil {
+		b.WriteString(ctx.RisksAndGrowth.String())
+	}
+	if ctx.BusinessResearch != nil {
+		b.WriteString(ctx.BusinessResearch.String())
+	}
 
-	slog.Info("Full Prompt", slog.String("Prompt", b.String()))
+	slog.Debug("Full Prompt", slog.String("Prompt", b.String()))
 	return b.String()
 }
 
@@ -166,21 +170,38 @@ func writeNews(b *strings.Builder, news *entity.NewsResponse) {
 	b.WriteString("\n</news>\n\n")
 }
 
-func writeScenarios(b *strings.Builder, scenarios []entity.Scenario, dcf []entity.DCFResult) {
-	m := make(map[string]entity.Scenario)
-	for _, i := range scenarios {
-		m[i.Name] = i
+func writePrecomputedDCF(b *strings.Builder, scenarios []entity.Scenario, dcf *entity.DCFResult) {
+	b.WriteString("<precomputed_dcf>\n")
+
+	if len(scenarios) == 0 || dcf == nil {
+		b.WriteString("Заранее рассчитанный DCF отсутствует. Явно укажи в отчёте невозможность определить Fair Value и не пытайся рассчитать DCF самостоятельно.\n")
+		b.WriteString("</precomputed_dcf>\n\n")
+		return
 	}
 
-	for _, x := range dcf {
-		scenario, ok := m[x.ID]
+	b.WriteString("ЭТО AUTHORITATIVE-ИСТОЧНИК СПРАВЕДЛИВОЙ СТОИМОСТИ. DCF, WACC, FCFF, терминал и цены за акцию уже рассчитаны внешней моделью. Пересчитывать, корректировать или \"уточнять\" эти числа ЗАПРЕЩЕНО. Вероятности сценариев тоже фиксированы — не меняй их. Твоя задача — интерпретировать сценарии и их допущения, а не переоценивать.\n\n")
+
+	fmt.Fprintf(b, "Взвешенная цена за акцию (WeightedPrice): %.2f руб.\n", dcf.WeightedPrice)
+	fmt.Fprintf(b, "Взвешенный Enterprise Value (WeightedEV): %.0f руб.\n", dcf.WeightedEV)
+	fmt.Fprintf(b, "Количество сценариев: %d\n\n", len(dcf.Scenarios))
+
+	scenariosByID := make(map[string]entity.Scenario, len(scenarios))
+	for _, s := range scenarios {
+		scenariosByID[s.ID] = s
+	}
+
+	for _, sr := range dcf.Scenarios {
+		scenario, ok := scenariosByID[sr.ScenarioID]
 		if !ok {
-			slog.Error("Scenario not found for dcf", "dcf", dcf)
+			slog.Error("Scenario not found for dcf result", slog.String("scenario_id", sr.ScenarioID))
+			continue
 		}
 
-		b.WriteString("---- Сценарий ------\n")
-		b.WriteString(scenario.String() + "\n")
-		b.WriteString(x.String() + "\n")
-		b.WriteString("----------\n")
+		b.WriteString("---- Сценарий ----\n")
+		b.WriteString(scenario.String())
+		b.WriteString(sr.String())
+		b.WriteString("------------------\n\n")
 	}
+
+	b.WriteString("</precomputed_dcf>\n\n")
 }

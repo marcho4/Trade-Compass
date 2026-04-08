@@ -1,15 +1,15 @@
-package gemini
+package usecase
 
 import "ai-service/internal/domain/entity"
 
 type scenarioDTO struct {
-	ID                   string               `json:"id"`
-	Name                 string               `json:"name"`
-	Description          string               `json:"description"`
-	Probability          float64              `json:"probability"`
-	TerminalGrowthRate   float64              `json:"terminal_growth_rate"`
-	GrowthFactorsApplied []factorDTO          `json:"growth_factors_applied,omitempty"`
-	RisksApplied         []factorDTO          `json:"risks_applied,omitempty"`
+	ID                   string                `json:"id"`
+	Name                 string                `json:"name"`
+	Description          string                `json:"description"`
+	Probability          float64               `json:"probability"`
+	TerminalGrowthRate   float64               `json:"terminal_growth_rate"`
+	GrowthFactorsApplied []factorDTO           `json:"growth_factors_applied,omitempty"`
+	RisksApplied         []factorDTO           `json:"risks_applied,omitempty"`
 	Assumptions          []yearlyAssumptionDTO `json:"assumptions"`
 }
 
@@ -33,11 +33,11 @@ func mapScenariosToDomain(dtos []scenarioDTO) []entity.Scenario {
 	scenarios := make([]entity.Scenario, len(dtos))
 	for i, d := range dtos {
 		scenarios[i] = entity.Scenario{
-			ID:                 d.ID,
-			Name:               d.Name,
-			Description:        d.Description,
-			Probability:        d.Probability,
-			TerminalGrowthRate: d.TerminalGrowthRate,
+			ID:                   d.ID,
+			Name:                 d.Name,
+			Description:          d.Description,
+			Probability:          d.Probability,
+			TerminalGrowthRate:   d.TerminalGrowthRate,
 			GrowthFactorsApplied: mapFactorsToDomain(d.GrowthFactorsApplied),
 			RisksApplied:         mapFactorsToDomain(d.RisksApplied),
 			Assumptions:          mapAssumptionsToDomain(d.Assumptions),

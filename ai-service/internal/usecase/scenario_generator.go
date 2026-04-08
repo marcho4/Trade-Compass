@@ -1,10 +1,13 @@
 package usecase
 
 import (
+	docs "ai-service/internal/docs"
 	"ai-service/internal/domain/entity"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"sort"
 	"time"
@@ -18,7 +21,7 @@ const (
 )
 
 type ScenarioGenerator struct {
-	ai                AIService
+	ai                AIProvider
 	finData           FinancialDataGateway
 	riskAndGrowthRepo RiskAndGrowthRepository
 	scenarioRepo      ScenarioRepository
@@ -28,7 +31,7 @@ type ScenarioGenerator struct {
 }
 
 func NewScenarioGenerator(
-	ai AIService,
+	ai AIProvider,
 	finData FinancialDataGateway,
 	riskAndGrowthRepo RiskAndGrowthRepository,
 	scenarioRepo ScenarioRepository,
@@ -63,6 +66,10 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 		return fmt.Errorf("get risk and growth: %w", err)
 	}
 
+	if riskAndGrowth == nil {
+		return errors.New("riskAndGrowth is nil")
+	}
+
 	latest, ok := getLatestFullYearData(history)
 	if !ok {
 		return fmt.Errorf("no confirmed annual data found for %s", task.Ticker)
@@ -70,10 +77,91 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 
 	wacc := calculateWACC(latest, cbRate)
 
-	scenarios, err := s.ai.GenerateScenarios(ctx, task.Ticker, YearsToForecast, history, cbRate, wacc, riskAndGrowth)
+	historyJSON, err := json.Marshal(history)
+	if err != nil {
+		return fmt.Errorf("marshal history: %w", err)
+	}
+
+	prompt := docs.ScenarioGeneratorPrompt()
+
+	prompt += fmt.Sprintf("\n\n## Кол-во лет\n\n%d", YearsToForecast)
+
+	prompt += fmt.Sprintf("\n\n## Исторические данные компании\n\nТикер: %s\n\n%s", task.Ticker, string(historyJSON))
+
+	prompt += fmt.Sprintf("\n\n## Макроэкономические данные\n\nСтавка ЦБ РФ: %.2f%%\nWACC: %.4f", cbRate.Rate, wacc)
+
+	var risks, growthFactors []entity.RiskAndGrowthFactor
+	for _, f := range riskAndGrowth.Factors {
+		if f.Type == entity.FactorRisk {
+			risks = append(risks, f)
+		} else {
+			growthFactors = append(growthFactors, f)
+		}
+	}
+
+	risksJSON, _ := json.Marshal(risks)
+	growthJSON, _ := json.Marshal(growthFactors)
+
+	prompt += fmt.Sprintf("\n\n## Факторы риска\n\n%s", string(risksJSON))
+
+	prompt += fmt.Sprintf("\n\n## Факторы роста\n\n%s", string(growthJSON))
+
+	factorSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"factor": {Type: TypeString},
+			"impact": {Type: TypeString},
+		},
+		Required: []string{"factor", "impact"},
+	}
+
+	assumptionSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"year":              {Type: TypeInteger},
+			"revenue_growth":    {Type: TypeNumber},
+			"cogs_pct_revenue":  {Type: TypeNumber},
+			"sga_pct_revenue":   {Type: TypeNumber},
+			"tax_rate":          {Type: TypeNumber},
+			"capex_pct_revenue": {Type: TypeNumber},
+			"da_pct_revenue":    {Type: TypeNumber},
+			"nwc_pct_revenue":   {Type: TypeNumber},
+		},
+		Required: []string{"year", "revenue_growth", "cogs_pct_revenue", "sga_pct_revenue", "tax_rate", "capex_pct_revenue", "da_pct_revenue", "nwc_pct_revenue"},
+	}
+
+	scenarioSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"id":                     {Type: TypeString},
+			"name":                   {Type: TypeString},
+			"description":            {Type: TypeString},
+			"probability":            {Type: TypeNumber},
+			"terminal_growth_rate":   {Type: TypeNumber},
+			"growth_factors_applied": {Type: TypeArray, Items: factorSchema},
+			"risks_applied":          {Type: TypeArray, Items: factorSchema},
+			"assumptions":            {Type: TypeArray, Items: assumptionSchema},
+		},
+		Required: []string{"id", "name", "description", "probability", "terminal_growth_rate", "assumptions"},
+	}
+
+	text, err := s.ai.GenerateText(ctx, prompt, entity.Pro, GenerateParams{
+		Temperature: Float32Ptr(0.2),
+		ResponseSchema: &Schema{
+			Type:  TypeArray,
+			Items: scenarioSchema,
+		},
+	})
 	if err != nil {
 		return fmt.Errorf("generate scenarios: %w", err)
 	}
+
+	var dtos []scenarioDTO
+	if err := json.Unmarshal([]byte(text), &dtos); err != nil {
+		slog.Error("failed to parse scenarios response", slog.String("ai_response", text))
+		return fmt.Errorf("parse scenarios response: %w", err)
+	}
+	scenarios := mapScenariosToDomain(dtos)
 
 	dcfInput := buildDCFInput(latest, wacc)
 

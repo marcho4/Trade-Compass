@@ -1,12 +1,14 @@
 package gemini
 
 import (
-	"ai-service/internal/domain/entity"
 	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"ai-service/internal/domain/entity"
+	"ai-service/internal/usecase"
 
 	"google.golang.org/genai"
 )
@@ -39,9 +41,7 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 		return nil, fmt.Errorf("create gemini client: %w", err)
 	}
 
-	return &Client{
-		client: client,
-	}, nil
+	return &Client{client: client}, nil
 }
 
 func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string, model entity.AIModel) (string, error) {
@@ -64,36 +64,13 @@ func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemProm
 
 	result, err := c.client.Models.GenerateContent(ctx, string(model), contents, config)
 	if err != nil {
-		return "", fmt.Errorf("gemini API call failed: %w", err)
+		return "", fmt.Errorf("call gemini: %w", err)
 	}
 
 	return strings.TrimSpace(result.Text()), nil
 }
 
-type GenerateOption func(*genai.GenerateContentConfig)
-
-func WithGoogleSearch() GenerateOption {
-	return func(cfg *genai.GenerateContentConfig) {
-		cfg.Tools = append(cfg.Tools, &genai.Tool{
-			GoogleSearch: &genai.GoogleSearch{},
-		})
-	}
-}
-
-func WithTemperature(t float32) GenerateOption {
-	return func(cfg *genai.GenerateContentConfig) {
-		cfg.Temperature = genai.Ptr(t)
-	}
-}
-
-func WithResponseSchema(schema *genai.Schema) GenerateOption {
-	return func(cfg *genai.GenerateContentConfig) {
-		cfg.ResponseMIMEType = "application/json"
-		cfg.ResponseSchema = schema
-	}
-}
-
-func (c *Client) GenerateText(ctx context.Context, prompt string, model entity.AIModel, opts ...GenerateOption) (string, error) {
+func (c *Client) GenerateText(ctx context.Context, prompt string, model entity.AIModel, params usecase.GenerateParams) (string, error) {
 	contents := []*genai.Content{
 		{
 			Role:  "user",
@@ -101,18 +78,77 @@ func (c *Client) GenerateText(ctx context.Context, prompt string, model entity.A
 		},
 	}
 
-	var config *genai.GenerateContentConfig
-	if len(opts) > 0 {
-		config = &genai.GenerateContentConfig{}
-		for _, opt := range opts {
-			opt(config)
-		}
-	}
+	config := buildConfig(params)
 
 	result, err := c.client.Models.GenerateContent(ctx, string(model), contents, config)
 	if err != nil {
-		return "", fmt.Errorf("gemini API call failed: %w", err)
+		return "", fmt.Errorf("call gemini: %w", err)
 	}
 
 	return strings.TrimSpace(result.Text()), nil
+}
+
+func buildConfig(params usecase.GenerateParams) *genai.GenerateContentConfig {
+	cfg := &genai.GenerateContentConfig{}
+
+	if params.Temperature != nil {
+		cfg.Temperature = genai.Ptr(*params.Temperature)
+	}
+
+	if params.GoogleSearch {
+		cfg.Tools = append(cfg.Tools, &genai.Tool{
+			GoogleSearch: &genai.GoogleSearch{},
+		})
+	}
+
+	if params.ResponseSchema != nil {
+		cfg.ResponseMIMEType = "application/json"
+		cfg.ResponseSchema = convertSchema(params.ResponseSchema)
+	}
+
+	return cfg
+}
+
+func convertSchema(s *usecase.Schema) *genai.Schema {
+	if s == nil {
+		return nil
+	}
+
+	out := &genai.Schema{
+		Type:     toGenaiType(s.Type),
+		Enum:     s.Enum,
+		Required: s.Required,
+	}
+
+	if len(s.Properties) > 0 {
+		out.Properties = make(map[string]*genai.Schema, len(s.Properties))
+		for k, v := range s.Properties {
+			out.Properties[k] = convertSchema(v)
+		}
+	}
+
+	if s.Items != nil {
+		out.Items = convertSchema(s.Items)
+	}
+
+	return out
+}
+
+func toGenaiType(t usecase.SchemaType) genai.Type {
+	switch t {
+	case usecase.TypeObject:
+		return genai.TypeObject
+	case usecase.TypeArray:
+		return genai.TypeArray
+	case usecase.TypeString:
+		return genai.TypeString
+	case usecase.TypeNumber:
+		return genai.TypeNumber
+	case usecase.TypeInteger:
+		return genai.TypeInteger
+	case usecase.TypeBoolean:
+		return genai.TypeBoolean
+	default:
+		return genai.TypeUnspecified
+	}
 }

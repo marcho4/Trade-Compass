@@ -53,6 +53,8 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	reportResultsRepo := postgres.NewReportResultsRepository(pool)
 	riskAndGrowthRepo := postgres.NewRiskAndGrowthRepository(pool)
 	taskRepo := postgres.NewTasksRepository(pool)
+	scenarioRepo := postgres.NewScenarioRepository(pool)
+	dcfRepo := postgres.NewDCFResultsRepository(pool)
 	transactor := postgres.NewPgxTransactor(pool)
 
 	// gateways
@@ -77,18 +79,18 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	fdClient := financialdata.NewClient(cfg.FinancialDataURL, cfg.FinancialDataAPIKey)
 	parserClient := parser.NewClient(cfg.ParserURL)
 	kafkaClient := kafkagw.NewKafkaClient(cfg.KafkaURL, cfg.KafkaTopic)
-	aiService := geminigw.NewAIService(geminiClient, s3Client, fdClient, newsRepo, analysisRepo, cfg.NewsTTL)
 
 	// usecases
 	analysisUC := usecase.NewGetAnalysisUsecase(analysisRepo)
 	reportResultsUC := usecase.NewGetReportResultsUsecase(reportResultsRepo)
-	businessResearchUC := usecase.NewBusinessResearchUsecase(aiService, businessResearchRepo, kafkaClient)
+	businessResearchUC := usecase.NewBusinessResearchUsecase(geminiClient, businessResearchRepo, kafkaClient)
 
-	analyzeReportUC := usecase.NewAnalyzeReportUsecase(aiService, analysisRepo, kafkaClient)
-	extractRawDataUC := usecase.NewExtractRawDataUsecase(aiService, fdClient, parserClient, kafkaClient)
-	extractResultUC := usecase.NewExtractResultUsecase(aiService, reportResultsRepo)
-	newsResearchUC := usecase.NewNewsResearchUsecase(aiService, newsRepo, kafkaClient, cfg.NewsTTL)
-	riskAndGrowthUC := usecase.NewRiskAndGrowthUsecase(aiService, riskAndGrowthRepo, newsRepo, businessResearchRepo, kafkaClient, cfg.NewsTTL)
+	analyzeReportUC := usecase.NewAnalyzeReportUsecase(geminiClient, analysisRepo, kafkaClient, fdClient, s3Client, newsRepo, businessResearchRepo, riskAndGrowthRepo, scenarioRepo, dcfRepo)
+	extractRawDataUC := usecase.NewExtractRawDataUsecase(geminiClient, fdClient, parserClient, kafkaClient, s3Client)
+	extractResultUC := usecase.NewExtractResultUsecase(geminiClient, reportResultsRepo, analysisRepo, taskRepo)
+	newsResearchUC := usecase.NewNewsResearchUsecase(geminiClient, newsRepo, kafkaClient, cfg.NewsTTL)
+	riskAndGrowthUC := usecase.NewRiskAndGrowthUsecase(geminiClient, riskAndGrowthRepo, newsRepo, businessResearchRepo, kafkaClient, cfg.NewsTTL)
+	scenarioGeneratorUC := usecase.NewScenarioGenerator(geminiClient, fdClient, riskAndGrowthRepo, scenarioRepo, dcfRepo, transactor, kafkaClient)
 	taskCounterUC := usecase.NewTaskCounterUsecase(taskRepo, transactor, kafkaClient)
 
 	// adapters
@@ -109,6 +111,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		businessResearchUC,
 		newsResearchUC,
 		riskAndGrowthUC,
+		scenarioGeneratorUC,
 		taskCounterUC,
 	)
 	consumer := kafkaadapter.NewConsumer(kafkaClient, dispatcher, 10)

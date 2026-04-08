@@ -11,13 +11,13 @@ import (
 )
 
 type NewsResearchUsecase struct {
-	ai        AIService
+	ai        AIProvider
 	news      NewsRepository
 	publisher MessagePublisher
 	newsTTL   time.Duration
 }
 
-func NewNewsResearchUsecase(ai AIService, news NewsRepository, publisher MessagePublisher, newsTTL time.Duration) *NewsResearchUsecase {
+func NewNewsResearchUsecase(ai AIProvider, news NewsRepository, publisher MessagePublisher, newsTTL time.Duration) *NewsResearchUsecase {
 	return &NewsResearchUsecase{
 		ai:        ai,
 		news:      news,
@@ -41,12 +41,48 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 		return nil
 	}
 
-	news, err := u.ai.CollectNews(ctx, task.Ticker)
-	if err != nil {
-		return fmt.Errorf("collect news: %w", err)
+	newsItemSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"news":        {Type: TypeString},
+			"date":        {Type: TypeString},
+			"source":      {Type: TypeString},
+			"severity":    {Type: TypeString, Enum: []string{"high", "medium", "low"}},
+			"impact_type": {Type: TypeString, Enum: []string{"positive", "negative", "neutral"}},
+		},
+		Required: []string{"news", "date", "source", "severity", "impact_type"},
 	}
 
-	if err := u.news.SaveNews(ctx, task.Ticker, news); err != nil {
+	responseSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"latest_news":    {Type: TypeArray, Items: newsItemSchema},
+			"important_news": {Type: TypeArray, Items: newsItemSchema},
+		},
+		Required: []string{"latest_news", "important_news"},
+	}
+
+	logger.Info("calling AI to collect news")
+	start := time.Now()
+
+	text, err := u.ai.GenerateText(ctx, buildNewsAgentPrompt(task.Ticker), entity.Flash, GenerateParams{
+		GoogleSearch:   true,
+		ResponseSchema: responseSchema,
+	})
+	if err != nil {
+		return fmt.Errorf("call ai provider for news: %w", err)
+	}
+
+	requestTime := time.Since(start)
+	logger.Info("Gemini call lasted", "time", requestTime.String())
+
+	var res entity.NewsResponse
+	if err := json.Unmarshal([]byte(text), &res); err != nil {
+		slog.Error("failed to parse news response", slog.String("ai_response", text))
+		return fmt.Errorf("parse news response: %w", err)
+	}
+
+	if err := u.news.SaveNews(ctx, task.Ticker, &res); err != nil {
 		return fmt.Errorf("save news: %w", err)
 	}
 

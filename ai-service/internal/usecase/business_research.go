@@ -7,17 +7,18 @@ import (
 	"fmt"
 	"log/slog"
 
+	docs "ai-service/internal/docs"
 	"ai-service/internal/domain"
 	"ai-service/internal/domain/entity"
 )
 
 type BusinessResearchUsecase struct {
-	ai        AIService
+	ai        AIProvider
 	repo      BusinessResearchRepository
 	publisher MessagePublisher
 }
 
-func NewBusinessResearchUsecase(ai AIService, repo BusinessResearchRepository, publisher MessagePublisher) *BusinessResearchUsecase {
+func NewBusinessResearchUsecase(ai AIProvider, repo BusinessResearchRepository, publisher MessagePublisher) *BusinessResearchUsecase {
 	return &BusinessResearchUsecase{
 		ai:        ai,
 		repo:      repo,
@@ -40,12 +41,84 @@ func (u *BusinessResearchUsecase) Execute(ctx context.Context, task entity.Task)
 		return nil
 	}
 
-	result, err := u.ai.ResearchBusiness(ctx, task.Ticker)
+	prompt := docs.BusinessResearcherPrompt() +
+		"\n\n## Компания для анализа\nТикер: " + task.Ticker +
+		"\n\nВАЖНО: В поле ticker ответа используй СТРОГО \"" + task.Ticker + "\". Не заменяй тикер на альтернативный."
+
+	marketSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"market": {Type: TypeString},
+			"role":   {Type: TypeString},
+		},
+		Required: []string{"market", "role"},
+	}
+
+	revenueSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"segment":     {Type: TypeString},
+			"share_pct":   {Type: TypeNumber},
+			"approximate": {Type: TypeBoolean},
+			"description": {Type: TypeString},
+			"trend":       {Type: TypeString, Enum: []string{"growing", "stable", "declining"}},
+		},
+		Required: []string{"segment", "share_pct", "approximate", "description", "trend"},
+	}
+
+	dependencySchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"factor":      {Type: TypeString},
+			"type":        {Type: TypeString, Enum: []string{"commodity", "currency", "regulation", "macro", "technology", "geopolitics", "infrastructure", "demand"}},
+			"severity":    {Type: TypeString, Enum: []string{"critical", "high", "moderate"}},
+			"description": {Type: TypeString},
+		},
+		Required: []string{"factor", "type", "severity", "description"},
+	}
+
+	responseSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"ticker":       {Type: TypeString},
+			"company_name": {Type: TypeString},
+			"profile": {
+				Type: TypeObject,
+				Properties: map[string]*Schema{
+					"description":           {Type: TypeString},
+					"products_and_services": {Type: TypeArray, Items: &Schema{Type: TypeString}},
+					"markets":               {Type: TypeArray, Items: marketSchema},
+					"key_clients":           {Type: TypeString},
+					"business_model":        {Type: TypeString},
+				},
+				Required: []string{"description", "products_and_services", "markets", "key_clients", "business_model"},
+			},
+			"revenue_sources": {Type: TypeArray, Items: revenueSchema},
+			"dependencies":    {Type: TypeArray, Items: dependencySchema},
+		},
+		Required: []string{"ticker", "company_name", "profile", "revenue_sources", "dependencies"},
+	}
+
+	logger.Info("calling AI for business research")
+	text, err := u.ai.GenerateText(ctx, prompt, entity.Flash, GenerateParams{
+		GoogleSearch:   true,
+		ResponseSchema: responseSchema,
+	})
 	if err != nil {
 		return fmt.Errorf("research business: %w", err)
 	}
 
-	if err := u.repo.SaveBusinessResearch(ctx, result); err != nil {
+	var res entity.BusinessResearchResponse
+	if err := json.Unmarshal([]byte(text), &res); err != nil {
+		logger.Error("failed to parse business research response", slog.String("ai_response", text))
+		return fmt.Errorf("parse business research response: %w", err)
+	}
+
+	res.Ticker = task.Ticker
+
+	logger.Info("business research completed")
+
+	if err := u.repo.SaveBusinessResearch(ctx, &res); err != nil {
 		return fmt.Errorf("save business research: %w", err)
 	}
 
@@ -67,6 +140,7 @@ func (u *BusinessResearchUsecase) Execute(ctx context.Context, task entity.Task)
 	}
 
 	logger.Info("published news-research task")
+
 	return nil
 }
 

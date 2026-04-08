@@ -6,27 +6,31 @@ import (
 	"fmt"
 	"log/slog"
 
+	docs "ai-service/internal/docs"
 	"ai-service/internal/domain/entity"
 )
 
 type ExtractRawDataUsecase struct {
-	ai        AIService
+	ai        AIProvider
 	fd        FinancialDataGateway
 	parser    ParserGateway
 	publisher MessagePublisher
+	storage   StorageClient
 }
 
 func NewExtractRawDataUsecase(
-	ai AIService,
+	ai AIProvider,
 	fd FinancialDataGateway,
 	parser ParserGateway,
 	publisher MessagePublisher,
+	storage StorageClient,
 ) *ExtractRawDataUsecase {
 	return &ExtractRawDataUsecase{
 		ai:        ai,
 		fd:        fd,
 		parser:    parser,
 		publisher: publisher,
+		storage:   storage,
 	}
 }
 
@@ -49,13 +53,30 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 	if existing == nil {
 		logger.Info("raw data not found, extracting")
 
-		result, err := u.ai.ExtractRawData(ctx, task.Ticker, task.ReportURL, task.Year, period)
-		if err != nil {
-			return fmt.Errorf("extract raw data: %w", err)
-		}
-		result.Status = entity.RawDataStatusConfirmed
+		prompt := docs.RawDataAgentPrompt() + "\n<ticker>" + task.Ticker + "</ticker>"
 
-		if err := u.fd.SaveDraft(ctx, result); err != nil {
+		logger.Info("downloading PDF for raw data extraction", slog.String("report_url", task.ReportURL))
+
+		pdfBytes, err := u.storage.DownloadPDF(ctx, task.ReportURL)
+		if err != nil {
+			return fmt.Errorf("download PDF: %w", err)
+		}
+		logger.Info("PDF downloaded", slog.Int("pdf_size_bytes", len(pdfBytes)))
+
+		text, err := u.ai.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Flash)
+		if err != nil {
+			return fmt.Errorf("ai call with pdf: %w", err)
+		}
+
+		var rawData entity.RawData
+		if err := json.Unmarshal([]byte(text), &rawData); err != nil {
+			return fmt.Errorf("unmarshal raw data: %w", err)
+		}
+
+		rawData.ComputeDerivedFields()
+		rawData.Status = entity.RawDataStatusConfirmed
+
+		if err := u.fd.SaveDraft(ctx, &rawData); err != nil {
 			return fmt.Errorf("save raw data: %w", err)
 		}
 

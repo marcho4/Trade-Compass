@@ -61,13 +61,16 @@ func (u *TaskCounterUsecase) decrement(ctx context.Context, task entity.Task) er
 			return fmt.Errorf("decrement pending: %w", err)
 		}
 
-		ok, err := u.tasks.CheckIfTaskIsReady(ctx, task.Id, waitTaskCount)
+		ok, err := u.tasks.CheckIfTaskIsReady(txCtx, task.Id, waitTaskCount)
 		if err != nil {
 			return fmt.Errorf("check task: %w", err)
 		}
 
 		if ok {
-			u.sendGenerateScenariosMessage(ctx, task)
+			err = u.sendGenerateScenariosMessage(txCtx, task)
+			if err != nil {
+				return fmt.Errorf("send generate scenario msg: %w", err)
+			}
 		}
 
 		return nil
@@ -78,15 +81,6 @@ func (u *TaskCounterUsecase) increment(ctx context.Context, task entity.Task) er
 	return u.transactor.RunInTx(ctx, func(txCtx context.Context) error {
 		if err := u.tasks.IncrementPending(txCtx, task.Id, string(task.Type), 1); err != nil {
 			return fmt.Errorf("increment pending: %w", err)
-		}
-
-		ok, err := u.tasks.CheckIfTaskIsReady(ctx, task.Id, waitTaskCount)
-		if err != nil {
-			return fmt.Errorf("check task: %w", err)
-		}
-
-		if ok {
-			u.sendGenerateScenariosMessage(ctx, task)
 		}
 
 		return nil
