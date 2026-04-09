@@ -62,18 +62,6 @@ class AnalyzeTaskGateway(ABC):
     @abstractmethod
     def send_task(self, ticker: str, year: int, period: str, report_url: str, task_id: str, task_type: str) -> None: ...
 
-    @abstractmethod
-    def begin_transaction(self) -> None: ...
-
-    @abstractmethod
-    def commit_transaction(self) -> None: ...
-
-    @abstractmethod
-    def abort_transaction(self) -> None: ...
-
-    @abstractmethod
-    def send_offsets_to_transaction(self, positions, group_metadata) -> None: ...
-
 class ReportsParser(ABC):
     @abstractmethod
     def search_company(self, query: str) -> List[dict]:

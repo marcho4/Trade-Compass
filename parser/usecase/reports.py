@@ -69,11 +69,11 @@ class ReportProcessor:
         reports = self.client.download_reports(first_company)
         downloaded = self._convert_to_downloaded_reports(reports)
 
-        saved = self.process_downloaded_reports(downloaded, ticker, skip_indexing=skip_indexing)
+        all_metadata, newly_saved_count = self.process_downloaded_reports(downloaded, ticker, skip_indexing=skip_indexing)
 
-        self._log_results(len(downloaded), len(saved))
+        self._log_results(len(downloaded), newly_saved_count)
 
-        return SingleCompanyProcessingResult(ticker=ticker, saved=len(saved), reports_metadata=saved)
+        return SingleCompanyProcessingResult(ticker=ticker, saved=newly_saved_count, reports_metadata=all_metadata)
 
     def _convert_to_downloaded_reports(self, reports: list[dict]) -> list[DownloadedReport]:
         result = []
@@ -89,18 +89,21 @@ class ReportProcessor:
                 ))
         return result
 
-    def process_downloaded_reports(self, reports: list[DownloadedReport], ticker: str, skip_indexing: bool = False) -> list[ReportMetadata]:
-        saved : list[ReportMetadata] = []
+    def process_downloaded_reports(self, reports: list[DownloadedReport], ticker: str, skip_indexing: bool = False) -> tuple[list[ReportMetadata], int]:
+        all_metadata: list[ReportMetadata] = []
+        newly_saved_count = 0
         for report in reports:
-            meta = self._process_downloaded_report(report, ticker, skip_indexing=skip_indexing)
+            meta, is_new = self._process_downloaded_report(report, ticker, skip_indexing=skip_indexing)
             if meta is not None:
-                saved.append(meta)
-        return saved
+                all_metadata.append(meta)
+                if is_new:
+                    newly_saved_count += 1
+        return all_metadata, newly_saved_count
 
-    def _process_downloaded_report(self, report: DownloadedReport, ticker: str, skip_indexing: bool = False) -> ReportMetadata | None:
+    def _process_downloaded_report(self, report: DownloadedReport, ticker: str, skip_indexing: bool = False) -> tuple[ReportMetadata | None, bool]:
         if not report.is_valid():
             logger.warning(f"skipping: report {report} is not valid")
-            return None
+            return None, False
 
         logger.info(f"{report.year}, {report.period_months} months - {report.size_mb:.2f} MB")
         logger.info(f"local path: {report.path}")
@@ -108,16 +111,16 @@ class ReportProcessor:
         s3_path = self._ensure_s3_uploaded(ticker, report)
         if s3_path is None:
             logger.error("error while saving to s3")
-            return None
+            return None, False
 
         report_orm = self._save_report_to_db(ticker, report.year, report.period, s3_path) # type: ignore
         if not report_orm:
-            return None
+            return ReportMetadata(s3_path=s3_path, year=report.year, period=report.period), False # type: ignore
 
         if not skip_indexing:
             self._vectorize_report(report_orm, report, ticker)
 
-        return ReportMetadata(s3_path=s3_path, year=report.year, period=report.period) # type: ignore
+        return ReportMetadata(s3_path=s3_path, year=report.year, period=report.period), True # type: ignore
 
     def _upload_to_s3(self, ticker: str, report: DownloadedReport) -> str | None:
         s3_path = self.s3_client.upload_report(ticker, report.year, report.period, report.path) # type: ignore

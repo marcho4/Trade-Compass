@@ -40,7 +40,10 @@ func NewRiskAndGrowthUsecase(
 }
 
 func (u *RiskAndGrowthUsecase) Execute(ctx context.Context, task entity.Task) error {
-	logger := slog.With(slog.String("ticker", task.Ticker))
+	logger := slog.With(
+		slog.String("id", task.Id),
+		slog.String("ticker", task.Ticker),
+	)
 
 	logger.Info("starting risk and growth task")
 
@@ -51,6 +54,9 @@ func (u *RiskAndGrowthUsecase) Execute(ctx context.Context, task entity.Task) er
 
 	if existing != nil {
 		logger.Info("fresh risk and growth already exists, skipping")
+		if err := u.pusblishNextMessage(ctx, task); err != nil {
+			return fmt.Errorf("send next msg: %w", err)
+		}
 		return nil
 	}
 
@@ -75,6 +81,7 @@ func (u *RiskAndGrowthUsecase) Execute(ctx context.Context, task entity.Task) er
 	}
 
 	prompt := docs.RiskAndGrowthPrompt()
+	prompt = strings.ReplaceAll(prompt, "{{TICKER}}", task.Ticker)
 	prompt = strings.ReplaceAll(prompt, "{{BUSINESS_RESEARCH}}", string(businessJSON))
 	prompt = strings.ReplaceAll(prompt, "{{NEWS}}", string(newsJSON))
 
@@ -115,6 +122,8 @@ func (u *RiskAndGrowthUsecase) Execute(ctx context.Context, task entity.Task) er
 		return fmt.Errorf("parse risk and growth response: %w", err)
 	}
 
+	result.Ticker = task.Ticker
+
 	logger.Info("risk and growth analysis completed",
 		slog.Int("factors_count", len(result.Factors)),
 	)
@@ -124,7 +133,14 @@ func (u *RiskAndGrowthUsecase) Execute(ctx context.Context, task entity.Task) er
 	}
 
 	logger.Info("risk and growth completed and saved")
+	if err := u.pusblishNextMessage(ctx, task); err != nil {
+		return fmt.Errorf("send next msg: %w", err)
+	}
 
+	return nil
+}
+
+func (u *RiskAndGrowthUsecase) pusblishNextMessage(ctx context.Context, task entity.Task) error {
 	nextTask := entity.Task{
 		Id:     task.Id,
 		Type:   entity.RiskAndGrowthSuccess,
@@ -140,7 +156,7 @@ func (u *RiskAndGrowthUsecase) Execute(ctx context.Context, task entity.Task) er
 		return fmt.Errorf("publish risk-and-growth task: %w", err)
 	}
 
-	logger.Info("published risk-and-growth success task")
+	slog.Info("published risk-and-growth success task")
 
 	return nil
 }

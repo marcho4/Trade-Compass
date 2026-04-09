@@ -92,8 +92,6 @@ class TickerParseConsumer:
         logger.info("Processing parsing request for ticker=%s, name=%s", ticker, name)
 
         try:
-            self._gateway.begin_transaction()
-
             with get_db_session() as db:
                 repo = PostgresReportsRepository(db)
                 with EDisclosureClient() as client:
@@ -111,13 +109,7 @@ class TickerParseConsumer:
                 self._gateway.send_task(ticker, meta.year, meta.period, meta.s3_path, task_id, "extract")
                 self._gateway.send_task(ticker, meta.year, meta.period, meta.s3_path, task_id, "raw-data-expect")
 
-            self._gateway.send_offsets_to_transaction(
-                self._consumer.position(self._consumer.assignment()),
-                self._consumer.consumer_group_metadata(),
-            )
-            self._gateway.commit_transaction()
-
+            self._consumer.commit(asynchronous=False)
             logger.info("Parsing result for %s: %s", ticker, result)
         except Exception as e:
-            self._gateway.abort_transaction()
             logger.error("Failed to process ticker %s: %s", ticker, e)

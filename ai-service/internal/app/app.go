@@ -90,7 +90,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	extractResultUC := usecase.NewExtractResultUsecase(geminiClient, reportResultsRepo, analysisRepo, taskRepo)
 	newsResearchUC := usecase.NewNewsResearchUsecase(geminiClient, newsRepo, kafkaClient, cfg.NewsTTL)
 	riskAndGrowthUC := usecase.NewRiskAndGrowthUsecase(geminiClient, riskAndGrowthRepo, newsRepo, businessResearchRepo, kafkaClient, cfg.NewsTTL)
-	scenarioGeneratorUC := usecase.NewScenarioGenerator(geminiClient, fdClient, riskAndGrowthRepo, scenarioRepo, dcfRepo, transactor, kafkaClient)
+	scenarioGeneratorUC := usecase.NewScenarioGenerator(geminiClient, fdClient, parserClient, riskAndGrowthRepo, scenarioRepo, dcfRepo, transactor, kafkaClient)
 	taskCounterUC := usecase.NewTaskCounterUsecase(taskRepo, transactor, kafkaClient)
 
 	// adapters

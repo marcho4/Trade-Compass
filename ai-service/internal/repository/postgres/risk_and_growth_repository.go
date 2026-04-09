@@ -49,8 +49,8 @@ func (r *RiskAndGrowthRepository) GetFreshRiskAndGrowth(ctx context.Context, tic
 	err := db.QueryRow(ctx, `
 		SELECT factors
 		FROM risk_and_growth
-		WHERE ticker = $1 AND created_at > NOW() - $2::interval
-	`, ticker, ttl.String()).Scan(&factorsJSON)
+		WHERE ticker = $1 AND created_at > NOW() - make_interval(secs => $2)
+	`, ticker, ttl.Seconds()).Scan(&factorsJSON)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

@@ -27,7 +27,10 @@ func NewBusinessResearchUsecase(ai AIProvider, repo BusinessResearchRepository, 
 }
 
 func (u *BusinessResearchUsecase) Execute(ctx context.Context, task entity.Task) error {
-	logger := slog.With(slog.String("ticker", task.Ticker))
+	logger := slog.With(
+		slog.String("id", task.Id),
+		slog.String("ticker", task.Ticker),
+	)
 
 	logger.Info("starting business research task")
 
@@ -38,6 +41,11 @@ func (u *BusinessResearchUsecase) Execute(ctx context.Context, task entity.Task)
 
 	if existing != nil {
 		logger.Info("business research already exists, skipping")
+
+		if err := u.publishNextTask(ctx, task); err != nil {
+			return fmt.Errorf("publish next task: %w", err)
+		}
+
 		return nil
 	}
 
@@ -124,6 +132,18 @@ func (u *BusinessResearchUsecase) Execute(ctx context.Context, task entity.Task)
 
 	logger.Info("business research completed and saved")
 
+	if err := u.publishNextTask(ctx, task); err != nil {
+		return fmt.Errorf("publish next task: %w", err)
+	}
+
+	return nil
+}
+
+func (u *BusinessResearchUsecase) GetBusinessResearch(ctx context.Context, ticker string) (*entity.BusinessResearchResult, error) {
+	return u.repo.GetBusinessResearch(ctx, ticker)
+}
+
+func (u *BusinessResearchUsecase) publishNextTask(ctx context.Context, task entity.Task) error {
 	nextTask := entity.Task{
 		Id:     task.Id,
 		Ticker: task.Ticker,
@@ -139,11 +159,7 @@ func (u *BusinessResearchUsecase) Execute(ctx context.Context, task entity.Task)
 		return fmt.Errorf("publish news-research task: %w", err)
 	}
 
-	logger.Info("published news-research task")
+	slog.Info("published news-research task")
 
 	return nil
-}
-
-func (u *BusinessResearchUsecase) GetBusinessResearch(ctx context.Context, ticker string) (*entity.BusinessResearchResult, error) {
-	return u.repo.GetBusinessResearch(ctx, ticker)
 }

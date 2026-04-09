@@ -27,7 +27,10 @@ func NewNewsResearchUsecase(ai AIProvider, news NewsRepository, publisher Messag
 }
 
 func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) error {
-	logger := slog.With(slog.String("ticker", task.Ticker))
+	logger := slog.With(
+		slog.String("id", task.Id),
+		slog.String("ticker", task.Ticker),
+	)
 
 	logger.Info("starting news research task")
 
@@ -38,6 +41,11 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 
 	if existing != nil {
 		logger.Info("fresh news already exist, skipping")
+
+		if err := u.sendNextTask(ctx, task); err != nil {
+			return fmt.Errorf("send task: %w", err)
+		}
+
 		return nil
 	}
 
@@ -88,6 +96,16 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 
 	logger.Info("news research completed and saved")
 
+	if err := u.sendNextTask(ctx, task); err != nil {
+		return fmt.Errorf("send task: %w", err)
+	}
+
+	logger.Info("published risk-and-growth task")
+
+	return nil
+}
+
+func (u *NewsResearchUsecase) sendNextTask(ctx context.Context, task entity.Task) error {
 	nextTask := entity.Task{
 		Id:     task.Id,
 		Ticker: task.Ticker,
@@ -103,6 +121,5 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 		return fmt.Errorf("publish risk-and-growth task: %w", err)
 	}
 
-	logger.Info("published risk-and-growth task")
 	return nil
 }

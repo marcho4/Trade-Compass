@@ -142,6 +142,33 @@ func (c *Client) GetReports(ctx context.Context, ticker string) ([]entity.Report
 	return body.Reports, nil
 }
 
+func (c *Client) GetLatestReport(ctx context.Context, ticker string) (*entity.Report, error) {
+	reports, err := c.GetReports(ctx, ticker)
+	if err != nil {
+		return nil, err
+	}
+
+	var best *entity.Report
+	for i := range reports {
+		r := &reports[i]
+		if best == nil {
+			best = r
+			continue
+		}
+		rMonths, _ := strconv.Atoi(r.Period)
+		bestMonths, _ := strconv.Atoi(best.Period)
+		if r.Year > best.Year || (r.Year == best.Year && rMonths > bestMonths) {
+			best = r
+		}
+	}
+
+	if best == nil {
+		return nil, fmt.Errorf("no reports found for %s", ticker)
+	}
+
+	return best, nil
+}
+
 func (c *Client) IsLatestReport(ctx context.Context, ticker string, year int, periodMonths int) (bool, error) {
 	reports, err := c.GetReports(ctx, ticker)
 	if err != nil {

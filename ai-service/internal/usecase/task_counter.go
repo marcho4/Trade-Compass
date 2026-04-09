@@ -71,6 +71,10 @@ func (u *TaskCounterUsecase) decrement(ctx context.Context, task entity.Task) er
 			if err != nil {
 				return fmt.Errorf("send generate scenario msg: %w", err)
 			}
+
+			if err = u.tasks.DeleteTask(txCtx, task.Id); err != nil {
+				return fmt.Errorf("delete task after ready: %w", err)
+			}
 		}
 
 		return nil

@@ -23,6 +23,7 @@ const (
 type ScenarioGenerator struct {
 	ai                AIProvider
 	finData           FinancialDataGateway
+	parserGateway     ParserGateway
 	riskAndGrowthRepo RiskAndGrowthRepository
 	scenarioRepo      ScenarioRepository
 	dcfRepo           DCFResultsRepository
@@ -33,6 +34,7 @@ type ScenarioGenerator struct {
 func NewScenarioGenerator(
 	ai AIProvider,
 	finData FinancialDataGateway,
+	parserGateway ParserGateway,
 	riskAndGrowthRepo RiskAndGrowthRepository,
 	scenarioRepo ScenarioRepository,
 	dcfRepo DCFResultsRepository,
@@ -42,6 +44,7 @@ func NewScenarioGenerator(
 	return &ScenarioGenerator{
 		ai:                ai,
 		finData:           finData,
+		parserGateway:     parserGateway,
 		riskAndGrowthRepo: riskAndGrowthRepo,
 		scenarioRepo:      scenarioRepo,
 		dcfRepo:           dcfRepo,
@@ -180,12 +183,22 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 		return fmt.Errorf("save results: %w", err)
 	}
 
+	latestReport, err := s.parserGateway.GetLatestReport(ctx, task.Ticker)
+	if err != nil {
+		return fmt.Errorf("get latest report: %w", err)
+	}
+
+	reportPeriod, ok := entity.MonthsToPeriod[latestReport.Period]
+	if !ok {
+		return fmt.Errorf("unknown period months %q for ticker %s", latestReport.Period, task.Ticker)
+	}
+
 	nextTask := entity.Task{
 		Id:        task.Id,
 		Ticker:    task.Ticker,
-		Year:      task.Year,
-		Period:    task.Period,
-		ReportURL: task.ReportURL,
+		Year:      latestReport.Year,
+		Period:    string(reportPeriod),
+		ReportURL: latestReport.S3Path,
 		Type:      entity.Analyze,
 	}
 

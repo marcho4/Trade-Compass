@@ -17,6 +17,7 @@ type FinancialDataGateway interface {
 
 type ParserGateway interface {
 	IsLatestReport(ctx context.Context, ticker string, year, periodMonths int) (bool, error)
+	GetLatestReport(ctx context.Context, ticker string) (*entity.Report, error)
 }
 
 type MessagePublisher interface {

@@ -20,9 +20,7 @@ class AiAnalyzeGateway(AnalyzeTaskGateway):
     def __init__(self):
         self._producer = Producer({
             "bootstrap.servers": config.kafka_bootstrap_servers,
-            "transactional.id": "parser-txn-id-553",
         })
-        self._producer.init_transactions(10)
 
     def send_task(self, ticker: str, year: int, period: str, report_url: str, task_id: str, task_type: str) -> None:
         ai_period = MONTHS_TO_PERIOD.get(period)
@@ -44,18 +42,7 @@ class AiAnalyzeGateway(AnalyzeTaskGateway):
             value=json.dumps(message).encode("utf-8"),
             callback=self._delivery_callback,
         )
-
-    def begin_transaction(self) -> None:
-        self._producer.begin_transaction()
-
-    def commit_transaction(self) -> None:
-        self._producer.commit_transaction()
-
-    def abort_transaction(self) -> None:
-        self._producer.abort_transaction()
-
-    def send_offsets_to_transaction(self, positions, group_metadata) -> None:
-        self._producer.send_offsets_to_transaction(positions, group_metadata)
+        self._producer.poll(0)
 
     @staticmethod
     def _delivery_callback(err, msg):

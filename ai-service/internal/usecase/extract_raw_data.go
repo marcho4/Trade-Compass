@@ -36,6 +36,7 @@ func NewExtractRawDataUsecase(
 
 func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) error {
 	logger := slog.With(
+		slog.String("id", task.Id),
 		slog.String("ticker", task.Ticker),
 		slog.Int("year", task.Year),
 		slog.String("period", task.Period),
@@ -101,7 +102,7 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 		return fmt.Errorf("publish analyze task: %w", err)
 	}
 
-	logger.Info("report is the latest, published analyze task")
+	logger.Info("report is the latest, published raw-data-success")
 
 	return nil
 }
