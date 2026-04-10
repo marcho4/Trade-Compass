@@ -41,8 +41,6 @@ type RawData struct {
 	OtherIncome       *int64   `json:"otherIncome,omitempty"`       // Прочие доходы + доход от аренды
 	OtherExpenses     *int64   `json:"otherExpenses,omitempty"`     // Прочие расходы (отрицательное)
 	EBIT              *int64   `json:"ebit,omitempty"`
-	EBITDA            *int64   `json:"ebitda,omitempty"`          // расчётное: EBIT + Depreciation
-	Depreciation      *int64   `json:"depreciation,omitempty"`    // Общая D&A из CF
 	InterestIncome    *int64   `json:"interestIncome,omitempty"`  // Процентные доходы
 	InterestExpense   *int64   `json:"interestExpense,omitempty"` // Финансовые расходы
 	ProfitBeforeTax   *int64   `json:"profitBeforeTax,omitempty"`
@@ -80,7 +78,12 @@ type RawData struct {
 	OperatingCashFlow *int64 `json:"operatingCashFlow,omitempty"`
 	InvestingCashFlow *int64 `json:"investingCashFlow,omitempty"`
 	FinancingCashFlow *int64 `json:"financingCashFlow,omitempty"`
+	DaFixedRou        *int64 `json:"daFixedRou,omitempty"`      // Амортизация ОС и ППА (положительное)
+	DaIntangibles     *int64 `json:"daIntangibles,omitempty"`   // Амортизация НМА (положительное)
+	CapexFA           *int64 `json:"capexFa,omitempty"`         // Приобретение ОС (отрицательное)
+	CapexIA           *int64 `json:"capexIa,omitempty"`         // Приобретение НМА (отрицательное)
 	CAPEX             *int64 `json:"capex,omitempty"`           // расчётное: capexFA + capexIA (отрицательное)
+	Depreciation      *int64 `json:"depreciation,omitempty"`    // расчётное: daFixedRou + daIntangibles
 	FreeCashFlow      *int64 `json:"freeCashFlow,omitempty"`    // расчётное: OCF + CAPEX
 	DividendsPaid     *int64 `json:"dividendsPaid,omitempty"`   // Дивиденды выплаченные (отрицательное)
 	LeasePayments     *int64 `json:"leasePayments,omitempty"`   // Погашение обязательств по аренде (отрицательное)
@@ -95,6 +98,7 @@ type RawData struct {
 	EnterpriseValue   *int64 `json:"enterpriseValue,omitempty"`   // Заполняется из MOEX API
 
 	// ── Derived Metrics ───────────────────────────────────────────
+	EBITDA          *int64 `json:"ebitda,omitempty"`          // расчётное: EBIT + Depreciation
 	WorkingCapital  *int64 `json:"workingCapital,omitempty"`  // currentAssets - currentLiabilities
 	CapitalEmployed *int64 `json:"capitalEmployed,omitempty"` // totalAssets - currentLiabilities
 	NetDebt         *int64 `json:"netDebt,omitempty"`         // debt - cash (без аренды)
@@ -130,7 +134,24 @@ func subPtr(a, b *int64) *int64 {
 	return ptr64(*a - *b)
 }
 
+func negSumPtr(a, b *int64) *int64 {
+	if a == nil && b == nil {
+		return nil
+	}
+	var av, bv int64
+	if a != nil {
+		av = *a
+	}
+	if b != nil {
+		bv = *b
+	}
+	return ptr64(-(av + bv))
+}
+
 func (r *RawData) ComputeDerivedFields() {
+	r.Depreciation = sumPtr(r.DaFixedRou, r.DaIntangibles)
+	r.CAPEX = negSumPtr(r.CapexFA, r.CapexIA)
+
 	r.EBITDA = sumPtr(r.EBIT, r.Depreciation)
 	r.FreeCashFlow = sumPtr(r.OperatingCashFlow, r.CAPEX)
 	r.Debt = sumPtr(r.LongTermDebt, r.ShortTermDebt)
