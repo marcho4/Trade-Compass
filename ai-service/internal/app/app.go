@@ -88,7 +88,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	analyzeReportUC := usecase.NewAnalyzeReportUsecase(geminiClient, analysisRepo, kafkaClient, fdClient, s3Client, newsRepo, businessResearchRepo, riskAndGrowthRepo, scenarioRepo, dcfRepo)
 	extractRawDataUC := usecase.NewExtractRawDataUsecase(geminiClient, fdClient, parserClient, kafkaClient, s3Client)
 	extractResultUC := usecase.NewExtractResultUsecase(geminiClient, reportResultsRepo, analysisRepo, taskRepo)
-	newsResearchUC := usecase.NewNewsResearchUsecase(geminiClient, newsRepo, kafkaClient, cfg.NewsTTL)
+	newsResearchUC := usecase.NewNewsResearchUsecase(geminiClient, newsRepo, businessResearchRepo, kafkaClient, cfg.NewsTTL)
 	riskAndGrowthUC := usecase.NewRiskAndGrowthUsecase(geminiClient, riskAndGrowthRepo, newsRepo, businessResearchRepo, kafkaClient, cfg.NewsTTL)
 	scenarioGeneratorUC := usecase.NewScenarioGenerator(geminiClient, fdClient, parserClient, riskAndGrowthRepo, scenarioRepo, dcfRepo, transactor, kafkaClient)
 	taskCounterUC := usecase.NewTaskCounterUsecase(taskRepo, transactor, kafkaClient)
@@ -100,7 +100,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("parse port: %w", err)
 	}
 
-	analysisHandler := httpserver.NewAnalysisHandler(analysisUC, reportResultsUC, businessResearchUC)
+	analysisHandler := httpserver.NewAnalysisHandler(analysisUC, reportResultsUC, businessResearchUC, newsRepo)
 	server := httpserver.NewHttpServer(analysisHandler)
 	server.RegisterRoutes(port, cfg.APIKey)
 

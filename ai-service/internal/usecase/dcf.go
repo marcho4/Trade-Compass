@@ -57,7 +57,7 @@ func calculateScenario(input entity.DCFInput, scenario entity.Scenario) entity.S
 	equity := ev - input.NetDebt
 	var price float64
 	if input.SharesOutstanding > 0 {
-		price = equity / float64(input.SharesOutstanding)
+		price = equity / input.SharesOutstanding
 	}
 
 	return entity.ScenarioDCFResult{

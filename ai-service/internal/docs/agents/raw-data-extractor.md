@@ -182,7 +182,6 @@
 
   "totalLiabilities": <int64>,
   "currentLiabilities": <int64>,
-  "debt": <int64>,
   "longTermDebt": <int64>,
   "shortTermDebt": <int64>,
   "ltLeaseLiabilities": <int64 или null>,
@@ -222,6 +221,7 @@
 ПЕРЕД извлечением данных найди на страницах отчёта фразу в скобках:
 - "(в тысячах рублей)" → reportUnits = "thousands"  
 - "(в миллионах рублей)" → reportUnits = "millions"
+- "(в миллиардах рублей)" → reportUnits = "billions"
 - "(в рублях)" → reportUnits = "units"
 
 Эта фраза обычно расположена под заголовком каждого отчёта (баланс, P&L, CF). Если уже нашел единицу измерения, то приводи все числа к ней в дальнейшем, чтобы весь отчет был в одном измерении.

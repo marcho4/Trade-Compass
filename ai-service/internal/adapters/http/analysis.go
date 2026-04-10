@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"ai-service/internal/domain"
 	"ai-service/internal/domain/entity"
@@ -26,21 +27,28 @@ type businessResearchReader interface {
 	GetBusinessResearch(ctx context.Context, ticker string) (*entity.BusinessResearchResult, error)
 }
 
+type newsReader interface {
+	GetFreshNews(ctx context.Context, ticker string, ttl time.Duration) (*entity.NewsResponse, error)
+}
+
 type analysisHandler struct {
 	analysis         analysisReader
 	reportResults    reportResultsReader
 	businessResearch businessResearchReader
+	news             newsReader
 }
 
 func NewAnalysisHandler(
 	analysis analysisReader,
 	reportResults reportResultsReader,
 	businessResearch businessResearchReader,
+	news newsReader,
 ) *analysisHandler {
 	return &analysisHandler{
 		analysis:         analysis,
 		reportResults:    reportResults,
 		businessResearch: businessResearch,
+		news:             news,
 	}
 }
 
@@ -191,6 +199,28 @@ func (h *analysisHandler) HandleGetLatestReportResults(w http.ResponseWriter, r 
 	}
 
 	respondWithJSON(w, http.StatusOK, map[string]any{"data": results})
+}
+
+func (h *analysisHandler) HandleGetNews(w http.ResponseWriter, r *http.Request) {
+	ticker := r.URL.Query().Get("ticker")
+	if ticker == "" {
+		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
+		return
+	}
+
+	news, err := h.news.GetFreshNews(r.Context(), ticker, 72*time.Hour)
+	if err != nil {
+		slog.Error("GetFreshNews failed", slog.String("ticker", ticker), slog.Any("error", err))
+		respondWithError(w, http.StatusInternalServerError, "failed to get news")
+		return
+	}
+
+	if news == nil {
+		respondWithError(w, http.StatusNotFound, "news not found")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]any{"data": news})
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

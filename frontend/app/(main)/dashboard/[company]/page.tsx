@@ -8,6 +8,7 @@ import {
   CompanyAnalyses,
   CompanyMetrics,
   CompanyAbout,
+  CompanyNews,
 } from "@/components/company"
 // import { getMockCompanyAnalysis } from "@/lib/mock-data"
 import { financialDataApi, Sector } from "@/lib/api"
@@ -83,10 +84,11 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
 
       {/* Tabs для переключения между разными видами данных */}
       <Tabs defaultValue="about" className="w-full">
-        <TabsList className="grid w-full lg:w-auto" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+        <TabsList className="grid w-full lg:w-auto" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
           <TabsTrigger value="about">О компании</TabsTrigger>
           <TabsTrigger value="reports">Отчёты</TabsTrigger>
           <TabsTrigger value="metrics">Показатели</TabsTrigger>
+          <TabsTrigger value="news">Новости</TabsTrigger>
           <TabsTrigger value="ai-analysis">AI Анализ</TabsTrigger>
         </TabsList>
 
@@ -119,6 +121,11 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
         {/* Показатели */}
         <TabsContent value="metrics" className="mt-6">
           <CompanyMetrics ticker={decodedTicker} />
+        </TabsContent>
+
+        {/* Новости */}
+        <TabsContent value="news" className="mt-6">
+          <CompanyNews ticker={decodedTicker} />
         </TabsContent>
 
         {/* AI Анализ */}

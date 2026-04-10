@@ -278,7 +278,16 @@ func buildDCFInput(d entity.RawData, wacc float64) entity.DCFInput {
 		input.NetDebt = float64(*d.NetDebt)
 	}
 	if d.SharesOutstanding != nil {
-		input.SharesOutstanding = *d.SharesOutstanding
+		shares := float64(*d.SharesOutstanding)
+		switch d.ReportUnits {
+		case "billions":
+			shares /= 1_000_000_000
+		case "millions":
+			shares /= 1_000_000
+		case "thousands":
+			shares /= 1_000
+		}
+		input.SharesOutstanding = shares
 	}
 
 	return input

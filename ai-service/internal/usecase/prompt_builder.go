@@ -26,8 +26,17 @@ type analysisContext struct {
 	DCFResult        *entity.DCFResult
 }
 
-func buildNewsAgentPrompt(ticker string) string {
-	return docs.NewsCollectorAgent() + "\n\n" + "## Тикер для анализа\n" + ticker
+func buildNewsAgentPrompt(ticker string, dependencies []entity.CompanyDependency) string {
+	prompt := docs.NewsCollectorAgent() + "\n\n## Тикер для анализа\n" + ticker
+
+	if len(dependencies) > 0 {
+		prompt += "\n\n## Зависимости компании из бизнес-анализа\n"
+		for _, d := range dependencies {
+			prompt += fmt.Sprintf("- %s [тип: %s, критичность: %s]: %s\n", d.Factor, d.Type, d.Severity, d.Description)
+		}
+	}
+
+	return prompt
 }
 
 func buildExtractPrompt(reportText string) string {
@@ -89,6 +98,8 @@ func writeFinancialHistory(b *strings.Builder, history []entity.RawData) {
 
 		units := "тыс. руб."
 		switch rd.ReportUnits {
+		case "billions":
+			units = "млрд руб."
 		case "millions":
 			units = "млн руб."
 		case "units":

@@ -38,7 +38,7 @@ type YearlyAssumption struct {
 
 func (a *YearlyAssumption) String() string {
 	return fmt.Sprintf("  %d: рост выручки %.1f%%, COGS %.1f%%, SGA %.1f%%, налог %.1f%%, CAPEX %.1f%%, DA %.1f%%, NWC %.1f%%",
-		a.Year, a.RevenueGrowth, a.COGSPctRevenue, a.SGAPctRevenue, a.TaxRate, a.CapexPctRevenue, a.DAPctRevenue, a.NWCPctRevenue)
+		a.Year, a.RevenueGrowth*100, a.COGSPctRevenue*100, a.SGAPctRevenue*100, a.TaxRate*100, a.CapexPctRevenue*100, a.DAPctRevenue*100, a.NWCPctRevenue*100)
 }
 
 func (s *Scenario) String() string {
@@ -46,7 +46,7 @@ func (s *Scenario) String() string {
 
 	fmt.Fprintf(&b, "--- Сценарий: %s (вероятность: %.0f%%) ---\n", s.Name, s.Probability*100)
 	fmt.Fprintf(&b, "Описание: %s\n", s.Description)
-	fmt.Fprintf(&b, "Терминальный темп роста: %.2f%%\n", s.TerminalGrowthRate)
+	fmt.Fprintf(&b, "Терминальный темп роста: %.2f%%\n", s.TerminalGrowthRate*100)
 
 	if len(s.GrowthFactorsApplied) > 0 {
 		b.WriteString("Драйверы роста:\n")

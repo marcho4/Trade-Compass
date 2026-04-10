@@ -3,26 +3,30 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
+	"ai-service/internal/domain"
 	"ai-service/internal/domain/entity"
 )
 
 type NewsResearchUsecase struct {
-	ai        AIProvider
-	news      NewsRepository
-	publisher MessagePublisher
-	newsTTL   time.Duration
+	ai               AIProvider
+	news             NewsRepository
+	businessResearch BusinessResearchRepository
+	publisher        MessagePublisher
+	newsTTL          time.Duration
 }
 
-func NewNewsResearchUsecase(ai AIProvider, news NewsRepository, publisher MessagePublisher, newsTTL time.Duration) *NewsResearchUsecase {
+func NewNewsResearchUsecase(ai AIProvider, news NewsRepository, businessResearch BusinessResearchRepository, publisher MessagePublisher, newsTTL time.Duration) *NewsResearchUsecase {
 	return &NewsResearchUsecase{
-		ai:        ai,
-		news:      news,
-		publisher: publisher,
-		newsTTL:   newsTTL,
+		ai:               ai,
+		news:             news,
+		businessResearch: businessResearch,
+		publisher:        publisher,
+		newsTTL:          newsTTL,
 	}
 }
 
@@ -49,6 +53,16 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 		return nil
 	}
 
+	research, err := u.businessResearch.GetBusinessResearch(ctx, task.Ticker)
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
+		return fmt.Errorf("get business research: %w", err)
+	}
+
+	var dependencies []entity.CompanyDependency
+	if research != nil {
+		dependencies = research.Dependencies
+	}
+
 	newsItemSchema := &Schema{
 		Type: TypeObject,
 		Properties: map[string]*Schema{
@@ -61,19 +75,35 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 		Required: []string{"news", "date", "source", "severity", "impact_type"},
 	}
 
+	dependencyNewsItemSchema := &Schema{
+		Type: TypeObject,
+		Properties: map[string]*Schema{
+			"dependency":  {Type: TypeString},
+			"news":        {Type: TypeString},
+			"date":        {Type: TypeString},
+			"source":      {Type: TypeString},
+			"severity":    {Type: TypeString, Enum: []string{"high", "medium", "low"}},
+			"impact_type": {Type: TypeString, Enum: []string{"positive", "negative", "neutral"}},
+		},
+		Required: []string{"dependency", "news", "date", "source", "severity", "impact_type"},
+	}
+
 	responseSchema := &Schema{
 		Type: TypeObject,
 		Properties: map[string]*Schema{
-			"latest_news":    {Type: TypeArray, Items: newsItemSchema},
-			"important_news": {Type: TypeArray, Items: newsItemSchema},
+			"latest_news":                {Type: TypeArray, Items: newsItemSchema},
+			"historical_events":          {Type: TypeArray, Items: newsItemSchema},
+			"upcoming_company_events":    {Type: TypeArray, Items: newsItemSchema},
+			"upcoming_dependency_events": {Type: TypeArray, Items: dependencyNewsItemSchema},
+			"past_dependency_events":     {Type: TypeArray, Items: dependencyNewsItemSchema},
 		},
-		Required: []string{"latest_news", "important_news"},
+		Required: []string{"latest_news", "historical_events", "upcoming_company_events", "upcoming_dependency_events", "past_dependency_events"},
 	}
 
 	logger.Info("calling AI to collect news")
 	start := time.Now()
 
-	text, err := u.ai.GenerateText(ctx, buildNewsAgentPrompt(task.Ticker), entity.Flash, GenerateParams{
+	text, err := u.ai.GenerateText(ctx, buildNewsAgentPrompt(task.Ticker, dependencies), entity.Flash, GenerateParams{
 		GoogleSearch:   true,
 		ResponseSchema: responseSchema,
 	})

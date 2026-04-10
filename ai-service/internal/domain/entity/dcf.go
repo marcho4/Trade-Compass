@@ -10,7 +10,7 @@ type DCFInput struct {
 	BaseNWC           float64
 	WACC              float64
 	NetDebt           float64
-	SharesOutstanding int64
+	SharesOutstanding float64 // normalized to the same unit as financial data
 }
 
 type YearlyFCF struct {

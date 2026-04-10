@@ -31,7 +31,7 @@ type RawData struct {
 	Year        int          `json:"year"`
 	Period      ReportPeriod `json:"period"`
 	Status      string       `json:"status"`
-	ReportUnits string       `json:"reportUnits"` // "thousands" | "millions" | "units"
+	ReportUnits string       `json:"reportUnits"` // "thousands" | "millions" | "billions" | "units"
 
 	// ── Income Statement ──────────────────────────────────────────
 	Revenue           *int64   `json:"revenue,omitempty"`
@@ -110,10 +110,17 @@ type RawData struct {
 func ptr64(v int64) *int64 { return &v }
 
 func sumPtr(a, b *int64) *int64 {
-	if a == nil || b == nil {
+	if a == nil && b == nil {
 		return nil
 	}
-	return ptr64(*a + *b)
+	var av, bv int64
+	if a != nil {
+		av = *a
+	}
+	if b != nil {
+		bv = *b
+	}
+	return ptr64(av + bv)
 }
 
 func subPtr(a, b *int64) *int64 {
