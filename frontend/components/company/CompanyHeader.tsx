@@ -1,10 +1,12 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Company } from "@/types"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { ArrowUp, ArrowDown, TrendingUp, Users, Loader2 } from "lucide-react"
 import { usePriceData } from "@/hooks/use-price-data"
+import { aiApi } from "@/lib/api/ai-api"
 
 interface CompanyHeaderProps {
   company: Company
@@ -13,6 +15,24 @@ interface CompanyHeaderProps {
 export const CompanyHeader = ({ company }: CompanyHeaderProps) => {
   const { price, priceChange, priceChangePercent, loading: priceLoading } = usePriceData(company.ticker)
   const isPricePositive = priceChange >= 0
+
+  const [companyName, setCompanyName] = useState<string | null>(null)
+  const [description, setDescription] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    aiApi.getBusinessResearch(company.ticker, controller.signal)
+      .then((data) => {
+        if (data) {
+          setCompanyName(data.profile.company_name)
+          setDescription(data.profile.description)
+        } else {
+          console.warn("data not found (business research)")
+        }
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [company.ticker])
 
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat("ru-RU", {
@@ -32,6 +52,12 @@ export const CompanyHeader = ({ company }: CompanyHeaderProps) => {
                 <Badge variant="outline">{company.sector}</Badge>
               )}
             </div>
+            {companyName && (
+              <p className="text-lg font-medium text-foreground/80 mb-1">{companyName}</p>
+            )}
+            {description && (
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">{description}</p>
+            )}
           </div>
 
           <div className="text-right">
@@ -49,6 +75,7 @@ export const CompanyHeader = ({ company }: CompanyHeaderProps) => {
                     isPricePositive ? "text-green-600" : "text-red-600"
                   }`}
                 >
+                  Изменение за день: 
                   {isPricePositive ? (
                     <ArrowUp className="w-4 h-4" />
                   ) : (
@@ -64,32 +91,6 @@ export const CompanyHeader = ({ company }: CompanyHeaderProps) => {
               </>
             ) : null}
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 pt-4 border-t">
-          {company.lotSize && (
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Размер лота</p>
-                <p className="font-medium">{company.lotSize}</p>
-              </div>
-            </div>
-          )}
-
-          {company.ceo && (
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">CEO</p>
-                <p className="font-medium text-sm">{company.ceo}</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </Card>
