@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
+	"time"
 
 	docs "ai-service/internal/docs"
 	"ai-service/internal/domain/entity"
@@ -74,6 +76,26 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 			return fmt.Errorf("unmarshal raw data: %w", err)
 		}
 
+		stockInfo, err := u.fd.GetStockInfo(ctx, task.Ticker)
+		if err != nil {
+			logger.Warn("failed to get stock info, skipping market cap calculation", slog.Any("error", err))
+		} else {
+			periodEnd := periodEndDate(task.Year, period)
+			price, err := u.fd.GetPriceAt(ctx, task.Ticker, periodEnd)
+			if err != nil {
+				logger.Warn("failed to get price at period end, skipping market cap calculation",
+					slog.String("date", periodEnd.Format("2006-01-02")),
+					slog.Any("error", err),
+				)
+			} else {
+				unitDivisor := unitDivisorForReportUnits(rawData.ReportUnits)
+				shares := int64(stockInfo.NumberOfShares)
+				rawData.SharesOutstanding = &shares
+				marketCap := int64(math.Round(price*float64(stockInfo.NumberOfShares))) / unitDivisor
+				rawData.MarketCap = &marketCap
+			}
+		}
+
 		rawData.ComputeDerivedFields()
 		rawData.Status = entity.RawDataStatusConfirmed
 
@@ -105,4 +127,26 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 	logger.Info("report is the latest, published raw-data-success")
 
 	return nil
+}
+
+func unitDivisorForReportUnits(units string) int64 {
+	switch units {
+	case "thousands":
+		return 1_000
+	case "millions":
+		return 1_000_000
+	case "billions":
+		return 1_000_000_000
+	default:
+		return 1
+	}
+}
+
+func periodEndDate(year int, period entity.ReportPeriod) time.Time {
+	months, ok := entity.PeriodToMonths[string(period)]
+	if !ok {
+		months = 12
+	}
+	lastDay := time.Date(year, time.Month(months)+1, 0, 0, 0, 0, 0, time.UTC)
+	return lastDay
 }

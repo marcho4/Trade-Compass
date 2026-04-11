@@ -48,14 +48,14 @@ func (r *DCFResultsRepository) SaveDCFResults(ctx context.Context, ticker string
 	return nil
 }
 
-func (r *DCFResultsRepository) GetDCFResults(ctx context.Context, ticker string) (*entity.DCFResult, error) {
+func (r *DCFResultsRepository) GetDCFResults(ctx context.Context, ticker string, id string) (*entity.DCFResult, error) {
 	db := Executor(ctx, r.db)
 
 	rows, err := db.Query(ctx, `
 		SELECT id, scenario_type, probability, enterprise_value, equity_value, price_per_share, terminal_value, yearly_fcfs
 		FROM dcf_results
-		WHERE ticker = $1
-	`, ticker)
+		WHERE ticker = $1 AND id = $2
+	`, ticker, id)
 	if err != nil {
 		return nil, fmt.Errorf("query dcf results: %w", err)
 	}

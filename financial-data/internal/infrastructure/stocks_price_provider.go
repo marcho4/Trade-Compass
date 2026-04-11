@@ -135,6 +135,47 @@ func unmarshalStockInfo(data []byte) (*domain.StockInfo, error) {
 	return domain.ParseStockInfo(response.Description.Data)
 }
 
+func (m *MoexDataProvider) GetPriceAt(ticker string, date time.Time) (float64, error) {
+	from := date.AddDate(0, 0, -7).Format("2006-01-02")
+	till := date.Format("2006-01-02")
+	url := fmt.Sprintf("%s%s/candles.json?from=%s&till=%s&interval=24&iss.meta=off",
+		m.baseUrl, ticker, from, till)
+
+	cache, err := m.redis.Get(context.TODO(), url).Result()
+	if err != nil && err != redis.Nil {
+		slog.Warn("redis get error", slog.String("key", url), slog.Any("err", err))
+	}
+	if err == nil {
+		if candles, err := unmarshalCandles([]byte(cache)); err == nil && len(candles) > 0 {
+			return candles[len(candles)-1].Close, nil
+		}
+	}
+
+	resp, err := m.client.Get(url)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, err
+	}
+
+	candles, err := unmarshalCandles(body)
+	if err != nil {
+		return 0, err
+	}
+	if len(candles) == 0 {
+		return 0, fmt.Errorf("no candles found for %s at %s", ticker, till)
+	}
+
+	if err := m.redis.Set(context.TODO(), url, string(body), PRICE_TTL).Err(); err != nil {
+		slog.Warn("failed to cache price at date", slog.String("ticker", ticker), slog.Any("err", err))
+	}
+
+	return candles[len(candles)-1].Close, nil
+}
+
 func (m *MoexDataProvider) GetMarketCap(ticker string) (float64, error) {
 	price, err := m.GetStockPrice(ticker, 5, domain.Period(60))
 	if err != nil {

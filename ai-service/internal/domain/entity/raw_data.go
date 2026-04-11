@@ -107,6 +107,14 @@ type RawData struct {
 	InterestOnLeases *int64 `json:"interestOnLeases,omitempty"` // Проценты по аренде (IFRS 16)
 	InterestOnLoans  *int64 `json:"interestOnLoans,omitempty"`  // Проценты по кредитам + облигациям
 
+	// ── Bank-specific ─────────────────────────────────────────────
+	CompanyType         *string `json:"companyType,omitempty"`
+	NetInterestIncome   *int64  `json:"netInterestIncome,omitempty"`
+	CommissionIncome    *int64  `json:"commissionIncome,omitempty"`
+	CommissionExpense   *int64  `json:"commissionExpense,omitempty"`
+	NetCommissionIncome *int64  `json:"netCommissionIncome,omitempty"`
+	CreditLossProvision *int64  `json:"creditLossProvision,omitempty"`
+
 	// ── Validation ────────────────────────────────────────────────
 	Warnings []string `json:"warnings,omitempty"`
 }
@@ -158,6 +166,9 @@ func (r *RawData) ComputeDerivedFields() {
 	r.NetDebt = subPtr(r.Debt, r.CashAndEquivalents)
 	r.WorkingCapital = subPtr(r.CurrentAssets, r.CurrentLiabilities)
 	r.CapitalEmployed = subPtr(r.TotalAssets, r.CurrentLiabilities)
+	if r.MarketCap != nil {
+		r.EnterpriseValue = sumPtr(r.MarketCap, r.NetDebt)
+	}
 }
 
 type Report struct {

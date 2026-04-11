@@ -18,7 +18,6 @@ type analysisContext struct {
 	RawDataHistory   []entity.RawData
 	Candles          []entity.Candle
 	CBRate           *entity.CBRate
-	MarketCap        float64
 	News             *entity.NewsResponse
 	BusinessResearch *entity.BusinessResearchResult
 	RisksAndGrowth   *entity.RiskAndGrowthResponse
@@ -27,7 +26,7 @@ type analysisContext struct {
 }
 
 func buildNewsAgentPrompt(ticker string, dependencies []entity.CompanyDependency) string {
-	prompt := docs.NewsCollectorAgent() + "\n\n## Тикер для анализа\n" + ticker
+	prompt := docs.NewsCollectorAgent() + "\n\n## Текущая дата\n" + time.Now().Format("02.01.2006") + "\n\n## Тикер для анализа\n" + ticker
 
 	if len(dependencies) > 0 {
 		prompt += "\n\n## Зависимости компании из бизнес-анализа\n"
@@ -51,7 +50,7 @@ func buildAnalysisPrompt(ctx analysisContext) string {
 	writeMacroContext(&b)
 	writeFinancialHistory(&b, ctx.RawDataHistory)
 	writePrecomputedDCF(&b, ctx.Scenarios, ctx.DCFResult)
-	writeMarketData(&b, ctx.CBRate, ctx.MarketCap)
+	writeMarketData(&b, ctx.CBRate)
 	writePriceHistory(&b, ctx.Candles)
 	writeNews(&b, ctx.News)
 
@@ -115,14 +114,8 @@ func writeFinancialHistory(b *strings.Builder, history []entity.RawData) {
 	b.WriteString("</financial_data>\n\n")
 }
 
-func writeMarketData(b *strings.Builder, rate *entity.CBRate, marketCap float64) {
+func writeMarketData(b *strings.Builder, rate *entity.CBRate) {
 	b.WriteString("<market_data>\n")
-
-	if marketCap > 0 {
-		fmt.Fprintf(b, "Рыночная капитализация: %.0f руб.\n", marketCap)
-	} else {
-		b.WriteString("Рыночная капитализация: нет данных\n")
-	}
 
 	if rate != nil {
 		fmt.Fprintf(b, "Ключевая ставка ЦБ РФ: %.2f%% (дата: %s)\n", rate.Rate, rate.Date.Format("02.01.2006"))

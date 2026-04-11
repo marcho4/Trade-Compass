@@ -68,11 +68,6 @@ func (u *AnalyzeReportUsecase) Execute(ctx context.Context, task entity.Task) er
 		return fmt.Errorf("get CB rate: %w", err)
 	}
 
-	marketCap, err := u.finData.GetMarketCap(ctx, task.Ticker)
-	if err != nil {
-		return fmt.Errorf("get market cap: %w", err)
-	}
-
 	news, err := u.news.GetFreshNews(ctx, task.Ticker, 72*time.Hour)
 	if err != nil {
 		logger.Warn("failed to get news from DB, continuing without it", slog.Any("error", err))
@@ -96,12 +91,12 @@ func (u *AnalyzeReportUsecase) Execute(ctx context.Context, task entity.Task) er
 		logger.Warn("failed to get risk and growth, continuing without it", slog.Any("error", err))
 	}
 
-	scenarios, err := u.scenarios.GetScenarios(ctx, task.Ticker)
+	scenarios, err := u.scenarios.GetScenariosByID(ctx, task.Ticker, task.Id)
 	if err != nil {
 		logger.Warn("failed to get scenarios, continuing without them", slog.Any("error", err))
 	}
 
-	dcfResult, err := u.dcf.GetDCFResults(ctx, task.Ticker)
+	dcfResult, err := u.dcf.GetDCFResults(ctx, task.Ticker, task.Id)
 	if err != nil {
 		logger.Warn("failed to get dcf results, continuing without them", slog.Any("error", err))
 	}
@@ -113,7 +108,6 @@ func (u *AnalyzeReportUsecase) Execute(ctx context.Context, task entity.Task) er
 		RawDataHistory:   rawDataHistory,
 		Candles:          candles,
 		CBRate:           cbRate,
-		MarketCap:        marketCap,
 		News:             news,
 		BusinessResearch: businessResearch,
 		RisksAndGrowth:   risksAndGrowth,

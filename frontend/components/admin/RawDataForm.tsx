@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import {
   RawData,
   MetricFieldConfig,
+  BANK_FIELDS,
   PNL_FIELDS,
   BALANCE_SHEET_FIELDS,
   CASH_FLOW_FIELDS,
@@ -74,6 +75,8 @@ export function RawDataForm({ data, onChange, disabled }: RawDataFormProps) {
     onChange({ ...data, [key]: value });
   };
 
+  const isBank = data.companyType === 'bank';
+
   const groups = [
     { title: 'P&L (Прибыли и убытки)', fields: PNL_FIELDS },
     { title: 'Баланс', fields: BALANCE_SHEET_FIELDS },
@@ -84,6 +87,32 @@ export function RawDataForm({ data, onChange, disabled }: RawDataFormProps) {
 
   return (
     <div className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="companyType" className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+          Тип компании
+        </Label>
+        <select
+          id="companyType"
+          value={data.companyType ?? 'corporate'}
+          onChange={(e) => onChange({ ...data, companyType: e.target.value })}
+          disabled={disabled}
+          className="h-9 w-48 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="corporate">Corporate</option>
+          <option value="bank">Bank</option>
+        </select>
+      </div>
+
+      {isBank && (
+        <MetricGroup
+          title="Банковские показатели"
+          fields={BANK_FIELDS}
+          data={data}
+          onChange={handleFieldChange}
+          disabled={disabled}
+        />
+      )}
+
       {groups.map((group) => (
         <MetricGroup
           key={group.title}

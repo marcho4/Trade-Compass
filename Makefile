@@ -5,23 +5,19 @@ build:
 
 financial-data:
 	docker compose up -d --build --force-recreate financial-data
-	docker compose restart nginx
 
 parser:
 	docker compose up -d --build --force-recreate parser
-	docker compose restart nginx
 
 auth:
 	docker compose up -d --build --force-recreate auth-service
-	docker compose restart nginx
 
 frontend:
-	docker compose up -d --build --force-recreate frontend
-	docker compose restart nginx
+	docker compose build frontend --no-cache
+	docker compose up -d frontend
 
 ai:
 	docker compose up -d --build --force-recreate ai-service
-	docker compose restart nginx
 
 restart:
 	docker compose down && docker compose up -d

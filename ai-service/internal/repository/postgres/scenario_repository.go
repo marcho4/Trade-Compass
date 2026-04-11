@@ -59,16 +59,16 @@ func (r *ScenarioRepository) SaveScenarios(ctx context.Context, ticker string, s
 	return nil
 }
 
-func (r *ScenarioRepository) GetScenarios(ctx context.Context, ticker string) ([]entity.Scenario, error) {
+func (r *ScenarioRepository) GetScenariosByID(ctx context.Context, ticker string, id string) ([]entity.Scenario, error) {
 	db := Executor(ctx, r.db)
 
 	rows, err := db.Query(ctx, `
 		SELECT id, name, description, probability, terminal_growth_rate, growth_factors_applied, risks_applied, assumptions
 		FROM scenarios
-		WHERE ticker = $1
-	`, ticker)
+		WHERE ticker = $1 AND id = $2
+	`, ticker, id)
 	if err != nil {
-		return nil, fmt.Errorf("query scenarios: %w", err)
+		return nil, fmt.Errorf("query scenarios by ids: %w", err)
 	}
 	defer rows.Close()
 
