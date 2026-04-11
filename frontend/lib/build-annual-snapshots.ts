@@ -5,7 +5,7 @@ export interface AnnualSnapshot {
   [field: string]: string | number | null
 }
 
-type NumericRawDataKey = Extract<keyof RawData, "revenue" | "costOfRevenue" | "grossProfit" | "operatingExpenses" | "ebit" | "ebitda" | "interestExpense" | "taxExpense" | "netProfit" | "totalAssets" | "currentAssets" | "cashAndEquivalents" | "inventories" | "receivables" | "totalLiabilities" | "currentLiabilities" | "debt" | "longTermDebt" | "shortTermDebt" | "equity" | "retainedEarnings" | "operatingCashFlow" | "investingCashFlow" | "financingCashFlow" | "capex" | "freeCashFlow" | "sharesOutstanding" | "marketCap" | "workingCapital" | "capitalEmployed" | "enterpriseValue" | "netDebt">
+export type NumericRawDataKey = Extract<keyof RawData, "revenue" | "costOfRevenue" | "grossProfit" | "operatingExpenses" | "ebit" | "ebitda" | "interestExpense" | "taxExpense" | "netProfit" | "totalAssets" | "currentAssets" | "cashAndEquivalents" | "inventories" | "receivables" | "totalLiabilities" | "currentLiabilities" | "debt" | "longTermDebt" | "shortTermDebt" | "equity" | "retainedEarnings" | "operatingCashFlow" | "investingCashFlow" | "financingCashFlow" | "capex" | "freeCashFlow" | "sharesOutstanding" | "marketCap" | "workingCapital" | "capitalEmployed" | "enterpriseValue" | "netDebt" | "netInterestIncome" | "commissionIncome" | "commissionExpense" | "netCommissionIncome" | "creditLossProvision">
 
 export function buildAnnualSnapshots(
   rawData: RawData[],

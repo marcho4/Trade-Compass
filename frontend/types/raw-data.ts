@@ -6,6 +6,7 @@ export interface RawData {
   period: string;
   status: MetricsStatus;
   reportUnits?: string | null;
+  companyType?: string | null;
 
   revenue?: number | null;
   costOfRevenue?: number | null;
@@ -44,6 +45,13 @@ export interface RawData {
   capitalEmployed?: number | null;
   enterpriseValue?: number | null;
   netDebt?: number | null;
+
+  // Bank-specific
+  netInterestIncome?: number | null;
+  commissionIncome?: number | null;
+  commissionExpense?: number | null;
+  netCommissionIncome?: number | null;
+  creditLossProvision?: number | null;
 }
 
 export interface MetricFieldConfig {
@@ -96,6 +104,14 @@ export const CALCULATED_FIELDS: MetricFieldConfig[] = [
   { key: 'capitalEmployed', label: 'Задействованный капитал' },
   { key: 'enterpriseValue', label: 'Enterprise Value' },
   { key: 'netDebt', label: 'Чистый долг' },
+];
+
+export const BANK_FIELDS: MetricFieldConfig[] = [
+  { key: 'netInterestIncome', label: 'Чистый процентный доход' },
+  { key: 'commissionIncome', label: 'Комиссионные доходы' },
+  { key: 'commissionExpense', label: 'Комиссионные расходы' },
+  { key: 'netCommissionIncome', label: 'Чистый комиссионный доход' },
+  { key: 'creditLossProvision', label: 'Резерв под кредитные убытки' },
 ];
 
 export const PERIOD_OPTIONS = [
