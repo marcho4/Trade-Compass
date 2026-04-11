@@ -111,4 +111,12 @@ type RawData struct {
 	// ── Notes Breakdown ───────────────────────────────────────────
 	InterestOnLeases *int64 `json:"interestOnLeases,omitempty"`
 	InterestOnLoans  *int64 `json:"interestOnLoans,omitempty"`
+
+	// ── Bank-specific ─────────────────────────────────────────────
+	CompanyType          *string `json:"companyType,omitempty"`
+	NetInterestIncome    *int64  `json:"netInterestIncome,omitempty"`
+	CommissionIncome     *int64  `json:"commissionIncome,omitempty"`
+	CommissionExpense    *int64  `json:"commissionExpense,omitempty"`
+	NetCommissionIncome  *int64  `json:"netCommissionIncome,omitempty"`
+	CreditLossProvision  *int64  `json:"creditLossProvision,omitempty"`
 }

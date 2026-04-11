@@ -35,7 +35,8 @@ const rawDataSelectColumns = `
 	acquisitions_net, interest_paid, debt_proceeds, debt_repayments,
 	shares_outstanding, market_cap, enterprise_value,
 	working_capital, capital_employed, net_debt,
-	interest_on_leases, interest_on_loans
+	interest_on_leases, interest_on_loans,
+	company_type, net_interest_income, commission_income, commission_expense, net_commission_income, credit_loss_provision
 `
 
 func rawDataScanTargets(rd *domain.RawData) []any {
@@ -57,6 +58,7 @@ func rawDataScanTargets(rd *domain.RawData) []any {
 		&rd.SharesOutstanding, &rd.MarketCap, &rd.EnterpriseValue,
 		&rd.WorkingCapital, &rd.CapitalEmployed, &rd.NetDebt,
 		&rd.InterestOnLeases, &rd.InterestOnLoans,
+		&rd.CompanyType, &rd.NetInterestIncome, &rd.CommissionIncome, &rd.CommissionExpense, &rd.NetCommissionIncome, &rd.CreditLossProvision,
 	}
 }
 
@@ -228,7 +230,8 @@ func (r *RawDataRepository) Create(ctx context.Context, rawData *domain.RawData)
 			acquisitions_net, interest_paid, debt_proceeds, debt_repayments,
 			shares_outstanding, market_cap, enterprise_value,
 			working_capital, capital_employed, net_debt,
-			interest_on_leases, interest_on_loans
+			interest_on_leases, interest_on_loans,
+			company_type, net_interest_income, commission_income, commission_expense, net_commission_income, credit_loss_provision
 		) VALUES (
 			$1, $2, $3, $4, $5,
 			$6, $7, $8, $9,
@@ -246,7 +249,8 @@ func (r *RawDataRepository) Create(ctx context.Context, rawData *domain.RawData)
 			$51, $52, $53, $54,
 			$55, $56, $57,
 			$58, $59, $60,
-			$61, $62
+			$61, $62,
+			$63, $64, $65, $66, $67, $68
 		)
 	`
 
@@ -268,6 +272,7 @@ func (r *RawDataRepository) Create(ctx context.Context, rawData *domain.RawData)
 		rawData.SharesOutstanding, rawData.MarketCap, rawData.EnterpriseValue,
 		rawData.WorkingCapital, rawData.CapitalEmployed, rawData.NetDebt,
 		rawData.InterestOnLeases, rawData.InterestOnLoans,
+		rawData.CompanyType, rawData.NetInterestIncome, rawData.CommissionIncome, rawData.CommissionExpense, rawData.NetCommissionIncome, rawData.CreditLossProvision,
 	)
 
 	if err != nil {
@@ -315,6 +320,7 @@ func (r *RawDataRepository) Update(ctx context.Context, rawData *domain.RawData)
 			shares_outstanding = $55, market_cap = $56, enterprise_value = $57,
 			working_capital = $58, capital_employed = $59, net_debt = $60,
 			interest_on_leases = $61, interest_on_loans = $62,
+			company_type = $63, net_interest_income = $64, commission_income = $65, commission_expense = $66, net_commission_income = $67, credit_loss_provision = $68,
 			updated_at = NOW()
 		WHERE ticker = $1 AND year = $2 AND period = $3
 	`
@@ -337,6 +343,7 @@ func (r *RawDataRepository) Update(ctx context.Context, rawData *domain.RawData)
 		rawData.SharesOutstanding, rawData.MarketCap, rawData.EnterpriseValue,
 		rawData.WorkingCapital, rawData.CapitalEmployed, rawData.NetDebt,
 		rawData.InterestOnLeases, rawData.InterestOnLoans,
+		rawData.CompanyType, rawData.NetInterestIncome, rawData.CommissionIncome, rawData.CommissionExpense, rawData.NetCommissionIncome, rawData.CreditLossProvision,
 	)
 
 	if err != nil {
