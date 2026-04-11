@@ -57,9 +57,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </main>
       
         {/* Desktop - фиксированная панель справа */}
-        <aside className="hidden lg:block w-[420px] py-8 pr-8 sticky top-16 h-[calc(100vh-4rem)]">
+        {/* <aside className="hidden lg:block w-[420px] py-8 pr-8 sticky top-16 h-[calc(100vh-4rem)]">
           <AIChatPanel promptExamples={getPromptExamples()} />
-        </aside>
+        </aside> */}
       </div>
 
       {/* Mobile/Tablet - плавающая кнопка и выезжающая панель */}
@@ -88,7 +88,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           />
         )}
 
-        {/* Панель чата */}
+        {/*
+        {/* Панель чата 
         <div
           className={cn(
             "fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-out",
@@ -101,7 +102,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           }}
         >
           <div className="relative h-full">
-            {/* Кнопка закрытия - показывается только когда чат открыт */}
+            {/* Кнопка закрытия - показывается только когда чат открыт 
             {isChatOpen && (
               <Button
                 onClick={() => setIsChatOpen(false)}
@@ -119,6 +120,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </div>
+        */}
       </div>
     </div>
   );
