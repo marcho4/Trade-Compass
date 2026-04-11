@@ -40,8 +40,8 @@ type TasksRepository interface {
 }
 
 type ScenarioRepository interface {
-	SaveScenarios(ctx context.Context, ticker string, scenarios []entity.Scenario) error
-	GetScenariosByID(ctx context.Context, ticker string, id string) ([]entity.Scenario, error)
+	SaveScenarios(ctx context.Context, taskID, ticker string, scenarios []entity.Scenario) error
+	GetScenariosByID(ctx context.Context, ticker string, taskID string) ([]entity.Scenario, error)
 }
 
 type DCFResultsRepository interface {

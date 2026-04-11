@@ -19,7 +19,7 @@ func NewScenarioRepository(db *pgxpool.Pool) *ScenarioRepository {
 	return &ScenarioRepository{db: db}
 }
 
-func (r *ScenarioRepository) SaveScenarios(ctx context.Context, ticker string, scenarios []entity.Scenario) error {
+func (r *ScenarioRepository) SaveScenarios(ctx context.Context, taskID, ticker string, scenarios []entity.Scenario) error {
 	db := Executor(ctx, r.db)
 
 	for _, s := range scenarios {
@@ -39,9 +39,9 @@ func (r *ScenarioRepository) SaveScenarios(ctx context.Context, ticker string, s
 		}
 
 		_, err = db.Exec(ctx, `
-			INSERT INTO scenarios (id, ticker, name, description, probability, terminal_growth_rate, growth_factors_applied, risks_applied, assumptions)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-			ON CONFLICT (id, ticker) DO UPDATE SET
+			INSERT INTO scenarios (task_id, ticker, id, name, description, probability, terminal_growth_rate, growth_factors_applied, risks_applied, assumptions)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			ON CONFLICT (task_id, ticker, id) DO UPDATE SET
 				name = EXCLUDED.name,
 				description = EXCLUDED.description,
 				probability = EXCLUDED.probability,
@@ -50,7 +50,7 @@ func (r *ScenarioRepository) SaveScenarios(ctx context.Context, ticker string, s
 				risks_applied = EXCLUDED.risks_applied,
 				assumptions = EXCLUDED.assumptions,
 				created_at = NOW()
-		`, s.ID, ticker, s.Name, s.Description, s.Probability, s.TerminalGrowthRate, growthJSON, risksJSON, assumptionsJSON)
+		`, taskID, ticker, s.ID, s.Name, s.Description, s.Probability, s.TerminalGrowthRate, growthJSON, risksJSON, assumptionsJSON)
 		if err != nil {
 			return fmt.Errorf("upsert scenario %s: %w", s.ID, err)
 		}
@@ -65,7 +65,7 @@ func (r *ScenarioRepository) GetScenariosByID(ctx context.Context, ticker string
 	rows, err := db.Query(ctx, `
 		SELECT id, name, description, probability, terminal_growth_rate, growth_factors_applied, risks_applied, assumptions
 		FROM scenarios
-		WHERE ticker = $1 AND id = $2
+		WHERE ticker = $1 AND task_id = $2
 	`, ticker, id)
 	if err != nil {
 		return nil, fmt.Errorf("query scenarios by ids: %w", err)

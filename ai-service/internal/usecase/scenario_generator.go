@@ -181,7 +181,7 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 	dcfResult.ID = task.Id
 
 	if err := s.transactor.RunInTx(ctx, func(txCtx context.Context) error {
-		if err := s.scenarioRepo.SaveScenarios(txCtx, task.Ticker, scenarios); err != nil {
+		if err := s.scenarioRepo.SaveScenarios(txCtx, task.Id, task.Ticker, scenarios); err != nil {
 			return fmt.Errorf("save scenarios: %w", err)
 		}
 		if err := s.dcfRepo.SaveDCFResults(txCtx, task.Ticker, dcfResult); err != nil {

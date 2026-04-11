@@ -14,17 +14,9 @@ type ScenarioRepository struct {
 	mock.Mock
 }
 
-type ScenarioRepository_Expecter struct {
-	mock *mock.Mock
-}
-
-func (_m *ScenarioRepository) EXPECT() *ScenarioRepository_Expecter {
-	return &ScenarioRepository_Expecter{mock: &_m.Mock}
-}
-
-// GetScenariosByID provides a mock function with given fields: ctx, ticker, id
-func (_m *ScenarioRepository) GetScenariosByID(ctx context.Context, ticker string, id string) ([]entity.Scenario, error) {
-	ret := _m.Called(ctx, ticker, id)
+// GetScenariosByID provides a mock function with given fields: ctx, ticker, taskID
+func (_m *ScenarioRepository) GetScenariosByID(ctx context.Context, ticker string, taskID string) ([]entity.Scenario, error) {
+	ret := _m.Called(ctx, ticker, taskID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetScenariosByID")
@@ -33,10 +25,10 @@ func (_m *ScenarioRepository) GetScenariosByID(ctx context.Context, ticker strin
 	var r0 []entity.Scenario
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, string, string) ([]entity.Scenario, error)); ok {
-		return rf(ctx, ticker, id)
+		return rf(ctx, ticker, taskID)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string, string) []entity.Scenario); ok {
-		r0 = rf(ctx, ticker, id)
+		r0 = rf(ctx, ticker, taskID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]entity.Scenario)
@@ -44,7 +36,7 @@ func (_m *ScenarioRepository) GetScenariosByID(ctx context.Context, ticker strin
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, ticker, id)
+		r1 = rf(ctx, ticker, taskID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -52,82 +44,22 @@ func (_m *ScenarioRepository) GetScenariosByID(ctx context.Context, ticker strin
 	return r0, r1
 }
 
-// ScenarioRepository_GetScenariosByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetScenariosByID'
-type ScenarioRepository_GetScenariosByID_Call struct {
-	*mock.Call
-}
-
-// GetScenariosByID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ticker string
-//   - id string
-func (_e *ScenarioRepository_Expecter) GetScenariosByID(ctx interface{}, ticker interface{}, id interface{}) *ScenarioRepository_GetScenariosByID_Call {
-	return &ScenarioRepository_GetScenariosByID_Call{Call: _e.mock.On("GetScenariosByID", ctx, ticker, id)}
-}
-
-func (_c *ScenarioRepository_GetScenariosByID_Call) Run(run func(ctx context.Context, ticker string, id string)) *ScenarioRepository_GetScenariosByID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
-	})
-	return _c
-}
-
-func (_c *ScenarioRepository_GetScenariosByID_Call) Return(_a0 []entity.Scenario, _a1 error) *ScenarioRepository_GetScenariosByID_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *ScenarioRepository_GetScenariosByID_Call) RunAndReturn(run func(context.Context, string, string) ([]entity.Scenario, error)) *ScenarioRepository_GetScenariosByID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveScenarios provides a mock function with given fields: ctx, ticker, scenarios
-func (_m *ScenarioRepository) SaveScenarios(ctx context.Context, ticker string, scenarios []entity.Scenario) error {
-	ret := _m.Called(ctx, ticker, scenarios)
+// SaveScenarios provides a mock function with given fields: ctx, taskID, ticker, scenarios
+func (_m *ScenarioRepository) SaveScenarios(ctx context.Context, taskID string, ticker string, scenarios []entity.Scenario) error {
+	ret := _m.Called(ctx, taskID, ticker, scenarios)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveScenarios")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, []entity.Scenario) error); ok {
-		r0 = rf(ctx, ticker, scenarios)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []entity.Scenario) error); ok {
+		r0 = rf(ctx, taskID, ticker, scenarios)
 	} else {
 		r0 = ret.Error(0)
 	}
 
 	return r0
-}
-
-// ScenarioRepository_SaveScenarios_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveScenarios'
-type ScenarioRepository_SaveScenarios_Call struct {
-	*mock.Call
-}
-
-// SaveScenarios is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ticker string
-//   - scenarios []entity.Scenario
-func (_e *ScenarioRepository_Expecter) SaveScenarios(ctx interface{}, ticker interface{}, scenarios interface{}) *ScenarioRepository_SaveScenarios_Call {
-	return &ScenarioRepository_SaveScenarios_Call{Call: _e.mock.On("SaveScenarios", ctx, ticker, scenarios)}
-}
-
-func (_c *ScenarioRepository_SaveScenarios_Call) Run(run func(ctx context.Context, ticker string, scenarios []entity.Scenario)) *ScenarioRepository_SaveScenarios_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].([]entity.Scenario))
-	})
-	return _c
-}
-
-func (_c *ScenarioRepository_SaveScenarios_Call) Return(_a0 error) *ScenarioRepository_SaveScenarios_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *ScenarioRepository_SaveScenarios_Call) RunAndReturn(run func(context.Context, string, []entity.Scenario) error) *ScenarioRepository_SaveScenarios_Call {
-	_c.Call.Return(run)
-	return _c
 }
 
 // NewScenarioRepository creates a new instance of ScenarioRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
