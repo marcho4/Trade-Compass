@@ -78,7 +78,17 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 		return fmt.Errorf("no confirmed annual data found for %s", task.Ticker)
 	}
 
-	wacc := calculateWACC(latest, cbRate)
+	stockInfo, err := s.finData.GetStockInfo(ctx, task.Ticker)
+	if err != nil {
+		return fmt.Errorf("get stock info: %w", err)
+	}
+
+	marketCap, err := s.finData.GetMarketCap(ctx, task.Ticker)
+	if err != nil {
+		return fmt.Errorf("get market cap: %w", err)
+	}
+
+	wacc := calculateWACC(latest, cbRate, marketCap)
 
 	historyJSON, err := json.Marshal(history)
 	if err != nil {
@@ -149,7 +159,6 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 	}
 
 	text, err := s.ai.GenerateText(ctx, prompt, entity.Pro, GenerateParams{
-		Temperature: Float32Ptr(0.2),
 		ResponseSchema: &Schema{
 			Type:  TypeArray,
 			Items: scenarioSchema,
@@ -166,7 +175,7 @@ func (s *ScenarioGenerator) Execute(ctx context.Context, task entity.Task) error
 	}
 	scenarios := mapScenariosToDomain(dtos)
 
-	dcfInput := buildDCFInput(latest, wacc)
+	dcfInput := buildDCFInput(latest, wacc, stockInfo.NumberOfShares)
 
 	dcfResult := Calculate(dcfInput, scenarios)
 	dcfResult.ID = task.Id
@@ -234,7 +243,8 @@ func getLatestFullYearData(history []entity.RawData) (entity.RawData, bool) {
 
 // calculateWACC вычисляет WACC через CAPM для стоимости капитала и фактическую
 // стоимость долга из отчётности. CB rate передаётся в долях (0.16 = 16%).
-func calculateWACC(d entity.RawData, cbRate *entity.CBRate) float64 {
+// marketCap — актуальная рыночная капитализация в рублях из MOEX API.
+func calculateWACC(d entity.RawData, cbRate *entity.CBRate, marketCap float64) float64 {
 	rf := cbRate.Rate / 100
 	ke := rf + defaultBeta*equityRiskPremium
 
@@ -247,9 +257,10 @@ func calculateWACC(d entity.RawData, cbRate *entity.CBRate) float64 {
 
 	taxRate := effectiveTaxRate(d)
 
+	divisor := unitDivisor(d.ReportUnits)
 	var e, debt float64
-	if d.MarketCap != nil {
-		e = float64(*d.MarketCap)
+	if marketCap > 0 {
+		e = marketCap / divisor
 	} else if d.Equity != nil {
 		e = float64(*d.Equity)
 	}
@@ -265,7 +276,20 @@ func calculateWACC(d entity.RawData, cbRate *entity.CBRate) float64 {
 	return ke*(e/total) + kd*(1-taxRate)*(debt/total)
 }
 
-func buildDCFInput(d entity.RawData, wacc float64) entity.DCFInput {
+func unitDivisor(reportUnits string) float64 {
+	switch reportUnits {
+	case "billions":
+		return 1_000_000_000
+	case "millions":
+		return 1_000_000
+	case "thousands":
+		return 1_000
+	default:
+		return 1
+	}
+}
+
+func buildDCFInput(d entity.RawData, wacc float64, numberOfShares int) entity.DCFInput {
 	input := entity.DCFInput{WACC: wacc}
 
 	if d.Revenue != nil {
@@ -277,17 +301,10 @@ func buildDCFInput(d entity.RawData, wacc float64) entity.DCFInput {
 	if d.NetDebt != nil {
 		input.NetDebt = float64(*d.NetDebt)
 	}
-	if d.SharesOutstanding != nil {
-		shares := float64(*d.SharesOutstanding)
-		switch d.ReportUnits {
-		case "billions":
-			shares /= 1_000_000_000
-		case "millions":
-			shares /= 1_000_000
-		case "thousands":
-			shares /= 1_000
-		}
-		input.SharesOutstanding = shares
+
+	divisor := unitDivisor(d.ReportUnits)
+	if numberOfShares > 0 {
+		input.SharesOutstanding = float64(numberOfShares) / divisor
 	}
 
 	return input

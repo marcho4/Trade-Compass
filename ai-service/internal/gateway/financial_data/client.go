@@ -175,6 +175,34 @@ func (c *Client) GetMarketCap(ctx context.Context, ticker string) (float64, erro
 	return result.Data, nil
 }
 
+func (c *Client) GetStockInfo(ctx context.Context, ticker string) (*entity.StockInfo, error) {
+	url := fmt.Sprintf("%s/stock-info?ticker=%s", c.baseURL, ticker)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call financial-data API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("financial-data API returned status %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Data entity.StockInfo `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &result.Data, nil
+}
+
 func (c *Client) GetRawData(ctx context.Context, ticker string, year int, period entity.ReportPeriod) (*entity.RawData, error) {
 	url := fmt.Sprintf("%s/raw-data/%s?year=%d&period=%s", c.baseURL, ticker, year, period)
 
