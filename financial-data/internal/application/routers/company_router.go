@@ -135,6 +135,10 @@ func (h *CompanyHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to publish business research task", "ticker", company.Ticker, "error", err)
 	}
 
+	if err := h.eventPublisher.PublishExpectRiskAndGrowthAnalysis(r.Context(), company.Ticker, id); err != nil {
+		slog.Error("failed to publish expect risk and growht task", "ticker", company.Ticker, "error", err)
+	}
+
 	response.RespondWithSuccess(w, 201, company, "Company successfully created")
 }
 

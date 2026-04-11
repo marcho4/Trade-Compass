@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"ai-service/internal/infrastructure/s3"
+	"ai-service/internal/gateway/s3"
 	"context"
 	"os"
 	"testing"

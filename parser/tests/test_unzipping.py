@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from infra.e_disclosure.unzipper import FileUnzipper
+from gateway.e_disclosure.unzipper import FileUnzipper
 
 
 class TestUnzipAndRename:

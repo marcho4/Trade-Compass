@@ -2,6 +2,29 @@ import { RawData } from '@/types/raw-data';
 
 const AI_BASE_URL = '/api/ai';
 
+export type NewsSeverity = 'high' | 'medium' | 'low';
+export type NewsImpact = 'positive' | 'negative' | 'neutral';
+
+export interface NewsItem {
+  news: string;
+  date: string;
+  source: string;
+  severity: NewsSeverity;
+  impact_type: NewsImpact;
+}
+
+export interface DependencyNewsItem extends NewsItem {
+  dependency: string;
+}
+
+export interface NewsResponse {
+  latest_news: NewsItem[];
+  historical_events: NewsItem[];
+  upcoming_company_events: NewsItem[];
+  upcoming_dependency_events: DependencyNewsItem[];
+  past_dependency_events: DependencyNewsItem[];
+}
+
 export interface AvailablePeriod {
   year: number;
   period: number;
@@ -124,6 +147,25 @@ export const aiApi = {
     const params = new URLSearchParams({ ticker });
 
     const response = await fetch(`${AI_BASE_URL}/business-research?${params}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+    });
+
+    if (response.status === 404) return null;
+    if (!response.ok) return null;
+
+    const json = await response.json();
+    return json.data || null;
+  },
+
+  async getNews(
+    ticker: string,
+    signal?: AbortSignal
+  ): Promise<NewsResponse | null> {
+    const params = new URLSearchParams({ ticker });
+
+    const response = await fetch(`${AI_BASE_URL}/news?${params}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       signal,

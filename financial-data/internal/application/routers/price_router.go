@@ -6,6 +6,7 @@ import (
 	"financial_data/internal/domain"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -22,6 +23,7 @@ func RegisterPriceRoutes(r chi.Router, priceProvider domain.MarketService, m *mi
 	handler := NewPriceHandler(priceProvider)
 	r.Get("/price", handler.HandleGetPriceByTicker)
 	r.Get("/price/latest", handler.HandleGetLatestPrice)
+	r.Get("/price/at", handler.HandleGetPriceAt)
 	r.Get("/market-cap", handler.HandleGetMarketCap)
 	r.Get("/stock-info", handler.HandleGetStockInfo)
 }
@@ -73,6 +75,29 @@ func (h *PriceHandler) HandleGetLatestPrice(w http.ResponseWriter, r *http.Reque
 	}
 
 	response.RespondWithSuccess(w, http.StatusOK, price[len(price)-1].Close, "Success")
+}
+
+func (h *PriceHandler) HandleGetPriceAt(w http.ResponseWriter, r *http.Request) {
+	ticker := r.URL.Query().Get("ticker")
+	dateStr := r.URL.Query().Get("date")
+	if ticker == "" || dateStr == "" {
+		response.RespondWithError(w, r, http.StatusBadRequest, "ticker and date are required", nil)
+		return
+	}
+
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		response.RespondWithError(w, r, http.StatusBadRequest, "date must be in YYYY-MM-DD format", err)
+		return
+	}
+
+	price, err := h.priceProvider.GetPriceAt(ticker, date)
+	if err != nil {
+		response.RespondWithError(w, r, http.StatusInternalServerError, "failed to get price at date", err)
+		return
+	}
+
+	response.RespondWithSuccess(w, http.StatusOK, price, "Success")
 }
 
 func (h *PriceHandler) HandleGetMarketCap(w http.ResponseWriter, r *http.Request) {

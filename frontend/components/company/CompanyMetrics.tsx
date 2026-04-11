@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { useRawDataHistory } from "@/hooks/use-raw-data-history"
 import { MetricsLineChart, MetricsLineConfig } from "./MetricsLineChart"
+import { RawDataTable } from "./RawDataTable"
 import { buildAnnualSnapshots } from "@/lib/build-annual-snapshots"
 
 interface CompanyMetricsProps {
@@ -72,6 +73,7 @@ export const CompanyMetrics = ({ ticker }: CompanyMetricsProps) => {
         data={debtEquitySnapshots}
         lines={DEBT_EQUITY_LINES}
       />
+      <RawDataTable data={data} />
     </div>
   )
 }
