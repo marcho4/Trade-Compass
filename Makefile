@@ -13,8 +13,8 @@ auth:
 	docker compose up -d --build --force-recreate auth-service
 
 frontend:
-	docker compose build frontend --no-cache
-	docker compose up -d frontend
+	docker compose build frontend
+	docker compose up -d --force-recreate frontend
 
 ai:
 	docker compose up -d --build --force-recreate ai-service
