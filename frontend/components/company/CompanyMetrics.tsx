@@ -13,8 +13,8 @@ interface CompanyMetricsProps {
 const REVENUE_NET_PROFIT_LINES: MetricsLineConfig[] = [
   { key: "revenue", label: "Выручка", color: "hsl(221, 83%, 53%)" },
   { key: "netProfit", label: "Чистая прибыль", color: "hsl(142, 71%, 45%)" },
-  { key: "operatingCashFlow", label: "Операционный Денежный поток", color: "hsl(32, 95%, 55%)" },
-  { key: "freeCashFlow", label: "Свободный денежный поток", color: "hsl(280, 70%, 55%)" },
+  { key: "operatingCashFlow", label: "Операционный Денежный поток", color: "hsl(32, 95%, 55%)", hiddenByDefault: true },
+  { key: "freeCashFlow", label: "Свободный денежный поток", color: "hsl(280, 70%, 55%)", hiddenByDefault: true },
 ]
 
 const DEBT_EQUITY_LINES: MetricsLineConfig[] = [

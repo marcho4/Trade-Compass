@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { CompanyCard, ScreenerFilters } from "@/components/screener"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, SearchX } from "lucide-react"
 import { financialDataApi, Sector, Company } from "@/lib/api"
 import { aiApi } from "@/lib/api/ai-api"
 import type { FilterValues, CompanyRating } from "@/components/screener/types"
@@ -284,6 +284,7 @@ export default function ScreenerPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-center">
+            <SearchX className="h-10 w-10 text-muted-foreground/40 mb-4" />
             <p className="text-xl font-semibold text-muted-foreground mb-2">
               Компании не найдены
             </p>

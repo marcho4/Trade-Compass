@@ -35,7 +35,7 @@ export const ScreenerFilters = ({
     <Card>
       <CardContent className="pt-1">
         <div className="flex flex-wrap items-end gap-4">
-          <div className="flex-1 min-w-[250px] space-y-2">
+          <div className="flex-1 min-w-[180px] space-y-2">
             <Label htmlFor="search" className="text-sm font-medium">
               Поиск
             </Label>

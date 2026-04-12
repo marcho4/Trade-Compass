@@ -14,17 +14,24 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Loader2,
   Info,
 } from "lucide-react"
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts"
 import { aiApi, type BusinessResearch } from "@/lib/api/ai-api"
 
 const CHART_COLORS = [
-  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6",
-  "#06b6d4", "#3b82f6", "#6366f1", "#a855f7", "#ec4899",
-  "#f43f5e", "#84cc16", "#10b981", "#0ea5e9", "#8b5cf6",
-  "#d946ef",
+  "oklch(0.63 0.19 25)",   // red
+  "oklch(0.70 0.17 55)",   // orange
+  "oklch(0.80 0.16 85)",   // yellow
+  "oklch(0.72 0.17 145)",  // green
+  "oklch(0.70 0.14 180)",  // teal
+  "oklch(0.68 0.15 220)",  // cyan
+  "oklch(0.60 0.18 260)",  // blue
+  "oklch(0.55 0.20 290)",  // indigo
+  "oklch(0.62 0.22 320)",  // purple
+  "oklch(0.68 0.20 350)",  // pink
+  "oklch(0.75 0.15 115)",  // lime
+  "oklch(0.58 0.16 240)",  // steel blue
 ]
 
 function getColorByHash(str: string, index: number, set: Set<number>): string {
@@ -103,12 +110,44 @@ export const CompanyAbout = ({ ticker }: CompanyAboutProps) => {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Загрузка...</span>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-4">
+              <div className="h-5 w-40 rounded bg-muted animate-pulse" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+                    <div className="space-y-1.5">
+                      <div className="h-3.5 w-full rounded bg-muted animate-pulse" />
+                      <div className="h-3.5 w-2/3 rounded bg-muted animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-4">
+              <div className="h-5 w-36 rounded bg-muted animate-pulse" />
+            </CardHeader>
+            <CardContent className="flex flex-col items-center">
+              <div className="h-[200px] w-[200px] rounded-full border-[16px] border-muted animate-pulse" />
+              <div className="w-full mt-4 space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex justify-between">
+                    <div className="h-3.5 w-24 rounded bg-muted animate-pulse" />
+                    <div className="h-3.5 w-12 rounded bg-muted animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     )
   }
 
@@ -155,7 +194,7 @@ export const CompanyAbout = ({ ticker }: CompanyAboutProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-primary/10">
+                  <div className="p-1.5 rounded-md bg-primary/20">
                     <ShoppingBag className="h-4 w-4 text-primary" />
                   </div>
                   <h4 className="text-sm font-medium">Продукты и услуги</h4>
@@ -169,7 +208,7 @@ export const CompanyAbout = ({ ticker }: CompanyAboutProps) => {
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-primary/10">
+                  <div className="p-1.5 rounded-md bg-primary/20">
                     <Globe className="h-4 w-4 text-primary" />
                   </div>
                   <h4 className="text-sm font-medium">Рынки</h4>
@@ -186,7 +225,7 @@ export const CompanyAbout = ({ ticker }: CompanyAboutProps) => {
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-primary/10">
+                  <div className="p-1.5 rounded-md bg-primary/20">
                     <Users className="h-4 w-4 text-primary" />
                   </div>
                   <h4 className="text-sm font-medium">Ключевые клиенты</h4>
@@ -196,7 +235,7 @@ export const CompanyAbout = ({ ticker }: CompanyAboutProps) => {
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-primary/10">
+                  <div className="p-1.5 rounded-md bg-primary/20">
                     <Briefcase className="h-4 w-4 text-primary" />
                   </div>
                   <h4 className="text-sm font-medium">Бизнес-модель</h4>

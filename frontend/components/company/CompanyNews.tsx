@@ -13,7 +13,6 @@ import {
   CalendarClock,
   Link2,
   Info,
-  Loader2,
 } from "lucide-react"
 import { aiApi, type NewsItem, type DependencyNewsItem, type NewsResponse } from "@/lib/api/ai-api"
 
@@ -85,10 +84,10 @@ function DependencyNewsCard({ item }: { item: DependencyNewsItem }) {
   const severity = severityConfig[item.severity] ?? severityConfig.low
 
   return (
-    <div className="p-4 rounded-lg border bg-card space-y-2.5">
+    <div className="p-4 rounded-lg border border-l-2 border-l-primary/40 bg-card space-y-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 space-y-1">
-          <span className="text-xs font-medium text-primary">{item.dependency}</span>
+          <Badge variant="secondary" className="text-xs font-medium">{item.dependency}</Badge>
           <p className="text-sm leading-relaxed">{item.news}</p>
         </div>
         <Badge variant="outline" className={`shrink-0 flex items-center gap-1 ${impact.className}`}>
@@ -176,9 +175,22 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
   if (loading) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Загрузка...</span>
+        <CardHeader className="pb-4">
+          <div className="h-5 w-40 rounded bg-muted animate-pulse" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="p-4 rounded-lg border space-y-2.5">
+              <div className="flex justify-between gap-3">
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 w-full rounded bg-muted animate-pulse" />
+                  <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
+                </div>
+                <div className="h-5 w-20 rounded-full bg-muted animate-pulse shrink-0" />
+              </div>
+              <div className="h-3 w-48 rounded bg-muted animate-pulse" />
+            </div>
+          ))}
         </CardContent>
       </Card>
     )

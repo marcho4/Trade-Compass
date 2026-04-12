@@ -84,7 +84,7 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
 
       {/* Tabs для переключения между разными видами данных */}
       <Tabs defaultValue="about" className="w-full">
-        <TabsList className="grid w-full lg:w-auto" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
+        <TabsList className="grid w-full lg:w-auto grid-cols-5">
           <TabsTrigger value="about">О компании</TabsTrigger>
           <TabsTrigger value="metrics">Показатели</TabsTrigger>
           <TabsTrigger value="ai-analysis">AI Анализ</TabsTrigger>
@@ -93,29 +93,29 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
         </TabsList>
 
         {/* О компании */}
-        <TabsContent value="about" className="mt-6">
+        <TabsContent value="about" className="mt-6 animate-fade-in">
           <CompanyAbout ticker={decodedTicker} />
         </TabsContent>
 
         
         {/* Показатели */}
-        <TabsContent value="metrics" className="mt-6">
+        <TabsContent value="metrics" className="mt-6 animate-fade-in">
           <CompanyMetrics ticker={decodedTicker} />
         </TabsContent>
 
         {/* AI Анализ */}
-        <TabsContent value="ai-analysis" className="mt-6">
+        <TabsContent value="ai-analysis" className="mt-6 animate-fade-in">
           <CompanyAnalyses ticker={decodedTicker} />
         </TabsContent>
 
         {/* Новости */}
-        <TabsContent value="news" className="mt-6">
+        <TabsContent value="news" className="mt-6 animate-fade-in">
           <CompanyNews ticker={decodedTicker} />
         </TabsContent>
 
 
         {/* Отчёты */}
-        <TabsContent value="reports" className="mt-6">
+        <TabsContent value="reports" className="mt-6 animate-fade-in">
           <CompanyReports ticker={decodedTicker} />
         </TabsContent>
       </Tabs>
