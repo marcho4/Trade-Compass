@@ -31,11 +31,16 @@ type newsReader interface {
 	GetFreshNews(ctx context.Context, ticker string, ttl time.Duration) (*entity.NewsResponse, error)
 }
 
+type newsPublisher interface {
+	PublishMessage(ctx context.Context, value []byte) error
+}
+
 type analysisHandler struct {
 	analysis         analysisReader
 	reportResults    reportResultsReader
 	businessResearch businessResearchReader
 	news             newsReader
+	newsPublisher    newsPublisher
 }
 
 func NewAnalysisHandler(
@@ -43,12 +48,14 @@ func NewAnalysisHandler(
 	reportResults reportResultsReader,
 	businessResearch businessResearchReader,
 	news newsReader,
+	newsPublisher newsPublisher,
 ) *analysisHandler {
 	return &analysisHandler{
 		analysis:         analysis,
 		reportResults:    reportResults,
 		businessResearch: businessResearch,
 		news:             news,
+		newsPublisher:    newsPublisher,
 	}
 }
 
@@ -221,6 +228,37 @@ func (h *analysisHandler) HandleGetNews(w http.ResponseWriter, r *http.Request) 
 	}
 
 	respondWithJSON(w, http.StatusOK, map[string]any{"data": news})
+}
+
+func (h *analysisHandler) HandleTriggerNews(w http.ResponseWriter, r *http.Request) {
+	ticker := r.URL.Query().Get("ticker")
+	if ticker == "" {
+		respondWithError(w, http.StatusBadRequest, "ticker query parameter is required")
+		return
+	}
+
+	shouldContinue := false
+	task := entity.Task{
+		Id:             ticker,
+		Ticker:         ticker,
+		Type:           entity.NewsResearch,
+		ShouldContinue: &shouldContinue,
+	}
+
+	payload, err := json.Marshal(task)
+	if err != nil {
+		slog.Error("HandleTriggerNews: marshal task", slog.String("ticker", ticker), slog.Any("error", err))
+		respondWithError(w, http.StatusInternalServerError, "failed to create task")
+		return
+	}
+
+	if err := h.newsPublisher.PublishMessage(r.Context(), payload); err != nil {
+		slog.Error("HandleTriggerNews: publish message", slog.String("ticker", ticker), slog.Any("error", err))
+		respondWithError(w, http.StatusInternalServerError, "failed to trigger news fetch")
+		return
+	}
+
+	respondWithJSON(w, http.StatusAccepted, map[string]string{"status": "triggered"})
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
