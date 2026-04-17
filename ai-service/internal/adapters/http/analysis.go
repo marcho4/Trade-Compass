@@ -11,6 +11,8 @@ import (
 
 	"ai-service/internal/domain"
 	"ai-service/internal/domain/entity"
+
+	"github.com/google/uuid"
 )
 
 type analysisReader interface {
@@ -239,7 +241,7 @@ func (h *analysisHandler) HandleTriggerNews(w http.ResponseWriter, r *http.Reque
 
 	shouldContinue := false
 	task := entity.Task{
-		Id:             ticker,
+		Id:             uuid.New().String(),
 		Ticker:         ticker,
 		Type:           entity.NewsResearch,
 		ShouldContinue: &shouldContinue,

@@ -172,7 +172,9 @@ export const aiApi = {
     });
 
     if (response.status === 404) return null;
-    if (!response.ok) return null;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch news (${response.status})`);
+    }
 
     const json = await response.json();
     return json.data || null;
