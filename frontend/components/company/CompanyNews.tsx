@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Newspaper, Info } from "lucide-react"
+import { Newspaper } from "lucide-react"
 import { aiApi, type NewsItem, type DependencyNewsItem, type NewsResponse } from "@/lib/api/ai-api"
 import Link from "next/link"
 
@@ -344,40 +344,90 @@ function LoadingSkeleton() {
 export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
   const [data, setData] = useState<NewsResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [timedOut, setTimedOut] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
+    let pollInterval: ReturnType<typeof setInterval> | null = null
+    let pollCount = 0
+    const MAX_POLLS = 12
 
-    const fetchData = async () => {
+    const fetchNews = async (): Promise<NewsResponse | null> => {
+      const result = await aiApi.getNews(ticker, controller.signal)
+      return result
+    }
+
+    const startPolling = () => {
+      pollInterval = setInterval(async () => {
+        pollCount++
+        try {
+          const result = await fetchNews()
+          if (result) {
+            if (pollInterval) clearInterval(pollInterval)
+            setData(result)
+            setLoading(false)
+            return
+          }
+        } catch {
+          // aborted or network error — stop polling
+          if (pollInterval) clearInterval(pollInterval)
+          setLoading(false)
+          return
+        }
+
+        if (pollCount >= MAX_POLLS) {
+          if (pollInterval) clearInterval(pollInterval)
+          setTimedOut(true)
+          setLoading(false)
+        }
+      }, 5000)
+    }
+
+    const init = async () => {
       try {
         setLoading(true)
-        setError(null)
-        const result = await aiApi.getNews(ticker, controller.signal)
-        setData(result)
+        const result = await fetchNews()
+        if (result) {
+          setData(result)
+          setLoading(false)
+          return
+        }
+
+        // 404 — trigger and start polling
+        try {
+          await aiApi.triggerNews(ticker, controller.signal)
+        } catch {
+          // trigger failed — show empty state immediately
+          setTimedOut(true)
+          setLoading(false)
+          return
+        }
+
+        startPolling()
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return
-        setError("Не удалось загрузить новости")
-      } finally {
+        setTimedOut(true)
         setLoading(false)
       }
     }
 
-    fetchData()
-    return () => controller.abort()
+    init()
+
+    return () => {
+      controller.abort()
+      if (pollInterval) clearInterval(pollInterval)
+    }
   }, [ticker])
 
   if (loading) {
     return <LoadingSkeleton />
   }
 
-  if (error || !data) {
+  if (timedOut || !data) {
     return (
       <div className="bg-card border rounded-sm flex flex-col items-center justify-center py-12 gap-2">
-        <Info className="h-8 w-8 text-muted-foreground/50" />
-        <p className="text-sm text-muted-foreground">
-          {error || "Новости по компании пока не доступны"}
-        </p>
+        <Newspaper className="h-8 w-8 text-muted-foreground/50" />
+        <p className="text-sm text-muted-foreground">Новостей пока нет</p>
       </div>
     )
   }
@@ -401,7 +451,7 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
   return (
     <div className="space-y-3.5 font-sans text-foreground">
       {/* Row 1: Latest news (wide) + Upcoming company events (narrow) */}
-      <div className="flex flex-col md:flex-row gap-3.5">
+      <div className="flex gap-3.5">
         {(data.latest_news?.length ?? 0) > 0 && (
           <TermPanel
             title="Последние новости"
@@ -429,7 +479,7 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
       </div>
 
       {/* Row 2: Upcoming deps | Past deps | Historic */}
-      <div className="flex flex-col md:flex-row gap-3.5">
+      <div className="flex gap-3.5">
         {(data.upcoming_dependency_events?.length ?? 0) > 0 && (
           <TermPanel
             title="Предстоящие · зависимости"
