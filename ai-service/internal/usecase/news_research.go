@@ -46,8 +46,10 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 	if existing != nil {
 		logger.Info("fresh news already exist, skipping")
 
-		if err := u.sendNextTask(ctx, task); err != nil {
-			return fmt.Errorf("send task: %w", err)
+		if task.ShouldContinue == nil || *task.ShouldContinue {
+			if err := u.sendNextTask(ctx, task); err != nil {
+				return fmt.Errorf("send task: %w", err)
+			}
 		}
 
 		return nil
@@ -126,11 +128,14 @@ func (u *NewsResearchUsecase) Execute(ctx context.Context, task entity.Task) err
 
 	logger.Info("news research completed and saved")
 
-	if err := u.sendNextTask(ctx, task); err != nil {
-		return fmt.Errorf("send task: %w", err)
+	if task.ShouldContinue == nil || *task.ShouldContinue {
+		if err := u.sendNextTask(ctx, task); err != nil {
+			return fmt.Errorf("send task: %w", err)
+		}
+		logger.Info("published risk-and-growth task")
+	} else {
+		logger.Info("should_continue=false, skipping next task")
 	}
-
-	logger.Info("published risk-and-growth task")
 
 	return nil
 }
