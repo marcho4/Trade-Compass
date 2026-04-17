@@ -451,7 +451,7 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
   return (
     <div className="space-y-3.5 font-sans text-foreground">
       {/* Row 1: Latest news (wide) + Upcoming company events (narrow) */}
-      <div className="flex gap-3.5">
+      <div className="flex flex-col md:flex-row gap-3.5">
         {(data.latest_news?.length ?? 0) > 0 && (
           <TermPanel
             title="Последние новости"
@@ -479,7 +479,7 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
       </div>
 
       {/* Row 2: Upcoming deps | Past deps | Historic */}
-      <div className="flex gap-3.5">
+      <div className="flex flex-col md:flex-row gap-3.5">
         {(data.upcoming_dependency_events?.length ?? 0) > 0 && (
           <TermPanel
             title="Предстоящие · зависимости"
