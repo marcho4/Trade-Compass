@@ -1,148 +1,343 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import {
-  Newspaper,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Clock,
-  History,
-  CalendarClock,
-  Link2,
-  Info,
-} from "lucide-react"
+import { Newspaper, Info } from "lucide-react"
 import { aiApi, type NewsItem, type DependencyNewsItem, type NewsResponse } from "@/lib/api/ai-api"
+import Link from "next/link"
 
 interface CompanyNewsProps {
   ticker: string
 }
 
-const impactConfig = {
-  positive: {
-    label: "Позитивно",
-    className: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-    icon: <TrendingUp className="h-3.5 w-3.5" />,
-  },
-  negative: {
-    label: "Негативно",
-    className: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
-    icon: <TrendingDown className="h-3.5 w-3.5" />,
-  },
-  neutral: {
-    label: "Нейтрально",
-    className: "bg-muted text-muted-foreground border-border",
-    icon: <Minus className="h-3.5 w-3.5" />,
-  },
-} as const
+const impactColor = (s: string) =>
+  s === "positive" ? "text-positive" : s === "negative" ? "text-negative" : "text-muted-foreground"
 
-const severityConfig = {
-  high: { label: "Высокая", dotClass: "bg-red-500" },
-  medium: { label: "Средняя", dotClass: "bg-yellow-500" },
-  low: { label: "Низкая", dotClass: "bg-muted-foreground/40" },
-} as const
+const impactBg = (s: string) =>
+  s === "positive"
+    ? "bg-positive/10"
+    : s === "negative"
+      ? "bg-negative/10"
+      : "bg-muted"
 
-function NewsCard({ item }: { item: NewsItem }) {
-  const impact = impactConfig[item.impact_type] ?? impactConfig.neutral
-  const severity = severityConfig[item.severity] ?? severityConfig.low
+const impactLabel = (s: string) =>
+  s === "positive" ? "POS" : s === "negative" ? "NEG" : "NEU"
 
+const impactDotBg = (s: string) =>
+  s === "positive" ? "bg-positive" : s === "negative" ? "bg-negative" : "bg-muted-foreground"
+
+function ImpactPill({ impact }: { impact: string }) {
   return (
-    <div className="p-4 rounded-lg border bg-card space-y-2.5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm leading-relaxed flex-1">{item.news}</p>
-        <Badge variant="outline" className={`shrink-0 flex items-center gap-1 ${impact.className}`}>
-          {impact.icon}
-          {impact.label}
-        </Badge>
-      </div>
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className={`inline-block h-1.5 w-1.5 rounded-full ${severity.dotClass}`} />
-          {severity.label} значимость
-        </span>
-        {item.date && (
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {item.date}
-          </span>
-        )}
-        {item.source && (
-          <span className="flex items-center gap-1">
-            <Link2 className="h-3 w-3" />
-            {item.source}
-          </span>
-        )}
-      </div>
-    </div>
+    <span
+      className={`inline-flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-wide uppercase ${impactColor(impact)} ${impactBg(impact)} px-1.5 py-0.5 rounded-sm leading-tight`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${impactDotBg(impact)}`} />
+      {impactLabel(impact)}
+    </span>
   )
 }
 
-function DependencyNewsCard({ item }: { item: DependencyNewsItem }) {
-  const impact = impactConfig[item.impact_type] ?? impactConfig.neutral
-  const severity = severityConfig[item.severity] ?? severityConfig.low
-
+function SeverityDots({ level }: { level: string }) {
+  const n = level === "high" ? 3 : level === "medium" ? 2 : 1
+  const activeClass =
+    level === "high"
+      ? "bg-primary"
+      : level === "medium"
+        ? "bg-foreground/60"
+        : "bg-muted-foreground/40"
+  const label =
+    level === "high"
+      ? "Высокая значимость"
+      : level === "medium"
+        ? "Средняя значимость"
+        : "Низкая значимость"
   return (
-    <div className="p-4 rounded-lg border border-l-2 border-l-primary/40 bg-card space-y-2.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 space-y-1">
-          <Badge variant="secondary" className="text-xs font-medium">{item.dependency}</Badge>
-          <p className="text-sm leading-relaxed">{item.news}</p>
-        </div>
-        <Badge variant="outline" className={`shrink-0 flex items-center gap-1 ${impact.className}`}>
-          {impact.icon}
-          {impact.label}
-        </Badge>
-      </div>
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className={`inline-block h-1.5 w-1.5 rounded-full ${severity.dotClass}`} />
-          {severity.label} значимость
-        </span>
-        {item.date && (
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {item.date}
-          </span>
-        )}
-        {item.source && (
-          <span className="flex items-center gap-1">
-            <Link2 className="h-3 w-3" />
-            {item.source}
-          </span>
-        )}
-      </div>
-    </div>
+    <span className="relative inline-flex gap-0.5 items-center group cursor-help">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className={`w-1 h-1 rounded-[1px] ${i < n ? activeClass : "bg-border"}`}
+        />
+      ))}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 whitespace-nowrap rounded-sm border border-border bg-popover px-1.5 py-1 font-mono text-[10px] uppercase tracking-wide text-popover-foreground opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100 z-[9999]"
+      >
+        {label}
+      </span>
+    </span>
   )
 }
 
-function NewsSection({
+function PanelHeader({
   title,
-  icon,
-  items,
-  renderItem,
+  count,
+  accentClass,
 }: {
   title: string
-  icon: React.ReactNode
-  items: (NewsItem | DependencyNewsItem)[]
-  renderItem: (item: NewsItem | DependencyNewsItem, i: number) => React.ReactNode
+  count: number
+  accentClass: string
 }) {
-  if (items.length === 0) return null
+  return (
+    <div className="flex items-center justify-between px-3.5 py-2.5 border-b bg-muted/50 sticky top-0 z-[2]">
+      <div className="flex items-center gap-2.5">
+        <span className={`w-[3px] h-3 rounded-[1px] ${accentClass}`} />
+        <span className="font-mono text-[11px] font-bold tracking-[1.2px] uppercase text-foreground">
+          {title}
+        </span>
+        <span className="font-mono text-[10px] text-muted-foreground">
+          [{String(count).padStart(3, "0")}]
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function safeDate(d: string): Date | null {
+  if (!d) return null
+  const m = d.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:[ T](.+))?$/)
+  const input = m ? `${m[3]}-${m[2]}-${m[1]}${m[4] ? "T" + m[4] : ""}` : d
+  const date = new Date(input)
+  return isNaN(date.getTime()) ? null : date
+}
+
+function fmtRelTime(d: string) {
+  const date = safeDate(d)
+  if (!date) return d
+  const now = new Date()
+  const sameDay = date.toDateString() === now.toDateString()
+  if (sameDay) {
+    return date.toLocaleString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+  }
+  return date.toLocaleString("ru-RU", { day: "2-digit", month: "short" })
+}
+
+function fmtShortDate(d: string) {
+  const date = safeDate(d)
+  if (!date) return d
+  return date.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit" })
+}
+
+function fmtHistDate(d: string) {
+  const date = safeDate(d)
+  if (!date) return d
+  return date.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" })
+}
+
+function fmtEventDay(d: string) {
+  const date = safeDate(d)
+  if (!date) return { day: "—", month: "" }
+  return {
+    day: String(date.getDate()),
+    month: date.toLocaleString("ru-RU", { month: "short" }),
+  }
+}
+
+function dayOffset(d: string): number {
+  const date = safeDate(d)
+  if (!date) return 0
+  return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+}
+
+function NewsRow({ n }: { n: NewsItem }) {
+  return (
+    <div className="grid grid-cols-[56px_20px_1fr_48px] gap-3 items-baseline px-3.5 py-2.5 border-b border-border/60 text-xs leading-snug cursor-pointer hover:bg-muted/30 transition-colors">
+      <span className="font-mono text-[10px] text-muted-foreground">
+        {fmtRelTime(n.date)}
+      </span>
+      <SeverityDots level={n.severity} />
+      <div>
+        <div className="text-foreground mb-0.5">{n.news}</div>
+        <div className="font-mono text-[10px] text-muted-foreground tracking-wide">
+          <Link href={n.source}>{n.source.toUpperCase()}</Link>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <ImpactPill impact={n.impact_type} />
+      </div>
+    </div>
+  )
+}
+
+function UpcomingCompanyRow({ e }: { e: NewsItem }) {
+  const { day, month } = fmtEventDay(e.date)
+  const offset = dayOffset(e.date)
+
+  const typeLabel =
+    e.source === "earnings" || e.news.toLowerCase().includes("отчёт")
+      ? "ER"
+      : e.source === "dividend" || e.news.toLowerCase().includes("дивиденд")
+        ? "DV"
+        : e.source === "conference" || e.news.toLowerCase().includes("investor")
+          ? "CF"
+          : "EV"
 
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-base">
-          {icon}
-          {title}
-          <span className="ml-auto text-xs font-normal text-muted-foreground">{items.length}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {items.map((item, i) => renderItem(item, i))}
-      </CardContent>
-    </Card>
+    <div className="grid grid-cols-[56px_28px_1fr_48px] gap-2.5 items-center px-3.5 py-3 border-b border-border/60 text-xs">
+      <div className="text-center">
+        <div className="font-mono text-base font-bold text-foreground leading-none">
+          {day}
+        </div>
+        <div className="font-mono text-[9px] text-muted-foreground uppercase mt-0.5">
+          {month}
+        </div>
+      </div>
+      <span className="inline-flex items-center justify-center font-mono text-[10px] font-bold tracking-wide uppercase text-primary bg-primary/10 border border-primary/20 px-1 py-0.5 rounded-sm leading-tight">
+        {typeLabel}
+      </span>
+      <div>
+        <div className="text-foreground text-[12.5px] font-semibold">{e.news}</div>
+        <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
+          {e.date} · <Link href={e.source}>{e.source}</Link>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <ImpactPill impact={e.impact_type} />
+      </div>
+    </div>
+  )
+}
+
+function UpcomingDepsRow({ e }: { e: DependencyNewsItem }) {
+  const { day, month } = fmtEventDay(e.date)
+  const offset = dayOffset(e.date)
+
+  return (
+    <div className="grid grid-cols-[48px_1fr_48px] gap-2.5 items-center px-3.5 py-2.5 border-b border-border/60 text-xs">
+      <div className="text-center">
+        <div className="font-mono text-sm font-bold text-foreground leading-none">
+          {day}
+        </div>
+        <div className="font-mono text-[8px] text-muted-foreground uppercase mt-0.5">
+          {month}
+        </div>
+      </div>
+      <div>
+        <div className="text-foreground text-xs">
+          <span className="font-mono text-blue-600 dark:text-blue-400 mr-1.5 font-bold">
+            {e.dependency}
+          </span>
+          {e.news}
+        </div>
+        <div className="font-mono text-[9px] text-muted-foreground mt-0.5">
+          <Link href={e.source}>{e.source.toUpperCase()}</Link>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <ImpactPill impact={e.impact_type} />
+      </div>
+    </div>
+  )
+}
+
+function PastDepsRow({ e }: { e: DependencyNewsItem }) {
+  return (
+    <div className="grid grid-cols-[52px_1fr_72px] gap-3 items-center px-3.5 py-2.5 border-b border-border/60 text-xs">
+      <div className="font-mono text-[10px] text-muted-foreground">
+        {fmtHistDate(e.date)}
+      </div>
+      <div>
+        <div className="text-foreground text-xs">
+          <span className="font-mono text-blue-600 dark:text-blue-400 mr-1.5 font-bold">
+            {e.dependency}
+          </span>
+          {e.news}
+        </div>
+        <div className="font-mono text-[9px] text-muted-foreground mt-0.5">
+          <Link href={e.source}>{e.source.toUpperCase()}</Link>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <ImpactPill impact={e.impact_type} />
+      </div>
+    </div>
+  )
+}
+
+function HistoricRow({ e }: { e: NewsItem }) {
+  return (
+    <div className="grid grid-cols-[76px_1fr_72px] gap-2.5 items-center px-3.5 py-2.5 border-b border-border/60 text-xs">
+      <div className="font-mono text-[10px] text-muted-foreground">
+        {fmtHistDate(e.date)}
+      </div>
+      <div>
+        <div className="text-foreground text-xs">{e.news}</div>
+        <div className="font-mono text-[9px] text-muted-foreground mt-0.5">
+          <Link href={e.source}>{e.source.toUpperCase()}</Link>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <ImpactPill impact={e.impact_type} />
+      </div>
+    </div>
+  )
+}
+
+function TermPanel({
+  title,
+  count,
+  accentClass,
+  children,
+  className = "",
+}: {
+  title: string
+  count: number
+  accentClass: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={`min-w-0 bg-card border rounded-sm flex flex-col shadow-[0_1px_0_rgba(0,0,0,0.02)] ${className}`}
+    >
+      <PanelHeader title={title} count={count} accentClass={accentClass} />
+      <div className="overflow-y-auto max-h-[360px]">{children}</div>
+    </div>
+  )
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3.5">
+      <div className="flex gap-3.5">
+        <div className="flex-[1.6] bg-card border rounded-sm overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b bg-muted/50">
+            <div className="h-3 w-32 rounded bg-muted animate-pulse" />
+          </div>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="px-3.5 py-2.5 border-b border-border/60">
+              <div className="h-3 w-full rounded bg-muted animate-pulse mb-1.5" />
+              <div className="h-2.5 w-24 rounded bg-muted animate-pulse" />
+            </div>
+          ))}
+        </div>
+        <div className="flex-1 bg-card border rounded-sm overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b bg-muted/50">
+            <div className="h-3 w-40 rounded bg-muted animate-pulse" />
+          </div>
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="px-3.5 py-3 border-b border-border/60">
+              <div className="h-3.5 w-full rounded bg-muted animate-pulse mb-1" />
+              <div className="h-2.5 w-32 rounded bg-muted animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-3.5">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex-1 bg-card border rounded-sm overflow-hidden">
+            <div className="px-3.5 py-2.5 border-b bg-muted/50">
+              <div className="h-3 w-36 rounded bg-muted animate-pulse" />
+            </div>
+            {[...Array(3)].map((_, j) => (
+              <div key={j} className="px-3.5 py-2.5 border-b border-border/60">
+                <div className="h-3 w-full rounded bg-muted animate-pulse mb-1" />
+                <div className="h-2.5 w-20 rounded bg-muted animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -173,39 +368,17 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
   }, [ticker])
 
   if (loading) {
-    return (
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="h-5 w-40 rounded bg-muted animate-pulse" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="p-4 rounded-lg border space-y-2.5">
-              <div className="flex justify-between gap-3">
-                <div className="flex-1 space-y-1.5">
-                  <div className="h-3.5 w-full rounded bg-muted animate-pulse" />
-                  <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
-                </div>
-                <div className="h-5 w-20 rounded-full bg-muted animate-pulse shrink-0" />
-              </div>
-              <div className="h-3 w-48 rounded bg-muted animate-pulse" />
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    )
+    return <LoadingSkeleton />
   }
 
   if (error || !data) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 gap-2">
-          <Info className="h-8 w-8 text-muted-foreground/50" />
-          <p className="text-sm text-muted-foreground">
-            {error || "Новости по компании пока не доступны"}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="bg-card border rounded-sm flex flex-col items-center justify-center py-12 gap-2">
+        <Info className="h-8 w-8 text-muted-foreground/50" />
+        <p className="text-sm text-muted-foreground">
+          {error || "Новости по компании пока не доступны"}
+        </p>
+      </div>
     )
   }
 
@@ -218,51 +391,82 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
 
   if (allEmpty) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 gap-2">
-          <Newspaper className="h-8 w-8 text-muted-foreground/50" />
-          <p className="text-sm text-muted-foreground">Новостей пока нет</p>
-        </CardContent>
-      </Card>
+      <div className="bg-card border rounded-sm flex flex-col items-center justify-center py-12 gap-2">
+        <Newspaper className="h-8 w-8 text-muted-foreground/50" />
+        <p className="text-sm text-muted-foreground">Новостей пока нет</p>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <NewsSection
-        title="Последние новости"
-        icon={<Newspaper className="h-4 w-4" />}
-        items={data.latest_news ?? []}
-        renderItem={(item, i) => <NewsCard key={i} item={item as NewsItem} />}
-      />
+    <div className="space-y-3.5 font-sans text-foreground">
+      {/* Row 1: Latest news (wide) + Upcoming company events (narrow) */}
+      <div className="flex gap-3.5">
+        {(data.latest_news?.length ?? 0) > 0 && (
+          <TermPanel
+            title="Последние новости"
+            count={data.latest_news.length}
+            accentClass="bg-primary"
+            className="flex-[1.6]"
+          >
+            {data.latest_news.map((n, i) => (
+              <NewsRow key={i} n={n} />
+            ))}
+          </TermPanel>
+        )}
+        {(data.upcoming_company_events?.length ?? 0) > 0 && (
+          <TermPanel
+            title="Предстоящие · компания"
+            count={data.upcoming_company_events.length}
+            accentClass="bg-primary"
+            className="flex-1"
+          >
+            {data.upcoming_company_events.map((e, i) => (
+              <UpcomingCompanyRow key={i} e={e} />
+            ))}
+          </TermPanel>
+        )}
+      </div>
 
-      <NewsSection
-        title="Предстоящие события компании"
-        icon={<CalendarClock className="h-4 w-4" />}
-        items={data.upcoming_company_events ?? []}
-        renderItem={(item, i) => <NewsCard key={i} item={item as NewsItem} />}
-      />
-
-      <NewsSection
-        title="Предстоящие события зависимостей"
-        icon={<CalendarClock className="h-4 w-4 text-muted-foreground" />}
-        items={data.upcoming_dependency_events ?? []}
-        renderItem={(item, i) => <DependencyNewsCard key={i} item={item as DependencyNewsItem} />}
-      />
-
-      <NewsSection
-        title="Прошедшие события зависимостей"
-        icon={<History className="h-4 w-4 text-muted-foreground" />}
-        items={data.past_dependency_events ?? []}
-        renderItem={(item, i) => <DependencyNewsCard key={i} item={item as DependencyNewsItem} />}
-      />
-
-      <NewsSection
-        title="Исторические события"
-        icon={<History className="h-4 w-4" />}
-        items={data.historical_events ?? []}
-        renderItem={(item, i) => <NewsCard key={i} item={item as NewsItem} />}
-      />
+      {/* Row 2: Upcoming deps | Past deps | Historic */}
+      <div className="flex gap-3.5">
+        {(data.upcoming_dependency_events?.length ?? 0) > 0 && (
+          <TermPanel
+            title="Предстоящие · зависимости"
+            count={data.upcoming_dependency_events.length}
+            accentClass="bg-blue-600 dark:bg-blue-400"
+            className="flex-1"
+          >
+            {data.upcoming_dependency_events.map((e, i) => (
+              <UpcomingDepsRow key={i} e={e} />
+            ))}
+          </TermPanel>
+        )}
+        {(data.past_dependency_events?.length ?? 0) > 0 && (
+          <TermPanel
+            title="Прошедшие · зависимости"
+            count={data.past_dependency_events.length}
+            accentClass="bg-muted-foreground"
+            className="flex-1"
+          >
+            {data.past_dependency_events.map((e, i) => (
+              <PastDepsRow key={i} e={e} />
+            ))}
+          </TermPanel>
+        )}
+        {(data.historical_events?.length ?? 0) > 0 && (
+          <TermPanel
+            title="Исторические события"
+            count={data.historical_events.length}
+            accentClass="bg-violet-600 dark:bg-violet-400"
+            className="flex-1"
+          >
+            {data.historical_events.map((e, i) => (
+              <HistoricRow key={i} e={e} />
+            ))}
+          </TermPanel>
+        )}
+      </div>
     </div>
   )
 }
