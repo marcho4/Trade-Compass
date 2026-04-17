@@ -298,7 +298,7 @@ function TermPanel({
 function LoadingSkeleton() {
   return (
     <div className="space-y-3.5">
-      <div className="flex gap-3.5">
+      <div className="flex flex-col md:flex-row gap-3.5">
         <div className="flex-[1.6] bg-card border rounded-sm overflow-hidden">
           <div className="px-3.5 py-2.5 border-b bg-muted/50">
             <div className="h-3 w-32 rounded bg-muted animate-pulse" />
@@ -322,7 +322,7 @@ function LoadingSkeleton() {
           ))}
         </div>
       </div>
-      <div className="flex gap-3.5">
+      <div className="flex flex-col md:flex-row gap-3.5">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="flex-1 bg-card border rounded-sm overflow-hidden">
             <div className="px-3.5 py-2.5 border-b bg-muted/50">
@@ -401,7 +401,7 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
   return (
     <div className="space-y-3.5 font-sans text-foreground">
       {/* Row 1: Latest news (wide) + Upcoming company events (narrow) */}
-      <div className="flex gap-3.5">
+      <div className="flex flex-col md:flex-row gap-3.5">
         {(data.latest_news?.length ?? 0) > 0 && (
           <TermPanel
             title="Последние новости"
@@ -429,7 +429,7 @@ export const CompanyNews = ({ ticker }: CompanyNewsProps) => {
       </div>
 
       {/* Row 2: Upcoming deps | Past deps | Historic */}
-      <div className="flex gap-3.5">
+      <div className="flex flex-col md:flex-row gap-3.5">
         {(data.upcoming_dependency_events?.length ?? 0) > 0 && (
           <TermPanel
             title="Предстоящие · зависимости"
