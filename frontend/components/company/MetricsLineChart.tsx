@@ -24,6 +24,7 @@ interface MetricsLineChartProps {
   description?: string
   data: AnnualSnapshot[]
   lines: MetricsLineConfig[]
+  valueFormatter?: (value: number) => string
 }
 
 function formatCompactValue(value: number): string {
@@ -34,7 +35,7 @@ function formatCompactValue(value: number): string {
   return value.toString()
 }
 
-export const MetricsLineChart = ({ title, description, data, lines }: MetricsLineChartProps) => {
+export const MetricsLineChart = ({ title, description, data, lines, valueFormatter = formatCompactValue }: MetricsLineChartProps) => {
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
     () => new Set(lines.filter((l) => !l.hiddenByDefault).map((l) => l.key))
   )
@@ -105,7 +106,7 @@ export const MetricsLineChart = ({ title, description, data, lines }: MetricsLin
               className="text-xs"
             />
             <YAxis
-              tickFormatter={formatCompactValue}
+              tickFormatter={valueFormatter}
               tickLine={false}
               axisLine={false}
               className="text-xs"
@@ -116,7 +117,7 @@ export const MetricsLineChart = ({ title, description, data, lines }: MetricsLin
                 <ChartTooltipContent
                   formatter={(value, name) => {
                     const config = chartConfig[name as string]
-                    const formatted = typeof value === "number" ? formatCompactValue(value) : value
+                    const formatted = typeof value === "number" ? valueFormatter(value) : value
                     return (
                       <span>
                         {config?.label ?? name}: <strong>{formatted}</strong>
