@@ -1,0 +1,28 @@
+export const T = {
+  bg: "#f6f5f1",
+  panel: "#ffffff",
+  panelAlt: "#fafaf7",
+  border: "#e3e0d6",
+  borderSoft: "#edeae0",
+  text: "#15181d",
+  text2: "#363b45",
+  textDim: "#6b7280",
+  textFaint: "#9aa0ab",
+  accent: "#2463a8",
+  accentSoft: "#e6eff9",
+  accentLine: "#a9c5e5",
+  pos: "#14804a",
+  posSoft: "#e4f2ea",
+  neg: "#b42318",
+  negSoft: "#fbe8e6",
+  neu: "#6b7280",
+  neuSoft: "#eceef0",
+  deps: "#2563eb",
+  depsSoft: "#e4ecfb",
+  hist: "#7c3aed",
+  histSoft: "#efe8fc",
+  mono: 'ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace',
+  sans: '"Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+} as const
+
+export type TickerTokens = typeof T
