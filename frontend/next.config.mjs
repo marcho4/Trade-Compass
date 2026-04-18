@@ -8,7 +8,14 @@ const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://trade-compass.ru/api/:path*',
+      },
+    ]
+  },
 }
 
 export default nextConfig
-

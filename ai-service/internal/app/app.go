@@ -100,7 +100,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		return nil, fmt.Errorf("parse port: %w", err)
 	}
 
-	analysisHandler := httpserver.NewAnalysisHandler(analysisUC, reportResultsUC, businessResearchUC, newsRepo)
+	analysisHandler := httpserver.NewAnalysisHandler(analysisUC, reportResultsUC, businessResearchUC, newsRepo, kafkaClient)
 	server := httpserver.NewHttpServer(analysisHandler)
 	server.RegisterRoutes(port, cfg.APIKey)
 

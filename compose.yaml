@@ -268,9 +268,6 @@ services:
     container_name: frontend
     expose:
       - "3000"
-    volumes:
-      - /app/node_modules
-      - /app/.next
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://89.169.137.57/api}

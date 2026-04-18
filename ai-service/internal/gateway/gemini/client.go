@@ -54,11 +54,19 @@ func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemProm
 		},
 	}
 
+	var temp float32 = 0.2
+	var thinkingBudget int32 = 16000
+
 	config := &genai.GenerateContentConfig{
 		SystemInstruction: &genai.Content{
 			Parts: []*genai.Part{
 				genai.NewPartFromText(systemPrompt),
 			},
+		},
+		Temperature: &temp,
+		ThinkingConfig: &genai.ThinkingConfig{
+			IncludeThoughts: false,
+			ThinkingBudget:  &thinkingBudget,
 		},
 	}
 

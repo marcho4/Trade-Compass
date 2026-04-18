@@ -9,14 +9,14 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { AnnualSnapshot } from "@/lib/build-annual-snapshots"
 
 export interface MetricsLineConfig {
   key: string
   label: string
   color: string
+  hiddenByDefault?: boolean
 }
 
 interface MetricsLineChartProps {
@@ -24,6 +24,7 @@ interface MetricsLineChartProps {
   description?: string
   data: AnnualSnapshot[]
   lines: MetricsLineConfig[]
+  valueFormatter?: (value: number) => string
 }
 
 function formatCompactValue(value: number): string {
@@ -34,9 +35,9 @@ function formatCompactValue(value: number): string {
   return value.toString()
 }
 
-export const MetricsLineChart = ({ title, description, data, lines }: MetricsLineChartProps) => {
+export const MetricsLineChart = ({ title, description, data, lines, valueFormatter = formatCompactValue }: MetricsLineChartProps) => {
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(
-    () => new Set(lines.map((l) => l.key))
+    () => new Set(lines.filter((l) => !l.hiddenByDefault).map((l) => l.key))
   )
 
   const toggleLine = (key: string) => {
@@ -57,20 +58,32 @@ export const MetricsLineChart = ({ title, description, data, lines }: MetricsLin
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
-        <div className="flex flex-wrap gap-4 pt-2">
-          {lines.map((line) => (
-            <div key={line.key} className="flex items-center gap-2">
-              <Checkbox
-                id={`toggle-${line.key}`}
-                checked={visibleKeys.has(line.key)}
-                onCheckedChange={() => toggleLine(line.key)}
-                style={{ borderColor: line.color, color: line.color, backgroundColor: "white" } as React.CSSProperties}
-              />
-              <Label htmlFor={`toggle-${line.key}`} className="text-sm cursor-pointer">
+        <div className="flex flex-wrap gap-2 pt-2">
+          {lines.map((line) => {
+            const isActive = visibleKeys.has(line.key)
+            return (
+              <Button
+                key={line.key}
+                variant="outline"
+                size="sm"
+                onClick={() => toggleLine(line.key)}
+                className="h-7 rounded-full text-xs gap-1.5 transition-colors"
+                style={isActive ? {
+                  borderColor: line.color,
+                  backgroundColor: `color-mix(in oklch, ${line.color} 15%, transparent)`,
+                  color: line.color,
+                } : {
+                  opacity: 0.5,
+                }}
+              >
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: line.color }}
+                />
                 {line.label}
-              </Label>
-            </div>
-          ))}
+              </Button>
+            )
+          })}
         </div>
       </CardHeader>
       <CardContent>
@@ -93,7 +106,7 @@ export const MetricsLineChart = ({ title, description, data, lines }: MetricsLin
               className="text-xs"
             />
             <YAxis
-              tickFormatter={formatCompactValue}
+              tickFormatter={valueFormatter}
               tickLine={false}
               axisLine={false}
               className="text-xs"
@@ -104,7 +117,7 @@ export const MetricsLineChart = ({ title, description, data, lines }: MetricsLin
                 <ChartTooltipContent
                   formatter={(value, name) => {
                     const config = chartConfig[name as string]
-                    const formatted = typeof value === "number" ? formatCompactValue(value) : value
+                    const formatted = typeof value === "number" ? valueFormatter(value) : value
                     return (
                       <span>
                         {config?.label ?? name}: <strong>{formatted}</strong>

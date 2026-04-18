@@ -54,19 +54,14 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 	}
 
 	if existing == nil {
-		logger.Info("raw data not found, extracting")
-
 		prompt := docs.RawDataAgentPrompt() + "\n<ticker>" + task.Ticker + "</ticker>"
-
-		logger.Info("downloading PDF for raw data extraction", slog.String("report_url", task.ReportURL))
 
 		pdfBytes, err := u.storage.DownloadPDF(ctx, task.ReportURL)
 		if err != nil {
 			return fmt.Errorf("download PDF: %w", err)
 		}
-		logger.Info("PDF downloaded", slog.Int("pdf_size_bytes", len(pdfBytes)))
 
-		text, err := u.ai.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Flash)
+		text, err := u.ai.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Pro)
 		if err != nil {
 			return fmt.Errorf("ai call with pdf: %w", err)
 		}
@@ -102,8 +97,6 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 		if err := u.fd.SaveDraft(ctx, &rawData); err != nil {
 			return fmt.Errorf("save raw data: %w", err)
 		}
-
-		logger.Info("raw data saved")
 	}
 
 	nextTask := entity.Task{
@@ -124,7 +117,7 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 		return fmt.Errorf("publish analyze task: %w", err)
 	}
 
-	logger.Info("report is the latest, published raw-data-success")
+	logger.Info("raw data extraction succeed")
 
 	return nil
 }

@@ -131,7 +131,7 @@ export const CompanyCard = ({
   return (
     <div
       ref={cardRef}
-      className="cursor-pointer transition-[transform,box-shadow] hover:shadow-lg hover:scale-[1.02]"
+      className="cursor-pointer transition-shadow hover:shadow-lg"
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {

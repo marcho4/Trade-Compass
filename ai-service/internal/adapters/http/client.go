@@ -19,6 +19,7 @@ type AnalysisHandler interface {
 	HandleGetLatestReportResults(w http.ResponseWriter, r *http.Request)
 	HandleGetBusinessResearch(w http.ResponseWriter, r *http.Request)
 	HandleGetNews(w http.ResponseWriter, r *http.Request)
+	HandleTriggerNews(w http.ResponseWriter, r *http.Request)
 }
 
 type HttpServer struct {
@@ -47,6 +48,7 @@ func (h *HttpServer) RegisterRoutes(port int, apiKey string) {
 	r.Get("/report-results/latest", h.analysisHandler.HandleGetLatestReportResults)
 	r.Get("/business-research", h.analysisHandler.HandleGetBusinessResearch)
 	r.Get("/news", h.analysisHandler.HandleGetNews)
+	r.Post("/news/trigger", h.analysisHandler.HandleTriggerNews)
 
 	r.Group(func(r chi.Router) {
 		r.Use(apiKeyAuth(apiKey))

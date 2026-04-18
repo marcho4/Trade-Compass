@@ -218,7 +218,7 @@ export const CompanyAnalyses = ({ ticker }: CompanyAnalysesProps) => {
                           ) : analysisError && !cachedText ? (
                             <p className="text-sm text-muted-foreground">{analysisError}</p>
                           ) : (
-                            <div className="prose prose-sm dark:prose-invert max-w-none
+                            <div className="prose prose-sm dark:prose-invert max-w-prose mx-auto
                               prose-headings:mt-6 prose-headings:mb-3
                               prose-h1:text-xl prose-h1:font-bold prose-h1:border-b prose-h1:pb-2
                               prose-h2:text-lg prose-h2:font-semibold prose-h2:border-b prose-h2:border-border prose-h2:pb-1.5

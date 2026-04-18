@@ -9,15 +9,45 @@ import {
   Globe,
   Users,
   Briefcase,
-  PieChart,
+  PieChart as PieChartIcon,
   AlertTriangle,
   TrendingUp,
   TrendingDown,
   Minus,
-  Loader2,
   Info,
 } from "lucide-react"
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts"
 import { aiApi, type BusinessResearch } from "@/lib/api/ai-api"
+
+const CHART_COLORS = [
+  "oklch(0.63 0.19 25)",   // red
+  "oklch(0.70 0.17 55)",   // orange
+  "oklch(0.80 0.16 85)",   // yellow
+  "oklch(0.72 0.17 145)",  // green
+  "oklch(0.70 0.14 180)",  // teal
+  "oklch(0.68 0.15 220)",  // cyan
+  "oklch(0.60 0.18 260)",  // blue
+  "oklch(0.55 0.20 290)",  // indigo
+  "oklch(0.62 0.22 320)",  // purple
+  "oklch(0.68 0.20 350)",  // pink
+  "oklch(0.75 0.15 115)",  // lime
+  "oklch(0.58 0.16 240)",  // steel blue
+]
+
+function getColorByHash(str: string, index: number, set: Set<number>): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+
+  const finalIdx = Math.abs(hash + index) % CHART_COLORS.length
+  if (set.has(finalIdx)) {
+    return getColorByHash(str, index + 1, set)
+  }
+
+  set.add(finalIdx)
+  return CHART_COLORS[Math.abs(hash + index) % CHART_COLORS.length]
+}
 
 interface CompanyAboutProps {
   ticker: string
@@ -80,12 +110,44 @@ export const CompanyAbout = ({ ticker }: CompanyAboutProps) => {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Загрузка...</span>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-4">
+              <div className="h-5 w-40 rounded bg-muted animate-pulse" />
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+                    <div className="space-y-1.5">
+                      <div className="h-3.5 w-full rounded bg-muted animate-pulse" />
+                      <div className="h-3.5 w-2/3 rounded bg-muted animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-4">
+              <div className="h-5 w-36 rounded bg-muted animate-pulse" />
+            </CardHeader>
+            <CardContent className="flex flex-col items-center">
+              <div className="h-[200px] w-[200px] rounded-full border-[16px] border-muted animate-pulse" />
+              <div className="w-full mt-4 space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex justify-between">
+                    <div className="h-3.5 w-24 rounded bg-muted animate-pulse" />
+                    <div className="h-3.5 w-12 rounded bg-muted animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     )
   }
 
@@ -105,123 +167,152 @@ export const CompanyAbout = ({ ticker }: CompanyAboutProps) => {
   const profile = data.profile
   const revenue = data.revenue_sources || []
   const dependencies = data.dependencies || []
+  const colors = new Set<number>()
+
+  const chartData = revenue.map((rs, i) => ({
+    name: rs.segment,
+    value: rs.share_pct,
+    color: getColorByHash(rs.segment, i, colors),
+    trend: rs.trend,
+    description: rs.description,
+    approximate: rs.approximate,
+  }))
 
   return (
     <div className="space-y-6">
-      {/* Профиль компании */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Building2 className="h-5 w-5" />
-            Профиль компании
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Продукты и услуги */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-primary/10">
-                  <ShoppingBag className="h-4 w-4 text-primary" />
-                </div>
-                <h4 className="text-sm font-medium">Продукты и услуги</h4>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(profile.products_and_services || []).map((product) => (
-                  <Badge key={product} variant="secondary">{product}</Badge>
-                ))}
-              </div>
-            </div>
-
-            {/* Рынки */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-primary/10">
-                  <Globe className="h-4 w-4 text-primary" />
-                </div>
-                <h4 className="text-sm font-medium">Рынки</h4>
-              </div>
-              <div className="space-y-2">
-                {(profile.markets || []).map((m) => (
-                  <div key={m.market} className="flex items-start gap-2">
-                    <span className="text-sm font-medium">{m.market}</span>
-                    <span className="text-sm text-muted-foreground">— {m.role}</span>
+      {/* Профиль компании + Структура выручки */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Профиль компании — 2/3 на десктопе */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building2 className="h-5 w-5" />
+              Профиль компании
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-primary/20">
+                    <ShoppingBag className="h-4 w-4 text-primary" />
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Клиенты */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-primary/10">
-                  <Users className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-medium">Продукты и услуги</h4>
                 </div>
-                <h4 className="text-sm font-medium">Ключевые клиенты</h4>
-              </div>
-              <p className="text-sm text-muted-foreground">{profile.key_clients}</p>
-            </div>
-
-            {/* Бизнес-модель */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-primary/10">
-                  <Briefcase className="h-4 w-4 text-primary" />
+                <div className="flex flex-wrap gap-2">
+                  {(profile.products_and_services || []).map((product) => (
+                    <Badge key={product} variant="secondary">{product}</Badge>
+                  ))}
                 </div>
-                <h4 className="text-sm font-medium">Бизнес-модель</h4>
               </div>
-              <p className="text-sm text-muted-foreground">{profile.business_model}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Источники выручки */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <PieChart className="h-5 w-5" />
-            Источники выручки
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {revenue.map((rs) => (
-              <div
-                key={rs.segment}
-                className="p-4 rounded-lg border bg-card"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{rs.segment}</span>
-                    {rs.approximate && (
-                      <Badge variant="outline" className="text-xs">~</Badge>
-                    )}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-primary/20">
+                    <Globe className="h-4 w-4 text-primary" />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      {trendIcon[rs.trend as keyof typeof trendIcon] || trendIcon.stable}
-                      <span className="text-xs text-muted-foreground">
-                        {trendLabel[rs.trend as keyof typeof trendLabel] || rs.trend}
-                      </span>
+                  <h4 className="text-sm font-medium">Рынки</h4>
+                </div>
+                <div className="space-y-2">
+                  {(profile.markets || []).map((m) => (
+                    <div key={m.market} className="grid grid-cols-[8rem_1fr] gap-2">
+                      <span className="text-sm font-medium">{m.market}</span>
+                      <span className="text-sm text-muted-foreground">— {m.role}</span>
                     </div>
-                    <span className="text-sm font-semibold min-w-[3rem] text-right">
-                      {rs.share_pct}%
-                    </span>
-                  </div>
+                  ))}
                 </div>
-                <div className="w-full bg-muted rounded-full h-2 mb-2">
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min(rs.share_pct, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">{rs.description}</p>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-primary/20">
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
+                  <h4 className="text-sm font-medium">Ключевые клиенты</h4>
+                </div>
+                <p className="text-sm text-muted-foreground">{profile.key_clients}</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-primary/20">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                  </div>
+                  <h4 className="text-sm font-medium">Бизнес-модель</h4>
+                </div>
+                <p className="text-sm text-muted-foreground">{profile.business_model}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Структура выручки — 1/3 на десктопе */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <PieChartIcon className="h-5 w-5" />
+              Структура выручки
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {revenue.length > 0 ? (
+              <div className="flex flex-col items-center">
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={85}
+                      paddingAngle={2}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null
+                        const d = payload[0].payload
+                        return (
+                          <div className="rounded-lg border bg-popover px-3 py-2 text-sm shadow-md">
+                            <p className="font-medium">{d.name}</p>
+                            <p className="text-muted-foreground">{d.value}%</p>
+                          </div>
+                        )
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="w-full mt-4 space-y-2">
+                  {chartData.map((entry) => (
+                    <div key={entry.name} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="h-3 w-3 rounded-full shrink-0"
+                          style={{ backgroundColor: entry.color }}
+                        />
+                        <span>{entry.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        {trendIcon[entry.trend as keyof typeof trendIcon] || trendIcon.stable}
+                        <span className="font-medium">{entry.value}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Нет данных о выручке
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Ключевые зависимости */}
       <Card>

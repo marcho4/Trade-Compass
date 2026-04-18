@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Company } from "@/types"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { ArrowUp, ArrowDown, TrendingUp, Users, Loader2 } from "lucide-react"
+import { ArrowUp, ArrowDown } from "lucide-react"
 import { usePriceData } from "@/hooks/use-price-data"
 import { aiApi } from "@/lib/api/ai-api"
 
@@ -52,18 +52,26 @@ export const CompanyHeader = ({ company }: CompanyHeaderProps) => {
                 <Badge variant="outline">{company.sector}</Badge>
               )}
             </div>
-            {companyName && (
+            {companyName ? (
               <p className="text-lg font-medium text-foreground/80 mb-1">{companyName}</p>
+            ) : (
+              <div className="h-5 w-48 rounded bg-muted animate-pulse mb-1" />
             )}
-            {description && (
+            {description ? (
               <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">{description}</p>
+            ) : (
+              <div className="space-y-1.5 max-w-2xl">
+                <div className="h-3.5 w-full rounded bg-muted animate-pulse" />
+                <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
+              </div>
             )}
           </div>
 
           <div className="text-right">
             {priceLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
+              <div className="space-y-2">
+                <div className="h-8 w-32 rounded bg-muted animate-pulse ml-auto" />
+                <div className="h-4 w-48 rounded bg-muted animate-pulse ml-auto" />
               </div>
             ) : price > 0 ? (
               <>

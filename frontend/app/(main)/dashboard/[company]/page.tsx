@@ -84,53 +84,39 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
 
       {/* Tabs для переключения между разными видами данных */}
       <Tabs defaultValue="about" className="w-full">
-        <TabsList className="grid w-full lg:w-auto" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
+        <TabsList className="grid w-full lg:w-auto grid-cols-5">
           <TabsTrigger value="about">О компании</TabsTrigger>
-          <TabsTrigger value="reports">Отчёты</TabsTrigger>
           <TabsTrigger value="metrics">Показатели</TabsTrigger>
-          <TabsTrigger value="news">Новости</TabsTrigger>
           <TabsTrigger value="ai-analysis">AI Анализ</TabsTrigger>
+          <TabsTrigger value="news">Новости</TabsTrigger>
+          <TabsTrigger value="reports">Отчёты</TabsTrigger>
         </TabsList>
 
-        {/* TODO: Вернуть табы overview, financials, charts когда будет API для финансовых данных */}
-        {/* {hasFinancials && latestMetrics && latestIndicators && (
-          <>
-            <TabsContent value="overview" className="space-y-8 mt-6">
-              <KeyMetricsGrid indicators={latestIndicators} industryAverages={industryAverages} />
-              ...
-            </TabsContent>
-            <TabsContent value="financials" className="space-y-6 mt-6">
-              <FinancialStatements metrics={latestMetrics} />
-            </TabsContent>
-            <TabsContent value="charts" className="space-y-6 mt-6">
-              ...
-            </TabsContent>
-          </>
-        )} */}
-
         {/* О компании */}
-        <TabsContent value="about" className="mt-6">
+        <TabsContent value="about" className="mt-6 animate-fade-in">
           <CompanyAbout ticker={decodedTicker} />
         </TabsContent>
 
-        {/* Отчёты */}
-        <TabsContent value="reports" className="mt-6">
-          <CompanyReports ticker={decodedTicker} />
-        </TabsContent>
-
+        
         {/* Показатели */}
-        <TabsContent value="metrics" className="mt-6">
+        <TabsContent value="metrics" className="mt-6 animate-fade-in">
           <CompanyMetrics ticker={decodedTicker} />
         </TabsContent>
 
+        {/* AI Анализ */}
+        <TabsContent value="ai-analysis" className="mt-6 animate-fade-in">
+          <CompanyAnalyses ticker={decodedTicker} />
+        </TabsContent>
+
         {/* Новости */}
-        <TabsContent value="news" className="mt-6">
+        <TabsContent value="news" className="mt-6 animate-fade-in">
           <CompanyNews ticker={decodedTicker} />
         </TabsContent>
 
-        {/* AI Анализ */}
-        <TabsContent value="ai-analysis" className="mt-6">
-          <CompanyAnalyses ticker={decodedTicker} />
+
+        {/* Отчёты */}
+        <TabsContent value="reports" className="mt-6 animate-fade-in">
+          <CompanyReports ticker={decodedTicker} />
         </TabsContent>
       </Tabs>
     </div>

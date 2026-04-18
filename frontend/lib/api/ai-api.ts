@@ -172,10 +172,25 @@ export const aiApi = {
     });
 
     if (response.status === 404) return null;
-    if (!response.ok) return null;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch news (${response.status})`);
+    }
 
     const json = await response.json();
     return json.data || null;
+  },
+
+  async triggerNews(ticker: string, signal?: AbortSignal): Promise<void> {
+    const params = new URLSearchParams({ ticker });
+
+    const response = await fetch(`${AI_BASE_URL}/news/trigger?${params}`, {
+      method: 'POST',
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to trigger news fetch (${response.status})`);
+    }
   },
 
   async getReportResults(
