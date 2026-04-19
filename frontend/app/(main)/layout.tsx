@@ -51,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col min-h-screen bg-background">
       <TopNavbar />
 
-      <div className="flex flex-1 pt-16">
+      <div className="flex flex-1 pt-[52px]">
         <main className="flex-1 px-4 md:px-8 py-4 overflow-y-auto">
           {children}
         </main>
