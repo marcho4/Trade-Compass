@@ -6,6 +6,7 @@ import {
   CompanyReports,
   CompanyAnalyses,
   CompanyNews,
+  CompanyMetrics,
 } from "@/components/company"
 import {
   T,
@@ -13,7 +14,6 @@ import {
   TickerTabStrip,
   TickerFooter,
   TickerTabAbout,
-  TickerTabMetrics,
   TPanel,
   type TickerHeroData,
   type TickerTab,
@@ -197,7 +197,13 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
 
         <div style={{ marginTop: 16 }}>
           {tab === "about" && <TickerTabAbout ticker={decodedTicker} />}
-          {tab === "metrics" && <TickerTabMetrics ticker={decodedTicker} />}
+          {tab === "metrics" && (
+            <TPanel title="Финансовые показатели" accent={T.accent}>
+              <div style={{ padding: 16, background: T.panel }}>
+                <CompanyMetrics ticker={decodedTicker} />
+              </div>
+            </TPanel>
+          )}
           {tab === "ai" && (
             <TPanel title="AI Анализ" accent={T.accent}>
               <div style={{ padding: 16, background: T.panel }}>
