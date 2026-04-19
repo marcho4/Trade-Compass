@@ -9,7 +9,6 @@ import {
 } from "@/components/company"
 import {
   T,
-  TickerTopBar,
   TickerHero,
   TickerTabStrip,
   TickerFooter,
@@ -30,32 +29,6 @@ type PageProps = {
   }>
 }
 
-function formatMoscowTime(d: Date): string {
-  return new Intl.DateTimeFormat("ru-RU", {
-    timeZone: "Europe/Moscow",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(d)
-    .replace(",", " ·")
-    .toUpperCase()
-}
-
-function isMoexOpen(d: Date): boolean {
-  const moscowHour = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Europe/Moscow",
-      hour: "2-digit",
-      hour12: false,
-    }).format(d),
-  )
-  const isWeekend = d.getUTCDay() === 0 || d.getUTCDay() === 6
-  return !isWeekend && moscowHour >= 10 && moscowHour < 24
-}
 
 const CompanyDashboardPage = ({ params }: PageProps) => {
   const { company: ticker } = use(params)
@@ -114,11 +87,6 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
   }, [decodedTicker])
 
   const now = useMemo(() => new Date(), [])
-  const marketOpen = useMemo(() => isMoexOpen(now), [now])
-  const marketLabel = useMemo(
-    () => `MOEX ${marketOpen ? "OPEN" : "CLOSED"} · ${formatMoscowTime(now)} МСК`,
-    [now, marketOpen],
-  )
 
   const lastUpdate = useMemo(
     () =>
@@ -214,8 +182,6 @@ const CompanyDashboardPage = ({ params }: PageProps) => {
         minHeight: "calc(100vh - 64px)",
       }}
     >
-      <TickerTopBar ticker={decodedTicker} marketOpen={marketOpen} marketLabel={marketLabel} />
-
       <div
         style={{
           padding: "18px 28px",
