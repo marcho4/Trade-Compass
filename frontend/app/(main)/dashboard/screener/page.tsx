@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { CompanyCard, ScreenerFilters } from "@/components/screener"
+import { SearchX } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, SearchX } from "lucide-react"
 import { financialDataApi, Sector, Company } from "@/lib/api"
 import { aiApi } from "@/lib/api/ai-api"
 import type { FilterValues, CompanyRating } from "@/components/screener/types"
@@ -32,6 +32,12 @@ const DEFAULT_RATING: CompanyRating = {
   total: 0,
 }
 
+const SORT_OPTIONS = [
+  { k: "rating", label: "Рейтинг" },
+  { k: "name", label: "Тикер" },
+  { k: "cap", label: "Капитализация" },
+]
+
 export default function ScreenerPage() {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
@@ -43,6 +49,8 @@ export default function ScreenerPage() {
     sector: "",
     ratingMin: "",
   })
+  const [sort, setSort] = useState("rating")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
   const [priceMap, setPriceMap] = useState<Map<string, PriceInfo>>(new Map())
   const [marketCapMap, setMarketCapMap] = useState<Map<string, number>>(new Map())
@@ -97,16 +105,23 @@ export default function ScreenerPage() {
   }
 
   const handleResetFilters = () => {
-    setFilters({
-      search: "",
-      sector: "",
-      ratingMin: "",
-    })
+    setFilters({ search: "", sector: "", ratingMin: "" })
+    setCurrentPage(1)
+  }
+
+  const handleSortCycle = () => {
+    if (sortDir === "desc") {
+      setSortDir("asc")
+    } else {
+      const idx = SORT_OPTIONS.findIndex((s) => s.k === sort)
+      setSort(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].k)
+      setSortDir("desc")
+    }
     setCurrentPage(1)
   }
 
   const filteredCompanies = useMemo(() => {
-    return companies.filter((company) => {
+    const list = companies.filter((company) => {
       if (filters.search) {
         const q = filters.search.toLowerCase()
         if (
@@ -116,27 +131,35 @@ export default function ScreenerPage() {
           return false
         }
       }
-
       if (filters.sector && company.sectorId !== parseInt(filters.sector)) {
         return false
       }
-
       if (filters.ratingMin) {
         if (company.rating.total < parseFloat(filters.ratingMin)) {
           return false
         }
       }
-
       return true
     })
-  }, [companies, filters])
+
+    list.sort((a, b) => {
+      let cmp = 0
+      if (sort === "rating") cmp = a.rating.total - b.rating.total
+      else if (sort === "name") cmp = a.ticker.localeCompare(b.ticker)
+      else if (sort === "cap") {
+        const ca = marketCapMap.get(a.ticker) ?? 0
+        const cb = marketCapMap.get(b.ticker) ?? 0
+        cmp = ca - cb
+      }
+      return sortDir === "asc" ? cmp : -cmp
+    })
+
+    return list
+  }, [companies, filters, sort, sortDir, marketCapMap])
 
   const totalPages = Math.ceil(filteredCompanies.length / ITEMS_PER_PAGE)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-  const paginatedCompanies = filteredCompanies.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE
-  )
+  const paginatedCompanies = filteredCompanies.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
   const visibleTickers = useMemo(
     () => paginatedCompanies.map((c) => c.ticker),
@@ -191,14 +214,6 @@ export default function ScreenerPage() {
     return () => controller.abort()
   }, [visibleTickers.join(",")])
 
-  const handlePreviousPage = () => {
-    setCurrentPage((prev) => Math.max(1, prev - 1))
-  }
-
-  const handleNextPage = () => {
-    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-  }
-
   const handleCompanyClick = (ticker: string) => {
     router.push(`/dashboard/${ticker}`)
   }
@@ -223,125 +238,116 @@ export default function ScreenerPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Загрузка компаний...</p>
+          <p className="font-mono text-[11px] text-muted-foreground tracking-[1px] uppercase">
+            Загрузка…
+          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Скринер акций</h1>
-        <p className="text-muted-foreground">
-          Найдите компании, которые соответствуют вашим инвестиционным критериям
-        </p>
-      </div>
-
-      <div className="mb-6">
+    <div className="container mx-auto px-4 py-6">
+      <div className="mb-4">
         <ScreenerFilters
           filters={filters}
           onFilterChange={handleFilterChange}
           onReset={handleResetFilters}
           sectors={sectors}
+          sort={sort}
+          sortDir={sortDir}
+          onSortCycle={handleSortCycle}
+          found={filteredCompanies.length}
+          total={companies.length}
         />
       </div>
 
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Найдено компаний: <span className="font-semibold text-foreground">{filteredCompanies.length}</span>
-          </p>
-          {totalPages > 1 && (
-            <p className="text-sm text-muted-foreground">
-              Страница {currentPage} из {totalPages}
-            </p>
-          )}
+      {paginatedCompanies.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+          {paginatedCompanies.map((company) => {
+            const priceInfo = priceMap.get(company.ticker)
+            const mcap = marketCapMap.get(company.ticker)
+            return (
+              <CompanyCard
+                key={company.id}
+                id={company.id}
+                ticker={company.ticker}
+                name={company.name}
+                sector={company.sectorName}
+                price={priceInfo?.price ?? 0}
+                priceChange={priceInfo?.priceChange ?? 0}
+                priceChangePercent={priceInfo?.priceChangePercent ?? 0}
+                priceLoading={!priceInfo}
+                rating={company.rating}
+                marketCap={mcap}
+                onClick={() => handleCompanyClick(company.ticker)}
+              />
+            )
+          })}
         </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <SearchX className="h-8 w-8 text-muted-foreground/40 mb-3" />
+          <p className="font-mono text-[11px] font-bold tracking-[1px] uppercase text-muted-foreground mb-3">
+            Компании не найдены
+          </p>
+          <Button onClick={handleResetFilters} variant="outline" className="rounded-[2px] font-mono text-[11px] font-bold tracking-[0.8px] uppercase h-8">
+            Сбросить фильтры
+          </Button>
+        </div>
+      )}
 
-        {paginatedCompanies.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-            {paginatedCompanies.map((company) => {
-              const priceInfo = priceMap.get(company.ticker)
-              const mcap = marketCapMap.get(company.ticker)
-              return (
-                <CompanyCard
-                  key={company.id}
-                  id={company.id}
-                  ticker={company.ticker}
-                  name={company.name}
-                  sector={company.sectorName}
-                  price={priceInfo?.price ?? 0}
-                  priceChange={priceInfo?.priceChange ?? 0}
-                  priceChangePercent={priceInfo?.priceChangePercent ?? 0}
-                  priceLoading={!priceInfo}
-                  rating={company.rating}
-                  marketCap={mcap}
-                  onClick={() => handleCompanyClick(company.ticker)}
-                />
-              )
-            })}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <SearchX className="h-10 w-10 text-muted-foreground/40 mb-4" />
-            <p className="text-xl font-semibold text-muted-foreground mb-2">
-              Компании не найдены
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Попробуйте изменить параметры фильтров
-            </p>
-            <Button onClick={handleResetFilters} variant="outline">
-              Сбросить фильтры
-            </Button>
-          </div>
-        )}
-
-        {paginationPages.length > 0 && paginatedCompanies.length > 0 && (
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePreviousPage}
+      {/* Pagination */}
+      {paginationPages.length > 0 && paginatedCompanies.length > 0 && (
+        <div className="flex items-center justify-between mt-5 pt-4 border-t border-dashed border-border">
+          <span className="font-mono text-[10.5px] text-muted-foreground tracking-[0.6px] uppercase">
+            стр{" "}
+            <span className="text-foreground font-bold">{currentPage}</span>
+            <span className="text-muted-foreground/50"> / {totalPages}</span>
+            <span className="text-muted-foreground/40 mx-2">·</span>
+            показано {startIndex + 1}–{Math.min(startIndex + ITEMS_PER_PAGE, filteredCompanies.length)} из {filteredCompanies.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
               disabled={currentPage === 1}
-              aria-label="Предыдущая страница"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border border-border bg-card text-foreground cursor-pointer disabled:text-muted-foreground/40 disabled:cursor-default hover:bg-muted/50 transition-colors min-w-[24px] text-center"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {paginationPages.map((item, idx) =>
-                item === "ellipsis" ? (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground" aria-hidden="true">
-                    ...
-                  </span>
-                ) : (
-                  <Button
-                    key={item}
-                    variant={item === currentPage ? "default" : "outline"}
-                    size="icon"
-                    onClick={() => setCurrentPage(item)}
-                    aria-label={`Страница ${item}`}
-                    className="w-10"
-                  >
-                    {item}
-                  </Button>
-                )
-              )}
-            </div>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleNextPage}
+              ‹
+            </button>
+            {paginationPages.map((item, idx) =>
+              item === "ellipsis" ? (
+                <span
+                  key={`ellipsis-${idx}`}
+                  className="px-2 font-mono text-[10.5px] text-muted-foreground/40"
+                >
+                  …
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  onClick={() => setCurrentPage(item)}
+                  className={[
+                    "font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border cursor-pointer min-w-[24px] text-center transition-colors",
+                    item === currentPage
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-card text-foreground border-border hover:bg-muted/50",
+                  ].join(" ")}
+                >
+                  {item}
+                </button>
+              )
+            )}
+            <button
               disabled={currentPage === totalPages}
-              aria-label="Следующая страница"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border border-border bg-card text-foreground cursor-pointer disabled:text-muted-foreground/40 disabled:cursor-default hover:bg-muted/50 transition-colors min-w-[24px] text-center"
             >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              ›
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
