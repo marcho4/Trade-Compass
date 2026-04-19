@@ -91,7 +91,7 @@ export const TopNavbar = () => {
   const marketOpen = useMemo(isMoexOpen, [])
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-7 h-[52px] border-b border-border bg-background">
+    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-7 h-[52px] border-b border-border bg-card">
       <div className="flex items-center gap-4">
         <Link
           href="/dashboard/screener"
