@@ -131,6 +131,34 @@ func (r *RawDataRepository) GetHistoryByTicker(ctx context.Context, ticker strin
 	return result, nil
 }
 
+func (r *RawDataRepository) GetTTMHistoryByTicker(ctx context.Context, ticker string) ([]domain.RawData, error) {
+	if ticker == "" {
+		return nil, fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)
+	}
+
+	query := fmt.Sprintf(`SELECT %s FROM metrics WHERE ticker = $1 AND status = 'confirmed' ORDER BY year ASC, period ASC`, rawDataSelectColumns)
+
+	rows, err := r.pool.Query(ctx, query, ticker)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query metrics: %w", err)
+	}
+	defer rows.Close()
+
+	var history []domain.RawData
+	for rows.Next() {
+		var rd domain.RawData
+		if err := rows.Scan(rawDataScanTargets(&rd)...); err != nil {
+			return nil, fmt.Errorf("failed to scan metrics: %w", err)
+		}
+		history = append(history, rd)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating metrics: %w", err)
+	}
+
+	return domain.BuildAnnualSnapshots(history), nil
+}
+
 func (r *RawDataRepository) GetDraftByTickerAndPeriod(ctx context.Context, ticker string, year int, period domain.ReportPeriod) (*domain.RawData, error) {
 	if ticker == "" {
 		return nil, fmt.Errorf("ticker is empty: %w", domain.ErrInvalidInput)

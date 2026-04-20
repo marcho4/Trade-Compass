@@ -105,6 +105,19 @@ func (h *RawDataHandler) HandleGetHistory(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if r.URL.Query().Get("aggregation") == "ttm" {
+		snapshots, err := h.repo.GetTTMHistoryByTicker(r.Context(), ticker)
+		if err != nil {
+			response.RespondWithError(w, r, 500, "failed to load TTM history", err)
+			return
+		}
+		if snapshots == nil {
+			snapshots = []domain.RawData{}
+		}
+		response.RespondWithSuccess(w, 200, snapshots, "")
+		return
+	}
+
 	history, err := h.repo.GetHistoryByTicker(r.Context(), ticker)
 	if err != nil {
 		response.RespondWithError(w, r, 500, "failed to load metrics history", err)
@@ -253,7 +266,7 @@ func (h *RawDataHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rawData.Status == domain.StatusConfirmed {
+	if rawData.Status == domain.StatusConfirmed && rawData.Period == "YEAR" {
 		go func() {
 			defer func() {
 				if rv := recover(); rv != nil {
@@ -325,8 +338,10 @@ func (h *RawDataHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		if updated.Status != domain.StatusConfirmed {
 			return
 		}
-		if err := h.ratiosService.CalculateAndSave(context.Background(), updated); err != nil {
-			slog.Error("failed to calculate ratios after update", "ticker", ticker, "error", err)
+		if updated.Period == "YEAR" {
+			if err := h.ratiosService.CalculateAndSave(context.Background(), updated); err != nil {
+				slog.Error("failed to calculate ratios after update", "ticker", ticker, "error", err)
+			}
 		}
 	}()
 
