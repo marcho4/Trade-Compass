@@ -54,41 +54,92 @@ func (u *ExtractRawDataUsecase) Execute(ctx context.Context, task entity.Task) e
 	}
 
 	if existing == nil {
-		prompt := docs.RawDataAgentPrompt() + "\n<ticker>" + task.Ticker + "</ticker>"
+		prompt := docs.RawDataAgentPrompt() + "\n## Ticker\n\n" + task.Ticker
 
 		pdfBytes, err := u.storage.DownloadPDF(ctx, task.ReportURL)
 		if err != nil {
 			return fmt.Errorf("download PDF: %w", err)
 		}
 
-		text, err := u.ai.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Pro)
+		var temp float32 = 0.1
+
+		text, err := u.ai.AnalyzeWithPDF(
+			ctx,
+			pdfBytes,
+			prompt,
+			entity.Pro,
+			GenerateParams{
+				Temperature:    &temp,
+				ResponseSchema: getResponseSchema(),
+			},
+		)
+
+		if err != nil {
+			return fmt.Errorf("ai call with pdf: %w", err)
+		}
+
+		prompt = docs.RawDataValidatorPrompt()
+		prompt += "\n\n## Received raw data from an agent\n\n" + text
+
+		validationResults, err := u.ai.AnalyzeWithPDF(
+			ctx,
+			pdfBytes,
+			prompt,
+			entity.Pro,
+			GenerateParams{
+				Temperature:    &temp,
+				ResponseSchema: getValidatorResponseSchema(),
+			},
+		)
+
+		if err != nil {
+			return fmt.Errorf("validate: %w", err)
+		}
+
+		logger.Info("Validation Result", "res", validationResults)
+
+		prompt = docs.RawDataAgentPrompt() +
+			"\n## Ticker\n\n" + task.Ticker +
+			"\n\n## Validation result\n\nFix every issue with errorLevel \"critical\" or \"high\". Issues with errorLevel \"warning\" should be reviewed but fixed only if clearly wrong.\n\n" +
+			validationResults +
+			"\n\n## Old result\n\n" + text
+
+		finalRawData, err := u.ai.AnalyzeWithPDF(
+			ctx,
+			pdfBytes,
+			prompt,
+			entity.Pro,
+			GenerateParams{
+				Temperature:    &temp,
+				ResponseSchema: getResponseSchema(),
+			},
+		)
+
 		if err != nil {
 			return fmt.Errorf("ai call with pdf: %w", err)
 		}
 
 		var rawData entity.RawData
-		if err := json.Unmarshal([]byte(text), &rawData); err != nil {
+		if err := json.Unmarshal([]byte(finalRawData), &rawData); err != nil {
 			return fmt.Errorf("unmarshal raw data: %w", err)
 		}
 
-		stockInfo, err := u.fd.GetStockInfo(ctx, task.Ticker)
-		if err != nil {
-			logger.Warn("failed to get stock info, skipping market cap calculation", slog.Any("error", err))
+		periodEnd := periodEndDate(task.Year, period)
+		stockInfo, stockErr := u.fd.GetStockInfo(ctx, task.Ticker)
+		price, priceErr := u.fd.GetPriceAt(ctx, task.Ticker, periodEnd)
+
+		if stockErr != nil || priceErr != nil {
+			logger.Warn(
+				"failed to get stock info or price, skipping market cap calculation",
+				slog.Any("stock error", stockErr),
+				slog.Any("price err", priceErr),
+			)
 		} else {
-			periodEnd := periodEndDate(task.Year, period)
-			price, err := u.fd.GetPriceAt(ctx, task.Ticker, periodEnd)
-			if err != nil {
-				logger.Warn("failed to get price at period end, skipping market cap calculation",
-					slog.String("date", periodEnd.Format("2006-01-02")),
-					slog.Any("error", err),
-				)
-			} else {
-				unitDivisor := unitDivisorForReportUnits(rawData.ReportUnits)
-				shares := int64(stockInfo.NumberOfShares)
-				rawData.SharesOutstanding = &shares
-				marketCap := int64(math.Round(price*float64(stockInfo.NumberOfShares))) / unitDivisor
-				rawData.MarketCap = &marketCap
-			}
+			unitDivisor := unitDivisorForReportUnits(rawData.ReportUnits)
+			shares := int64(stockInfo.NumberOfShares)
+			rawData.SharesOutstanding = &shares
+			marketCap := int64(math.Round(price*float64(stockInfo.NumberOfShares))) / unitDivisor
+			rawData.MarketCap = &marketCap
 		}
 
 		rawData.ComputeDerivedFields()
@@ -142,4 +193,128 @@ func periodEndDate(year int, period entity.ReportPeriod) time.Time {
 	}
 	lastDay := time.Date(year, time.Month(months)+1, 0, 0, 0, 0, 0, time.UTC)
 	return lastDay
+}
+
+func getResponseSchema() *Schema {
+	str := &Schema{Type: TypeString}
+	integer := &Schema{Type: TypeInteger}
+	warnings := &Schema{Type: TypeArray, Items: str}
+
+	properties := map[string]*Schema{
+		"ticker":      str,
+		"year":        integer,
+		"period":      {Type: TypeString, Enum: []string{"Q1", "Q2", "Q3", "YEAR"}},
+		"status":      str,
+		"reportUnits": {Type: TypeString, Enum: []string{"units", "thousands", "millions", "billions"}},
+		"companyType": {Type: TypeString, Enum: []string{"bank", "corporate"}},
+
+		// Income Statement
+		"revenue":           integer,
+		"costOfRevenue":     integer,
+		"grossProfit":       integer,
+		"operatingExpenses": integer,
+		"otherIncome":       integer,
+		"otherExpenses":     integer,
+		"ebit":              integer,
+		"interestIncome":    integer,
+		"interestExpense":   integer,
+		"profitBeforeTax":   integer,
+		"taxExpense":        integer,
+		"netProfit":         integer,
+		"netProfitParent":   integer,
+
+		// Balance Sheet - Assets
+		"totalAssets":           integer,
+		"currentAssets":         integer,
+		"cashAndEquivalents":    integer,
+		"inventories":           integer,
+		"receivables":           integer,
+		"fixedAssets":           integer,
+		"rightOfUseAssets":      integer,
+		"intangibleAssets":      integer,
+		"goodwill":              integer,
+		"totalNonCurrentAssets": integer,
+
+		// Balance Sheet - Liabilities & Equity
+		"totalLiabilities":   integer,
+		"currentLiabilities": integer,
+		"longTermDebt":       integer,
+		"shortTermDebt":      integer,
+		"ltLeaseLiabilities": integer,
+		"stLeaseLiabilities": integer,
+		"tradePayables":      integer,
+		"equity":             integer,
+		"equityParent":       integer,
+		"treasuryShares":     integer,
+		"retainedEarnings":   integer,
+
+		// Cash Flow
+		"operatingCashFlow": integer,
+		"investingCashFlow": integer,
+		"financingCashFlow": integer,
+		"daFixedRou":        integer,
+		"daIntangibles":     integer,
+		"capexFa":           integer,
+		"capexIa":           integer,
+		"dividendsPaid":     integer,
+		"leasePayments":     integer,
+		"acquisitionsNet":   integer,
+		"interestPaid":      integer,
+		"debtProceeds":      integer,
+		"debtRepayments":    integer,
+
+		// Interest breakdown
+		"interestOnLeases": integer,
+		"interestOnLoans":  integer,
+
+		// Bank-specific
+		"netInterestIncome":    integer,
+		"commissionIncome":     integer,
+		"commissionExpense":    integer,
+		"netCommissionIncome":  integer,
+		"creditLossProvision":  integer,
+		"interbankLiabilities": integer,
+
+		"warnings": warnings,
+	}
+
+	return &Schema{
+		Type:       TypeObject,
+		Properties: properties,
+		Required: []string{
+			"ticker", "year", "period", "reportUnits", "companyType",
+			"revenue", "costOfRevenue", "grossProfit", "operatingExpenses",
+			"ebit", "interestExpense", "profitBeforeTax", "taxExpense", "netProfit",
+			"totalAssets", "currentAssets", "cashAndEquivalents", "inventories", "receivables",
+			"totalLiabilities", "currentLiabilities", "longTermDebt", "shortTermDebt",
+			"equity", "retainedEarnings",
+			"operatingCashFlow", "investingCashFlow", "financingCashFlow",
+			"warnings",
+		},
+	}
+}
+
+func getValidatorResponseSchema() *Schema {
+	str := &Schema{Type: TypeString}
+
+	properties := map[string]*Schema{
+		"rule":       str,
+		"errorLevel": {Type: TypeString, Enum: []string{"critical", "high", "warning"}},
+		"fieldName":  str,
+		"reason":     str,
+		"hint":       str,
+	}
+
+	errReport := Schema{
+		Type:       TypeObject,
+		Properties: properties,
+		Required:   []string{"fieldName", "errorLevel", "reason", "rule", "hint"},
+	}
+
+	validatorReport := Schema{
+		Type:  TypeArray,
+		Items: &errReport,
+	}
+
+	return &validatorReport
 }

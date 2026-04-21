@@ -11,8 +11,11 @@ var analysisFramework string
 //go:embed agents/results-extractor.md
 var extractPrompt string
 
-//go:embed agents/raw-data-extractor.md
+//go:embed agents/raw-data-extractor-v2.md
 var rawDataAgentPrompt string
+
+//go:embed agents/raw-data-validator.md
+var rawDataValidatorPrompt string
 
 //go:embed agents/news-collector.md
 var newsCollectorAgent string
@@ -56,4 +59,8 @@ func RiskAndGrowthPrompt() string {
 
 func ScenarioGeneratorPrompt() string {
 	return scenarioGeneratorPrompt
+}
+
+func RawDataValidatorPrompt() string {
+	return rawDataValidatorPrompt
 }

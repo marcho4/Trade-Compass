@@ -127,7 +127,7 @@ func (u *AnalyzeReportUsecase) Execute(ctx context.Context, task entity.Task) er
 	logger.Info("calling Gemini API")
 
 	start := time.Now()
-	result, err := u.aiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Pro)
+	result, err := u.aiClient.AnalyzeWithPDF(ctx, pdfBytes, prompt, entity.Pro, GenerateParams{})
 	if err != nil {
 		return fmt.Errorf("generate analysis: %w", err)
 	}

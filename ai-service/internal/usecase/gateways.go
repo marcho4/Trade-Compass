@@ -31,11 +31,8 @@ type StorageClient interface {
 	DownloadPDF(ctx context.Context, url string) ([]byte, error)
 }
 
-// AIProvider — провайдер-агностичный интерфейс LLM.
-// Конкретные реализации (Gemini, OpenAI, ...) живут в gateway-слое и
-// конвертируют GenerateParams/Schema в свои внутренние типы.
 type AIProvider interface {
-	AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string, model entity.AIModel) (string, error)
+	AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string, model entity.AIModel, params GenerateParams) (string, error)
 	GenerateText(ctx context.Context, prompt string, model entity.AIModel, params GenerateParams) (string, error)
 }
 
@@ -56,8 +53,6 @@ const (
 	TypeBoolean SchemaType = "boolean"
 )
 
-// Schema — провайдер-агностичное описание JSON-схемы ответа LLM.
-// Покрывает подмножество JSON Schema, которое реально использует проект.
 type Schema struct {
 	Type       SchemaType
 	Properties map[string]*Schema

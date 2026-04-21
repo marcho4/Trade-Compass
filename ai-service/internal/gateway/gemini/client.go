@@ -44,7 +44,7 @@ func NewClient(apiKey string, proxyURL string) (*Client, error) {
 	return &Client{client: client}, nil
 }
 
-func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemPrompt string, model entity.AIModel) (string, error) {
+func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, prompt string, model entity.AIModel, params usecase.GenerateParams) (string, error) {
 	contents := []*genai.Content{
 		{
 			Role: "user",
@@ -52,23 +52,21 @@ func (c *Client) AnalyzeWithPDF(ctx context.Context, pdfBytes []byte, systemProm
 				genai.NewPartFromBytes(pdfBytes, "application/pdf"),
 			},
 		},
+		{
+			Role:  "user",
+			Parts: []*genai.Part{genai.NewPartFromText(prompt)},
+		},
 	}
 
-	var temp float32 = 0.2
+	config := buildConfig(params)
+
 	var thinkingBudget int32 = 16000
 
-	config := &genai.GenerateContentConfig{
-		SystemInstruction: &genai.Content{
-			Parts: []*genai.Part{
-				genai.NewPartFromText(systemPrompt),
-			},
-		},
-		Temperature: &temp,
-		ThinkingConfig: &genai.ThinkingConfig{
-			IncludeThoughts: false,
-			ThinkingBudget:  &thinkingBudget,
-		},
-	}
+	thinkingConfig := &genai.ThinkingConfig{}
+	thinkingConfig.ThinkingBudget = &thinkingBudget
+	thinkingConfig.IncludeThoughts = false
+
+	config.ThinkingConfig = thinkingConfig
 
 	result, err := c.client.Models.GenerateContent(ctx, string(model), contents, config)
 	if err != nil {
