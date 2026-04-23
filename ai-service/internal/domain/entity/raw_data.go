@@ -161,11 +161,17 @@ func (r *RawData) ComputeDerivedFields() {
 	r.CAPEX = negSumPtr(r.CapexFA, r.CapexIA)
 
 	r.EBITDA = sumPtr(r.EBIT, r.Depreciation)
-	r.FreeCashFlow = sumPtr(r.OperatingCashFlow, r.CAPEX)
-	r.Debt = sumPtr(r.LongTermDebt, r.ShortTermDebt)
+	r.FreeCashFlow = sumPtr(sumPtr(r.OperatingCashFlow, r.CAPEX), r.LeasePayments)
+	r.Debt = sumPtr(sumPtr(r.LongTermDebt, r.ShortTermDebt), sumPtr(r.LtLeaseLiabilities, r.StLeaseLiabilities))
 	r.NetDebt = subPtr(r.Debt, r.CashAndEquivalents)
-	r.WorkingCapital = subPtr(r.CurrentAssets, r.CurrentLiabilities)
-	r.CapitalEmployed = subPtr(r.TotalAssets, r.CurrentLiabilities)
+
+	operatingAssets := subPtr(r.CurrentAssets, r.CashAndEquivalents)
+	operatingLiabilities := subPtr(subPtr(r.CurrentLiabilities, r.ShortTermDebt), r.StLeaseLiabilities)
+
+	r.WorkingCapital = subPtr(operatingAssets, operatingLiabilities)
+
+	r.CapitalEmployed = subPtr(r.TotalAssets, operatingLiabilities)
+
 	if r.MarketCap != nil {
 		r.EnterpriseValue = sumPtr(r.MarketCap, r.NetDebt)
 	}
