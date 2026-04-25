@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { financialDataApi, Sector, Company } from "@/lib/api"
 import { aiApi } from "@/lib/api/ai-api"
 import type { FilterValues, CompanyRating } from "@/components/screener/types"
+import { Footer } from "@/components/layout/Footer"
 
 interface CompanyWithRating extends Company {
   name: string
@@ -247,107 +248,110 @@ export default function ScreenerPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="mb-4">
-        <ScreenerFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onReset={handleResetFilters}
-          sectors={sectors}
-          sort={sort}
-          sortDir={sortDir}
-          onSortCycle={handleSortCycle}
-          found={filteredCompanies.length}
-          total={companies.length}
-        />
-      </div>
-
-      {paginatedCompanies.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {paginatedCompanies.map((company) => {
-            const priceInfo = priceMap.get(company.ticker)
-            const mcap = marketCapMap.get(company.ticker)
-            return (
-              <CompanyCard
-                key={company.id}
-                id={company.id}
-                ticker={company.ticker}
-                name={company.name}
-                sector={company.sectorName}
-                price={priceInfo?.price ?? 0}
-                priceChange={priceInfo?.priceChange ?? 0}
-                priceChangePercent={priceInfo?.priceChangePercent ?? 0}
-                priceLoading={!priceInfo}
-                rating={company.rating}
-                marketCap={mcap}
-                onClick={() => handleCompanyClick(company.ticker)}
-              />
-            )
-          })}
+    <>
+      <div className="container mx-auto px-4 py-6">
+        <div className="mb-4">
+          <ScreenerFilters
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onReset={handleResetFilters}
+            sectors={sectors}
+            sort={sort}
+            sortDir={sortDir}
+            onSortCycle={handleSortCycle}
+            found={filteredCompanies.length}
+            total={companies.length}
+          />
         </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <SearchX className="h-8 w-8 text-muted-foreground/40 mb-3" />
-          <p className="font-mono text-[11px] font-bold tracking-[1px] uppercase text-muted-foreground mb-3">
-            Компании не найдены
-          </p>
-          <Button onClick={handleResetFilters} variant="outline" className="rounded-[2px] font-mono text-[11px] font-bold tracking-[0.8px] uppercase h-8">
-            Сбросить фильтры
-          </Button>
-        </div>
-      )}
 
-      {/* Pagination */}
-      {paginationPages.length > 0 && paginatedCompanies.length > 0 && (
-        <div className="flex items-center justify-between mt-5 pt-4 border-t border-dashed border-border">
-          <span className="font-mono text-[10.5px] text-muted-foreground tracking-[0.6px] uppercase">
-            стр{" "}
-            <span className="text-foreground font-bold">{currentPage}</span>
-            <span className="text-muted-foreground/50"> / {totalPages}</span>
-            <span className="text-muted-foreground/40 mx-2">·</span>
-            показано {startIndex + 1}–{Math.min(startIndex + ITEMS_PER_PAGE, filteredCompanies.length)} из {filteredCompanies.length}
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border border-border bg-card text-foreground cursor-pointer disabled:text-muted-foreground/40 disabled:cursor-default hover:bg-muted/50 transition-colors min-w-[24px] text-center"
-            >
-              ‹
-            </button>
-            {paginationPages.map((item, idx) =>
-              item === "ellipsis" ? (
-                <span
-                  key={`ellipsis-${idx}`}
-                  className="px-2 font-mono text-[10.5px] text-muted-foreground/40"
-                >
-                  …
-                </span>
-              ) : (
-                <button
-                  key={item}
-                  onClick={() => setCurrentPage(item)}
-                  className={[
-                    "font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border cursor-pointer min-w-[24px] text-center transition-colors",
-                    item === currentPage
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-card text-foreground border-border hover:bg-muted/50",
-                  ].join(" ")}
-                >
-                  {item}
-                </button>
+        {paginatedCompanies.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+            {paginatedCompanies.map((company) => {
+              const priceInfo = priceMap.get(company.ticker)
+              const mcap = marketCapMap.get(company.ticker)
+              return (
+                <CompanyCard
+                  key={company.id}
+                  id={company.id}
+                  ticker={company.ticker}
+                  name={company.name}
+                  sector={company.sectorName}
+                  price={priceInfo?.price ?? 0}
+                  priceChange={priceInfo?.priceChange ?? 0}
+                  priceChangePercent={priceInfo?.priceChangePercent ?? 0}
+                  priceLoading={!priceInfo}
+                  rating={company.rating}
+                  marketCap={mcap}
+                  onClick={() => handleCompanyClick(company.ticker)}
+                />
               )
-            )}
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border border-border bg-card text-foreground cursor-pointer disabled:text-muted-foreground/40 disabled:cursor-default hover:bg-muted/50 transition-colors min-w-[24px] text-center"
-            >
-              ›
-            </button>
+            })}
           </div>
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <SearchX className="h-8 w-8 text-muted-foreground/40 mb-3" />
+            <p className="font-mono text-[11px] font-bold tracking-[1px] uppercase text-muted-foreground mb-3">
+              Компании не найдены
+            </p>
+            <Button onClick={handleResetFilters} variant="outline" className="rounded-[2px] font-mono text-[11px] font-bold tracking-[0.8px] uppercase h-8">
+              Сбросить фильтры
+            </Button>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {paginationPages.length > 0 && paginatedCompanies.length > 0 && (
+          <div className="flex items-center justify-between mt-5 pt-4 border-t border-dashed border-border">
+            <span className="font-mono text-[10.5px] text-muted-foreground tracking-[0.6px] uppercase">
+              стр{" "}
+              <span className="text-foreground font-bold">{currentPage}</span>
+              <span className="text-muted-foreground/50"> / {totalPages}</span>
+              <span className="text-muted-foreground/40 mx-2">·</span>
+              показано {startIndex + 1}–{Math.min(startIndex + ITEMS_PER_PAGE, filteredCompanies.length)} из {filteredCompanies.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border border-border bg-card text-foreground cursor-pointer disabled:text-muted-foreground/40 disabled:cursor-default hover:bg-muted/50 transition-colors min-w-[24px] text-center"
+              >
+                ‹
+              </button>
+              {paginationPages.map((item, idx) =>
+                item === "ellipsis" ? (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="px-2 font-mono text-[10.5px] text-muted-foreground/40"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={item}
+                    onClick={() => setCurrentPage(item)}
+                    className={[
+                      "font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border cursor-pointer min-w-[24px] text-center transition-colors",
+                      item === currentPage
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-card text-foreground border-border hover:bg-muted/50",
+                    ].join(" ")}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="font-mono text-[10.5px] font-bold tracking-[0.5px] px-2 py-1 rounded-[2px] border border-border bg-card text-foreground cursor-pointer disabled:text-muted-foreground/40 disabled:cursor-default hover:bg-muted/50 transition-colors min-w-[24px] text-center"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      <Footer />
+    </>
   )
 }

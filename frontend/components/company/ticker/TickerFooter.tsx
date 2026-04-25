@@ -28,7 +28,7 @@ export function TickerFooter({ ticker, buildTag }: TickerFooterProps) {
       <span>
         TRADE COMPASS · TICKER {ticker} · DATA DELAYED 15MIN · MOEX / INTERFAX
       </span>
-      <span>BUILD {buildTag}</span>
+      <span>не индивидуальная инвестиционная рекомендация</span>
     </div>
   )
 }

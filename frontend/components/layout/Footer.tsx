@@ -8,7 +8,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-muted-foreground">
-            © {currentYear} Trade Compass. Все права защищены.
+            {currentYear} Trade Compass
           </div>
 
           <nav className="flex flex-wrap justify-center gap-4 md:gap-6">
