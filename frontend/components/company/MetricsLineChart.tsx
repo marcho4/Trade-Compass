@@ -9,7 +9,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { AnnualSnapshot } from "@/lib/build-annual-snapshots"
 
 export interface MetricsLineConfig {
@@ -54,74 +54,86 @@ export const MetricsLineChart = ({ title, description, data, lines, valueFormatt
   )
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
-        <div className="flex flex-wrap gap-2 pt-2">
+    <Card className="overflow-hidden rounded-[2px] shadow-[0_1px_0_rgba(20,20,20,0.02)]">
+      <CardHeader className="gap-1.5 border-b border-border/60 pb-4">
+        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
+        {description && (
+          <CardDescription className="text-xs text-muted-foreground">{description}</CardDescription>
+        )}
+        <div className="flex flex-wrap gap-1.5 pt-3">
           {lines.map((line) => {
             const isActive = visibleKeys.has(line.key)
             return (
-              <Button
+              <button
                 key={line.key}
-                variant="outline"
-                size="sm"
+                type="button"
                 onClick={() => toggleLine(line.key)}
-                className="h-7 rounded-full text-xs gap-1.5 transition-colors"
-                style={isActive ? {
-                  borderColor: line.color,
-                  backgroundColor: `color-mix(in oklch, ${line.color} 15%, transparent)`,
-                  color: line.color,
-                } : {
-                  opacity: 0.5,
-                }}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-[2px] border px-2.5 py-1 text-xs font-medium transition-all",
+                  "hover:bg-accent/60",
+                  isActive
+                    ? "border-border bg-card text-foreground shadow-xs"
+                    : "border-transparent bg-muted/40 text-muted-foreground/70"
+                )}
               >
                 <span
-                  className="h-2 w-2 rounded-full shrink-0"
+                  aria-hidden
+                  className={cn("h-1.5 w-1.5 rounded-full transition-opacity", !isActive && "opacity-40")}
                   style={{ backgroundColor: line.color }}
                 />
                 {line.label}
-              </Button>
+              </button>
             )
           })}
         </div>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[350px] w-full">
-          <ComposedChart data={data} accessibilityLayer>
+      <CardContent className="pt-6 pb-4">
+        <ChartContainer config={chartConfig} className="h-[320px] w-full">
+          <ComposedChart data={data} accessibilityLayer margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
             <defs>
               {lines.map((line) => (
                 <linearGradient key={line.key} id={`fill-${line.key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={`var(--color-${line.key})`} stopOpacity={0.25} />
-                  <stop offset="100%" stopColor={`var(--color-${line.key})`} stopOpacity={0.02} />
+                  <stop offset="0%" stopColor={`var(--color-${line.key})`} stopOpacity={0.18} />
+                  <stop offset="95%" stopColor={`var(--color-${line.key})`} stopOpacity={0} />
                 </linearGradient>
               ))}
             </defs>
-            <CartesianGrid vertical={false} />
+            <CartesianGrid
+              vertical={false}
+              stroke="var(--border)"
+              strokeOpacity={0.6}
+              strokeDasharray="3 4"
+            />
             <XAxis
               dataKey="period"
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
-              className="text-xs"
+              tickMargin={10}
+              className="text-[11px] font-mono"
+              stroke="var(--muted-foreground)"
             />
             <YAxis
               tickFormatter={valueFormatter}
               tickLine={false}
               axisLine={false}
-              className="text-xs"
-              width={80}
+              tickMargin={6}
+              className="text-[11px] font-mono"
+              stroke="var(--muted-foreground)"
+              width={72}
             />
             <ChartTooltip
+              cursor={{ stroke: "var(--border)", strokeWidth: 1, strokeDasharray: "3 3" }}
               content={
                 <ChartTooltipContent
+                  className="rounded-lg border-border/60 bg-popover/95 backdrop-blur-sm shadow-md"
                   formatter={(value, name) => {
                     const config = chartConfig[name as string]
                     const formatted = typeof value === "number" ? valueFormatter(value) : value
                     return (
-                      <span>
-                        {config?.label ?? name}: <strong>{formatted}</strong>
-                      </span>
+                      <div className="flex w-full items-center justify-between gap-4">
+                        <span className="text-muted-foreground">{config?.label ?? name}</span>
+                        <span className="font-mono font-medium tabular-nums text-foreground">{formatted}</span>
+                      </div>
                     )
                   }}
                 />
@@ -135,9 +147,14 @@ export const MetricsLineChart = ({ title, description, data, lines, valueFormatt
                   dataKey={line.key}
                   stroke={`var(--color-${line.key})`}
                   fill={`url(#fill-${line.key})`}
-                  strokeWidth={2}
-                  dot={{ r: 4, fill: `var(--color-${line.key})` }}
-                  activeDot={{ r: 6 }}
+                  strokeWidth={1.75}
+                  dot={false}
+                  activeDot={{
+                    r: 4,
+                    strokeWidth: 2,
+                    stroke: "var(--background)",
+                    fill: `var(--color-${line.key})`,
+                  }}
                   connectNulls
                 />
               ) : null,

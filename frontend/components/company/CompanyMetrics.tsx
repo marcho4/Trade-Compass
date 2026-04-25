@@ -11,26 +11,26 @@ interface CompanyMetricsProps {
 }
 
 const REVENUE_NET_PROFIT_LINES: MetricsLineConfig[] = [
-  { key: "revenue", label: "Выручка", color: "hsl(221, 83%, 53%)" },
-  { key: "netProfit", label: "Чистая прибыль", color: "hsl(142, 71%, 45%)" },
-  { key: "operatingCashFlow", label: "Операционный Денежный поток", color: "hsl(32, 95%, 55%)", hiddenByDefault: true },
-  { key: "freeCashFlow", label: "Свободный денежный поток", color: "hsl(280, 70%, 55%)", hiddenByDefault: true },
+  { key: "revenue", label: "Выручка", color: "var(--chart-1)" },
+  { key: "netProfit", label: "Чистая прибыль", color: "var(--positive)" },
+  { key: "operatingCashFlow", label: "Операционный Денежный поток", color: "var(--chart-5)", hiddenByDefault: true },
+  { key: "freeCashFlow", label: "Свободный денежный поток", color: "var(--chart-3)", hiddenByDefault: true },
 ]
 
 const DEBT_EQUITY_LINES: MetricsLineConfig[] = [
-  { key: "debt", label: "Долг", color: "hsl(0, 72%, 51%)" },
-  { key: "equity", label: "Собственный капитал", color: "hsl(221, 83%, 53%)" },
+  { key: "debt", label: "Долг", color: "var(--negative)" },
+  { key: "equity", label: "Собственный капитал", color: "var(--chart-1)" },
 ]
 
 const MARGIN_LINES: MetricsLineConfig[] = [
-  { key: "grossMargin", label: "Валовая маржа", color: "hsl(221, 83%, 53%)" },
-  { key: "operatingMargin", label: "Операционная маржа", color: "hsl(32, 95%, 55%)" },
-  { key: "netMargin", label: "Чистая маржа", color: "hsl(142, 71%, 45%)" },
+  { key: "grossMargin", label: "Валовая маржа", color: "var(--chart-1)" },
+  { key: "operatingMargin", label: "Операционная маржа", color: "var(--chart-5)" },
+  { key: "netMargin", label: "Чистая маржа", color: "var(--positive)" },
 ]
 
 const BALANCE_LINES: MetricsLineConfig[] = [
-  { key: "totalAssets", label: "Всего активов", color: "hsl(221, 83%, 53%)" },
-  { key: "totalLiabilities", label: "Всего обязательств", color: "hsl(0, 72%, 51%)" },
+  { key: "totalAssets", label: "Всего активов", color: "var(--chart-1)" },
+  { key: "totalLiabilities", label: "Всего обязательств", color: "var(--negative)" },
 ]
 
 export const CompanyMetrics = ({ ticker }: CompanyMetricsProps) => {
